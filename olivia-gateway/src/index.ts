@@ -49,6 +49,7 @@ await registerPulseRoutes(app)
 app.get('/health', async () => ({
   status: 'ok',
   provider: process.env.MAIL_PROVIDER ?? 'mock',
+  configuredUser: process.env.MAIL_AUTH_USER ?? null,
 }))
 
 await app.listen({ port: env.port, host: env.host })
