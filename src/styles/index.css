@@ -222,6 +222,45 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 50; border: 1px solid rgba(92, 220, 206, .25); border-radius: 999px; background: rgba(9, 27, 42, .94); box-shadow: 0 16px 40px rgba(0, 0, 0, .4); padding: 10px 15px; display: flex; align-items: center; gap: 8px; font-size: 9px; color: #c6e6e9; }.toast span { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 9px #4ade80; }
 .navScrim { display: none; }
 
+.authShell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  position: relative;
+  background:
+    radial-gradient(circle at 78% 0, rgba(100, 52, 190, .18), transparent 34%),
+    radial-gradient(circle at 15% 100%, rgba(0, 183, 224, .12), transparent 35%),
+    linear-gradient(150deg, #07111f, #081323 52%, #091221);
+}
+
+.authCard {
+  width: min(420px, 100%);
+  border: 1px solid var(--stroke);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(12, 26, 47, .94), rgba(10, 22, 40, .92));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .02), 0 20px 50px rgba(0, 0, 0, .22);
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.authBrand { font-size: 18px; }
+.authCard h1 { margin: 6px 0 0; font-size: 24px; }
+.authCard p { margin: 0; color: #8ea3ba; font-size: 13px; line-height: 1.6; }
+.authCard input {
+  width: 100%;
+  border: 1px solid rgba(145, 181, 224, .12);
+  border-radius: 12px;
+  background: rgba(14, 27, 46, .8);
+  color: #e8f1ff;
+  padding: 13px 14px;
+}
+.authCard .sendAi { margin: 4px 0 0; justify-content: center; }
+
 @media (max-width: 1500px) {
   .grid.aiOn { grid-template-columns: 205px 305px minmax(450px, 1fr) 315px; }
   .grid.aiOff { grid-template-columns: 205px 325px minmax(510px, 1fr); }

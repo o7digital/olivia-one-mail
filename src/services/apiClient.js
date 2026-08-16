@@ -46,21 +46,36 @@ export const apiClient = {
   get: (path, params) => request(path, { params }),
   post: (path, body) => request(path, { method: 'POST', body }),
   delete: (path) => request(path, { method: 'DELETE' }),
-  async ensureSession() {
-    const me = await request('/api/me')
-    if (me.authenticated) {
-      csrfToken = csrfToken || getCookieValue('olivia_csrf')
-      if (csrfToken) return me
-    }
+  async getCurrentUser() {
+    const response = await fetch(buildUrl('/api/me'), {
+      credentials: 'include',
+      headers: csrfToken ? { 'x-olivia-csrf': csrfToken } : undefined,
+    })
 
+    if (response.status === 401) return null
+    if (!response.ok) throw new Error('Unable to restore session')
+
+    const payload = await response.json()
+    csrfToken = csrfToken || getCookieValue('olivia_csrf')
+    return payload
+  },
+  async login(credentials) {
     const login = await request('/api/auth/login', {
       method: 'POST',
-      body: {
-        email: 'info@o7digitalgroup.com',
-        password: 'phase-two-demo',
-      },
+      body: credentials,
     })
     csrfToken = login.csrfToken
-    return request('/api/me')
+    return login
+  },
+  async logout() {
+    await request('/api/auth/logout', { method: 'POST', body: {} })
+    csrfToken = ''
+  },
+  async ensureSession() {
+    const me = await apiClient.getCurrentUser()
+    if (!me?.authenticated) {
+      throw new Error('Authentication required')
+    }
+    return me
   },
 }

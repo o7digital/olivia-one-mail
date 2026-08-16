@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { aiService } from '../services/aiService'
 
-export function useAIWorkspace(messageId) {
+export function useAIWorkspace(messageId, enabled = true) {
   const [analysis, setAnalysis] = useState(null)
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (!messageId) {
+    if (!enabled || !messageId) {
       setAnalysis(null)
       setStatus('idle')
       return
@@ -34,7 +34,7 @@ export function useAIWorkspace(messageId) {
     return () => {
       active = false
     }
-  }, [messageId])
+  }, [enabled, messageId])
 
   return { analysis, error, status }
 }
