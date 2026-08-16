@@ -1,22 +1,15 @@
 import type { FastifyReply, FastifyRequest, preHandlerHookHandler } from 'fastify'
 
-const SESSION_COOKIE = 'olivia_session'
+const SESSION_COOKIE = '__Host-olivia_session'
 const CSRF_COOKIE = 'olivia_csrf'
 
 function isProductionOrigin(origin: string) {
   return origin.startsWith('https://')
 }
 
-export function buildSessionValue(email: string, cookieSecret: string) {
-  return `${email}:${cookieSecret}`
-}
-
-export function readSessionEmail(sessionValue: string | undefined, cookieSecret: string) {
+export function readSessionEmail(sessionValue: string | undefined) {
   if (!sessionValue) return null
-  const [email, secret] = sessionValue.split(':')
-  if (!email || !secret) return null
-  if (secret !== cookieSecret) return null
-  return email
+  return sessionValue
 }
 
 export function clearSessionCookies(reply: FastifyReply, secureCookies: boolean) {
@@ -35,17 +28,17 @@ export function clearSessionCookies(reply: FastifyReply, secureCookies: boolean)
 export function setSessionCookies(args: {
   reply: FastifyReply
   email: string
-  cookieSecret: string
   csrfToken: string
   appOrigin: string
 }) {
   const secureCookies = isProductionOrigin(args.appOrigin)
   args.reply
-    .setCookie(SESSION_COOKIE, buildSessionValue(args.email, args.cookieSecret), {
+    .setCookie(SESSION_COOKIE, args.email, {
       httpOnly: true,
       sameSite: 'lax',
       path: '/',
       secure: secureCookies,
+      signed: true,
     })
     .setCookie(CSRF_COOKIE, args.csrfToken, {
       httpOnly: false,
@@ -55,9 +48,10 @@ export function setSessionCookies(args: {
     })
 }
 
-export function requireSession(cookieSecret: string): preHandlerHookHandler {
+export function requireSession(): preHandlerHookHandler {
   return async function requireSessionPreHandler(request: FastifyRequest, reply: FastifyReply) {
-    const email = readSessionEmail(request.cookies[SESSION_COOKIE], cookieSecret)
+    const signedSession = request.unsignCookie(request.cookies[SESSION_COOKIE] ?? '')
+    const email = signedSession.valid ? readSessionEmail(signedSession.value) : null
     if (!email) {
       return reply.code(401).send({ message: 'Authentication required' })
     }

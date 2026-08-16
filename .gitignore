@@ -3,4 +3,6 @@ dist
 test-results
 .DS_Store
 *.local
+.env.production
+.env.production.*
 .vercel

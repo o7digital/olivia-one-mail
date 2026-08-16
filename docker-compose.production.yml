@@ -1,5 +1,6 @@
 services:
   olivia-one-front:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: Dockerfile
@@ -11,6 +12,7 @@ services:
           - olivia-one-front
 
   olivia-gateway:
+    restart: unless-stopped
     build:
       context: ./olivia-gateway
       dockerfile: Dockerfile

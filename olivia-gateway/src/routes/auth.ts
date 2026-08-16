@@ -19,7 +19,6 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     setSessionCookies({
       reply,
       email: body.email,
-      cookieSecret: app.env.cookieSecret,
       csrfToken,
       appOrigin: app.env.appOrigin,
     })
@@ -40,7 +39,8 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   })
 
   app.get('/api/me', { preHandler: app.requireSession }, async (request) => {
-    const email = readSessionEmail(request.cookies.olivia_session, app.env.cookieSecret)
+    const signedSession = request.unsignCookie(request.cookies['__Host-olivia_session'] ?? '')
+    const email = signedSession.valid ? readSessionEmail(signedSession.value) : null
 
     return {
       authenticated: true,

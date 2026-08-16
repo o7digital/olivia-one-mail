@@ -13,7 +13,7 @@ const app = Fastify({ logger: true })
 const provider = createMailProvider()
 
 app.decorate('env', env)
-app.decorate('requireSession', requireSession(env.cookieSecret))
+app.decorate('requireSession', requireSession())
 
 await app.register(cors, {
   origin: env.appOrigin,
