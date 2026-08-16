@@ -7,7 +7,7 @@ import { IconButton } from '../common/IconButton'
 import { AttachmentCard } from './AttachmentCard'
 import { SuggestedReply } from './SuggestedReply'
 
-export function MailReader({ aiOpen, message, onAiToggle, onNotify }) {
+export function MailReader({ aiOpen, analysis, message, onAiToggle, onNotify }) {
   if (!message) {
     return <section className="reader card readerEmpty"><MailReaderPlaceholder /></section>
   }
@@ -28,14 +28,14 @@ export function MailReader({ aiOpen, message, onAiToggle, onNotify }) {
           <div><IconButton label="Reply"><Reply size={16} /></IconButton><IconButton label="Reply all"><ReplyAll size={16} /></IconButton><IconButton label="Forward"><Forward size={16} /></IconButton></div>
         </div>
         <div className="sender"><Avatar initials={message.initials} tone={message.tone} /><div><b>{message.sender}</b><small>{message.email}</small><small>To: Olivier Steineur</small></div><time>Today, {message.time}</time></div>
-        <div className="summary"><label><Sparkles size={14} />AI Summary</label><p>{message.sender} follows up on an important conversation. Olivia detected a strong commercial signal and recommends a focused response plus a follow-up action.</p></div>
+        <div className="summary"><label><Sparkles size={14} />AI Summary</label><p>{analysis?.summary?.[0] ?? `${message.sender} follows up on an important conversation.`}</p></div>
         <div className="body">{message.body.map((paragraph, index) => <p key={`${message.id}-${index}`}>{paragraph}</p>)}</div>
 
         {message.attachments.length ? (
           <><div className="attachTitle"><Paperclip size={15} />{message.attachments.length} Attachments</div><div className="attachments">{message.attachments.map((attachment) => <AttachmentCard key={attachment.title} attachment={attachment} />)}</div></>
         ) : null}
 
-        <SuggestedReply key={message.id} message={message} onSent={onNotify} />
+        <SuggestedReply key={message.id} message={message} onSent={onNotify} suggestedReply={analysis?.suggestedReply ?? `Hi ${message.sender.split(' ')[0]},\n\nThank you for the message.\n\nBest regards,\n\nOlivier`} />
       </article>
     </section>
   )

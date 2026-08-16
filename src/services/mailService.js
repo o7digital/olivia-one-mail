@@ -1,20 +1,15 @@
-import { messages } from '../mocks/mail'
+import { apiClient } from './apiClient'
 
-const delay = (value, duration = 420) => new Promise((resolve) => {
-  window.setTimeout(() => resolve(value), duration)
-})
-
-export const mockMailService = {
-  async listMessages(folder = 'Inbox') {
-    const matches = messages.filter((message) => message.folder === folder)
-    return delay(matches)
-  },
-
-  async markRead(id) {
-    return delay({ id, unread: false }, 160)
-  },
-
-  async sendMessage(input) {
-    return delay({ id: `mock-${Date.now()}`, ...input, status: 'sent' }, 520)
-  },
+export const mailService = {
+  ensureSession: () => apiClient.ensureSession(),
+  listFolders: () => apiClient.get('/api/mail/folders'),
+  listMessages: (folder = 'Inbox') => apiClient.get('/api/mail/messages', { folder }),
+  getMessage: (id) => apiClient.get(`/api/mail/messages/${id}`),
+  markRead: (id) => apiClient.post(`/api/mail/messages/${id}/read`, {}),
+  toggleStar: (id) => apiClient.post(`/api/mail/messages/${id}/star`, {}),
+  moveMessage: (id, folder) => apiClient.post(`/api/mail/messages/${id}/move`, { folder }),
+  deleteMessage: (id) => apiClient.delete(`/api/mail/messages/${id}`),
+  sendMessage: (input) => apiClient.post('/api/mail/send', input),
+  replyToMessage: (id, body) => apiClient.post(`/api/mail/reply/${id}`, { body }),
+  forwardMessage: (id, input) => apiClient.post(`/api/mail/forward/${id}`, input),
 }

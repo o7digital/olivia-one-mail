@@ -1,5 +1,29 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { mockMailService } from '../../services/mailService'
+import { mailService } from '../../services/mailService'
+
+export function useMailFolders() {
+  const [folders, setFolders] = useState([])
+  const [status, setStatus] = useState('loading')
+
+  useEffect(() => {
+    let active = true
+
+    async function load() {
+      await mailService.ensureSession()
+      const nextFolders = await mailService.listFolders()
+      if (!active) return
+      setFolders(nextFolders)
+      setStatus('ready')
+    }
+
+    load()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  return { folders, status }
+}
 
 export function useInbox(folder, query) {
   const [messages, setMessages] = useState([])
@@ -11,7 +35,8 @@ export function useInbox(folder, query) {
     setStatus('loading')
     setError(null)
     try {
-      const nextMessages = await mockMailService.listMessages(folder)
+      await mailService.ensureSession()
+      const nextMessages = await mailService.listMessages(folder)
       setMessages(nextMessages)
       setSelectedId((current) => nextMessages.some(({ id }) => id === current) ? current : nextMessages[0]?.id ?? null)
       setStatus('ready')
@@ -47,7 +72,7 @@ export function useInbox(folder, query) {
     setMessages((current) => current.map((message) => (
       message.id === id ? { ...message, unread: false } : message
     )))
-    mockMailService.markRead(id)
+    mailService.markRead(id)
   }, [])
 
   return {
