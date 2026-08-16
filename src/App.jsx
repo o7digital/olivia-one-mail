@@ -10,6 +10,7 @@ import { MailReader } from './components/mail/MailReader'
 import { OpportunityDialog } from './features/ai-workspace/OpportunityDialog'
 import { ComposeModal } from './features/composer/ComposeModal'
 import { useAIWorkspace } from './hooks/useAIWorkspace'
+import { useSession } from './hooks/useSession'
 import { pulseService } from './services/pulseService'
 import { useInbox, useMailFolders } from './features/inbox/useInbox'
 
@@ -25,9 +26,13 @@ function App() {
   const [opportunityOpen, setOpportunityOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [toast, setToast] = useState('')
-  const folders = useMailFolders()
-  const inbox = useInbox(activeFolder, query)
-  const aiWorkspace = useAIWorkspace(inbox.selected?.id)
+  const [loginError, setLoginError] = useState('')
+  const [loginLoading, setLoginLoading] = useState(false)
+  const session = useSession()
+  const isAuthenticated = session.isAuthenticated
+  const folders = useMailFolders(isAuthenticated)
+  const inbox = useInbox(activeFolder, query, isAuthenticated)
+  const aiWorkspace = useAIWorkspace(inbox.selected?.id, isAuthenticated)
 
   const notify = useCallback((message) => {
     window.clearTimeout(toastTimer.current)
@@ -36,6 +41,10 @@ function App() {
   }, [])
 
   useEffect(() => () => window.clearTimeout(toastTimer.current), [])
+
+  useEffect(() => {
+    if (session.error) setLoginError(session.error)
+  }, [session.error])
 
   useEffect(() => {
     function handleShortcut(event) {
@@ -88,6 +97,44 @@ function App() {
     await pulseService.createTasks(aiWorkspace.analysis.tasks)
     setOpportunityOpen(false)
     notify(`Opportunity created in O7 Pulse for ${contact.contactId}`)
+  }
+
+  async function handleLogin(event) {
+    event.preventDefault()
+    const formData = new FormData(event.currentTarget)
+    setLoginError('')
+    setLoginLoading(true)
+    try {
+      await session.login({
+        email: String(formData.get('email') ?? ''),
+        password: String(formData.get('password') ?? ''),
+      })
+    } catch (error) {
+      setLoginError(error.message)
+    } finally {
+      setLoginLoading(false)
+    }
+  }
+
+  if (!session.ready) {
+    return <div className="authShell"><div className="authCard"><b>Restoring secure session…</b><p>Olivia One is checking the pilot mailbox session.</p></div></div>
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="authShell">
+        <div className="glow g1" /><div className="glow g2" />
+        <form className="authCard" onSubmit={handleLogin}>
+          <div className="brand authBrand"><div className="brandmark">O1</div><span>Olivia One Pilot</span></div>
+          <h1>Single-mailbox access</h1>
+          <p>Sign in with the pilot mailbox configured on the gateway.</p>
+          <input autoFocus name="email" type="email" placeholder="Pilot mailbox email" aria-label="Email" />
+          <input name="password" type="password" placeholder="Password" aria-label="Password" />
+          {loginError ? <p className="formError" role="alert">{loginError}</p> : null}
+          <button className="sendAi" type="submit" disabled={loginLoading}>{loginLoading ? 'Signing in…' : 'Sign in securely'}</button>
+        </form>
+      </div>
+    )
   }
 
   return (

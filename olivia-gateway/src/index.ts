@@ -3,16 +3,17 @@ import cors from '@fastify/cors'
 import rateLimit from '@fastify/rate-limit'
 import Fastify from 'fastify'
 import { getEnv } from './config/env.js'
-import { registerAIRoutes } from './routes/ai.js'
 import { registerAuthRoutes } from './routes/auth.js'
-import { registerMailRoutes } from './routes/mail.js'
-import { registerPeopleRoutes } from './routes/people.js'
-import { registerPulseRoutes } from './routes/pulse.js'
+import { registerProtectedRoutes } from './routes/protected.js'
 import { createMailProvider } from './services/providerRegistry.js'
+import { requireSession } from './services/session.js'
 
 const env = getEnv()
 const app = Fastify({ logger: true })
 const provider = createMailProvider()
+
+app.decorate('env', env)
+app.decorate('requireSession', requireSession(env.cookieSecret))
 
 await app.register(cors, {
   origin: env.appOrigin,
@@ -41,15 +42,18 @@ app.addHook('onRequest', async (request, reply) => {
 })
 
 await registerAuthRoutes(app)
-await registerMailRoutes(app, provider)
-await registerPeopleRoutes(app)
-await registerAIRoutes(app)
-await registerPulseRoutes(app)
+await registerProtectedRoutes(app, provider, app.requireSession)
 
 app.get('/health', async () => ({
   status: 'ok',
   provider: process.env.MAIL_PROVIDER ?? 'mock',
-  configuredUser: process.env.MAIL_AUTH_USER ?? null,
 }))
 
 await app.listen({ port: env.port, host: env.host })
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    env: ReturnType<typeof getEnv>
+    requireSession: ReturnType<typeof requireSession>
+  }
+}

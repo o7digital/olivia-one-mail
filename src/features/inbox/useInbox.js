@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { mailService } from '../../services/mailService'
 
-export function useMailFolders() {
+export function useMailFolders(enabled = true) {
   const [folders, setFolders] = useState([])
   const [status, setStatus] = useState('loading')
 
@@ -9,6 +9,10 @@ export function useMailFolders() {
     let active = true
 
     async function load() {
+      if (!enabled) {
+        if (active) setStatus('idle')
+        return
+      }
       await mailService.ensureSession()
       const nextFolders = await mailService.listFolders()
       if (!active) return
@@ -20,18 +24,25 @@ export function useMailFolders() {
     return () => {
       active = false
     }
-  }, [])
+  }, [enabled])
 
   return { folders, status }
 }
 
-export function useInbox(folder, query) {
+export function useInbox(folder, query, enabled = true) {
   const [messages, setMessages] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [status, setStatus] = useState('loading')
   const [error, setError] = useState(null)
 
   const load = useCallback(async () => {
+    if (!enabled) {
+      setMessages([])
+      setSelectedId(null)
+      setStatus('idle')
+      setError(null)
+      return
+    }
     setStatus('loading')
     setError(null)
     try {
@@ -44,7 +55,7 @@ export function useInbox(folder, query) {
       setError(loadError)
       setStatus('error')
     }
-  }, [folder])
+  }, [enabled, folder])
 
   useEffect(() => {
     load()
