@@ -1,7 +1,7 @@
 import { Paperclip, Send, Sparkles, X } from 'lucide-react'
 import { useState } from 'react'
 import { IconButton } from '../../components/common/IconButton'
-import { mockMailService } from '../../services/mailService'
+import { mailService } from '../../services/mailService'
 
 const emptyDraft = { to: '', subject: '', body: '' }
 
@@ -22,7 +22,13 @@ export function ComposeModal({ onClose, onSent }) {
       return
     }
     setSending(true)
-    await mockMailService.sendMessage(draft)
+    try {
+      await mailService.sendMessage(draft)
+    } catch (sendError) {
+      setError(sendError.message)
+      setSending(false)
+      return
+    }
     onSent('Message sent')
     onClose()
   }

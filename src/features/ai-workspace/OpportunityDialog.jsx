@@ -1,7 +1,16 @@
 import { BriefcaseBusiness, X } from 'lucide-react'
+import { useState } from 'react'
 import { IconButton } from '../../components/common/IconButton'
 
-export function OpportunityDialog({ message, onCancel, onConfirm }) {
+export function OpportunityDialog({ analysis, message, onCancel, onConfirm }) {
+  const [submitting, setSubmitting] = useState(false)
+
+  async function submit() {
+    setSubmitting(true)
+    await onConfirm()
+    setSubmitting(false)
+  }
+
   return (
     <div className="overlay" onMouseDown={(event) => event.target === event.currentTarget && onCancel()}>
       <div className="confirmDialog" role="dialog" aria-modal="true" aria-labelledby="opportunity-title">
@@ -9,9 +18,9 @@ export function OpportunityDialog({ message, onCancel, onConfirm }) {
         <IconButton className="confirmClose" label="Close" onClick={onCancel}><X size={17} /></IconButton>
         <small>O7 Pulse · Mock action</small>
         <h2 id="opportunity-title">Create Partnership Expansion?</h2>
-        <p>This will simulate syncing {message.sender}, {message.company}, and this conversation into O7 Pulse. No external data will be changed in Phase 1.</p>
-        <div className="confirmMeta"><span>Estimated value</span><b>$120,000</b></div>
-        <div className="confirmActions"><button type="button" onClick={onCancel}>Cancel</button><button type="button" onClick={onConfirm}>Confirm opportunity</button></div>
+        <p>This will sync {message.sender}, {message.company}, and this conversation into O7 Pulse through the Olivia Gateway. Mailcow stays untouched.</p>
+        <div className="confirmMeta"><span>Estimated value</span><b>{new Intl.NumberFormat('en-US', { style: 'currency', currency: analysis.opportunity.currency }).format(analysis.opportunity.estimatedValue)}</b></div>
+        <div className="confirmActions"><button type="button" onClick={onCancel}>Cancel</button><button type="button" onClick={submit} disabled={submitting}>{submitting ? 'Syncing…' : 'Confirm opportunity'}</button></div>
       </div>
     </div>
   )

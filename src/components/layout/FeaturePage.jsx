@@ -1,4 +1,6 @@
 import { CalendarDays, CheckSquare2, ContactRound, Settings2, Sparkles } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { peopleService } from '../../services/peopleService'
 
 const pageDetails = {
   calendar: { eyebrow: 'Schedule', title: 'Calendar', copy: 'Your connected calendar experience will arrive in Phase 2.', icon: CalendarDays, stats: ['3 meetings today', 'Next: 2:30 PM', 'Focus time protected'] },
@@ -9,13 +11,42 @@ const pageDetails = {
 }
 
 export function FeaturePage({ page }) {
+  const [dynamicStats, setDynamicStats] = useState(null)
   const detail = pageDetails[page]
   const Icon = detail.icon
+
+  useEffect(() => {
+    let active = true
+
+    async function load() {
+      if (page === 'contacts') {
+        const contacts = await peopleService.listContacts()
+        if (!active) return
+        setDynamicStats([`${contacts.length} contacts`, '18 active conversations', '12 warm leads'])
+        return
+      }
+
+      if (page === 'calendar') {
+        const events = await peopleService.listCalendarEvents()
+        if (!active) return
+        setDynamicStats([`${events.length} meetings today`, 'Next: 2:30 PM', 'Focus time protected'])
+        return
+      }
+
+      setDynamicStats(null)
+    }
+
+    load()
+    return () => {
+      active = false
+    }
+  }, [page])
+
   return (
     <section className="featurePage card">
       <div className="featureHero"><span className="featureIcon"><Icon size={24} /></span><small>{detail.eyebrow}</small><h1>{detail.title}</h1><p>{detail.copy}</p></div>
-      <div className="featureStats">{detail.stats.map((stat) => <div key={stat}><span /><b>{stat}</b></div>)}</div>
-      <div className="phaseNote"><Sparkles size={17} /><div><b>Phase 1 shell</b><p>This route is ready for its dedicated feature work. Live providers and server integrations remain intentionally disconnected.</p></div></div>
+      <div className="featureStats">{(dynamicStats ?? detail.stats).map((stat) => <div key={stat}><span /><b>{stat}</b></div>)}</div>
+      <div className="phaseNote"><Sparkles size={17} /><div><b>Phase 2 gateway ready</b><p>This route now has a server-side boundary. Live provider adapters can replace the mock gateway without redesigning the UI.</p></div></div>
     </section>
   )
 }

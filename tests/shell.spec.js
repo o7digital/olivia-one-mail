@@ -30,7 +30,7 @@ test('mail shell interactions and desktop screenshots', async ({ page }) => {
   await page.getByRole('button', { name: 'Create Opportunity' }).click()
   await expect(page.getByRole('dialog', { name: 'Create Partnership Expansion?' })).toBeVisible()
   await page.getByRole('button', { name: 'Confirm opportunity' }).click()
-  await expect(page.getByRole('status')).toContainText('Mock opportunity created')
+  await expect(page.getByRole('status')).toContainText('Opportunity created in O7 Pulse')
 })
 
 test('tablet layout and application routes', async ({ page }) => {

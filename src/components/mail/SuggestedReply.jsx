@@ -1,10 +1,10 @@
 import { Forward, Reply, ReplyAll, Send, Sparkles } from 'lucide-react'
 import { useState } from 'react'
+import { mailService } from '../../services/mailService'
 
-export function SuggestedReply({ message, onSent }) {
+export function SuggestedReply({ message, onSent, suggestedReply }) {
   const [activeMode, setActiveMode] = useState('AI Suggested Reply')
   const [sending, setSending] = useState(false)
-  const firstName = message.sender.split(' ')[0]
 
   const modes = [
     ['AI Suggested Reply', Sparkles], ['Reply', Reply], ['Reply All', ReplyAll], ['Forward', Forward],
@@ -12,7 +12,7 @@ export function SuggestedReply({ message, onSent }) {
 
   async function sendReply() {
     setSending(true)
-    await new Promise((resolve) => window.setTimeout(resolve, 450))
+    await mailService.replyToMessage(message.id, suggestedReply)
     setSending(false)
     onSent('Suggested reply sent')
   }
@@ -27,10 +27,7 @@ export function SuggestedReply({ message, onSent }) {
         ))}
       </div>
       <div className="draft" contentEditable suppressContentEditableWarning aria-label="Reply draft">
-        <p>Hi {firstName},</p>
-        <p>Thank you for sharing the proposal and materials. I’ve reviewed them and everything looks great.</p>
-        <p>I’d be happy to schedule a call this week to discuss next steps. Please share your availability.</p>
-        <p>Best regards,<br />Olivier</p>
+        {suggestedReply.split('\n\n').map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
       </div>
       <button className="sendAi" type="button" onClick={sendReply} disabled={sending}><Send size={15} />{sending ? 'Sending…' : 'Send suggested reply'}</button>
     </div>

@@ -9,7 +9,9 @@ import { MailList } from './components/mail/MailList'
 import { MailReader } from './components/mail/MailReader'
 import { OpportunityDialog } from './features/ai-workspace/OpportunityDialog'
 import { ComposeModal } from './features/composer/ComposeModal'
-import { useInbox } from './features/inbox/useInbox'
+import { useAIWorkspace } from './hooks/useAIWorkspace'
+import { pulseService } from './services/pulseService'
+import { useInbox, useMailFolders } from './features/inbox/useInbox'
 
 function App() {
   const location = useLocation()
@@ -23,7 +25,9 @@ function App() {
   const [opportunityOpen, setOpportunityOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [toast, setToast] = useState('')
+  const folders = useMailFolders()
   const inbox = useInbox(activeFolder, query)
+  const aiWorkspace = useAIWorkspace(inbox.selected?.id)
 
   const notify = useCallback((message) => {
     window.clearTimeout(toastTimer.current)
@@ -62,9 +66,28 @@ function App() {
     if (value && location.pathname !== '/mail') navigate('/mail')
   }
 
-  function confirmOpportunity() {
+  async function confirmOpportunity() {
+    if (!inbox.selected || !aiWorkspace.analysis) return
+
+    const contact = await pulseService.syncContact({
+      name: inbox.selected.sender,
+      email: inbox.selected.email,
+      company: inbox.selected.company,
+    })
+    const opportunity = await pulseService.createOpportunity({
+      title: aiWorkspace.analysis.opportunity.title,
+      messageId: inbox.selected.id,
+      estimatedValue: aiWorkspace.analysis.opportunity.estimatedValue,
+      currency: aiWorkspace.analysis.opportunity.currency,
+      confirmed: true,
+    })
+    await pulseService.linkConversation({
+      threadId: inbox.selected.id,
+      opportunityId: opportunity.opportunityId,
+    })
+    await pulseService.createTasks(aiWorkspace.analysis.tasks)
     setOpportunityOpen(false)
-    notify('Mock opportunity created in O7 Pulse')
+    notify(`Opportunity created in O7 Pulse for ${contact.contactId}`)
   }
 
   return (
@@ -85,17 +108,17 @@ function App() {
         <Route path="/" element={<Navigate to="/mail" replace />} />
         <Route path="/mail" element={(
           <main className={`grid ${aiOpen ? 'aiOn' : 'aiOff'}`}>
-            <Sidebar activeFolder={activeFolder} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => setComposeOpen(true)} onFolderChange={changeFolder} />
+            <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => setComposeOpen(true)} onFolderChange={changeFolder} />
             <MailList activeFolder={activeFolder} error={inbox.error} messages={inbox.filteredMessages} onRetry={inbox.reload} onSelect={inbox.selectMessage} query={query} selectedId={inbox.selectedId} status={inbox.status} />
-            <MailReader aiOpen={aiOpen} message={inbox.selected} onAiToggle={() => setAiOpen((current) => !current)} onNotify={notify} />
-            {aiOpen ? <AIWorkspace message={inbox.selected} onCreateOpportunity={() => setOpportunityOpen(true)} onNotify={notify} /> : null}
+            <MailReader aiOpen={aiOpen} analysis={aiWorkspace.analysis} message={inbox.selected} onAiToggle={() => setAiOpen((current) => !current)} onNotify={notify} />
+            {aiOpen ? <AIWorkspace analysis={aiWorkspace.analysis} message={inbox.selected} onCreateOpportunity={() => setOpportunityOpen(true)} onNotify={notify} status={aiWorkspace.status} /> : null}
             <AppRail />
           </main>
         )} />
         {['calendar', 'contacts', 'tasks', 'pulse', 'settings'].map((page) => (
           <Route key={page} path={`/${page}`} element={(
             <main className="grid pageGrid">
-              <Sidebar activeFolder={activeFolder} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => setComposeOpen(true)} onFolderChange={changeFolder} />
+              <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => setComposeOpen(true)} onFolderChange={changeFolder} />
               <FeaturePage page={page} />
               <AppRail />
             </main>
@@ -105,7 +128,7 @@ function App() {
       </Routes>
 
       {composeOpen ? <ComposeModal onClose={() => setComposeOpen(false)} onSent={notify} /> : null}
-      {opportunityOpen && inbox.selected ? <OpportunityDialog message={inbox.selected} onCancel={() => setOpportunityOpen(false)} onConfirm={confirmOpportunity} /> : null}
+      {opportunityOpen && inbox.selected && aiWorkspace.analysis ? <OpportunityDialog analysis={aiWorkspace.analysis} message={inbox.selected} onCancel={() => setOpportunityOpen(false)} onConfirm={confirmOpportunity} /> : null}
       {toast ? <div className="toast" role="status"><span />{toast}</div> : null}
     </div>
   )

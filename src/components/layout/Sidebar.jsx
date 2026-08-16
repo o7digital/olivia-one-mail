@@ -3,7 +3,7 @@ import {
   Sparkles, Trash2, X,
 } from 'lucide-react'
 import { Avatar } from '../common/Avatar'
-import { folders, labels, spaces } from '../../mocks/mail'
+import { labels, spaces } from '../../mocks/mail'
 
 const folderIcons = {
   Inbox, Priority: Sparkles, Snoozed: Clock3, Sent: Send, Drafts: FileText,
@@ -23,7 +23,7 @@ function SidebarSection({ items, labels: withLabels = false, title }) {
   )
 }
 
-export function Sidebar({ activeFolder, mobileOpen, onClose, onCompose, onFolderChange }) {
+export function Sidebar({ activeFolder, folders, mobileOpen, onClose, onCompose, onFolderChange }) {
   return (
     <aside className={`sidebar card ${mobileOpen ? 'mobileOpen' : ''}`}>
       <button type="button" className="closeSidebar" onClick={onClose} aria-label="Close navigation"><X size={18} /></button>
