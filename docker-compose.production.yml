@@ -25,8 +25,12 @@ services:
       MAIL_SMTP_HOST: ${MAIL_SMTP_HOST:-mail.o7digitalgroup.com}
       MAIL_SMTP_PORT: ${MAIL_SMTP_PORT:-587}
       MAIL_SMTP_SECURE: ${MAIL_SMTP_SECURE:-false}
-      MAIL_AUTH_USER: ${MAIL_AUTH_USER:-info@o7digitalgroup.com}
-      MAIL_AUTH_PASS: ${MAIL_AUTH_PASS:-CHANGE_ME}
+      AI_PROVIDER: ${AI_PROVIDER:-python-olivia}
+      AI_API_URL: ${AI_API_URL:-http://olivia-ai-python:8000}
+      AI_DEFAULT_CLIENT_CODE: ${AI_DEFAULT_CLIENT_CODE:-default}
+      AI_MAILBOX_CLIENT_MAP: ${AI_MAILBOX_CLIENT_MAP:-{}}
+      AI_DOMAIN_CLIENT_MAP: ${AI_DOMAIN_CLIENT_MAP:-{}}
+      OLIVIA_INTERNAL_TOKEN: ${OLIVIA_INTERNAL_TOKEN:-CHANGE_ME}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Olivier Steineur}
       COOKIE_SECRET: ${COOKIE_SECRET:-CHANGE_ME}
       PORT: ${PORT:-8787}
@@ -35,8 +39,38 @@ services:
       mailcow:
         aliases:
           - olivia-gateway
+      olivia-ai-network:
+        aliases:
+          - olivia-gateway
+
+  olivia-ai-python:
+    restart: unless-stopped
+    build:
+      context: ../suitesmine-bot
+      dockerfile: Dockerfile.python
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6-luna}
+      OPENAI_MODEL_FAST: ${OPENAI_MODEL_FAST:-gpt-5.6-luna}
+      OPENAI_MODEL_BALANCED: ${OPENAI_MODEL_BALANCED:-gpt-5.6-terra}
+      OPENAI_MODEL_POWERFUL: ${OPENAI_MODEL_POWERFUL:-gpt-5.6-sol}
+      OPENAI_VECTOR_STORES_JSON: ${OPENAI_VECTOR_STORES_JSON:-{}}
+      OLIVIA_WEB_SEARCH_ENABLED: ${OLIVIA_WEB_SEARCH_ENABLED:-true}
+      OLIVIA_MAX_TOOL_ROUNDS: ${OLIVIA_MAX_TOOL_ROUNDS:-3}
+      OLIVIA_INTERNAL_TOKEN: ${OLIVIA_INTERNAL_TOKEN:-CHANGE_ME}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      olivia-ai-network:
+        aliases:
+          - olivia-ai-python
 
 networks:
   mailcow:
     external: true
     name: ${MAILCOW_NETWORK:-mailcowdockerized_mailcow-network}
+  olivia-ai-network:
+    name: olivia-ai-network

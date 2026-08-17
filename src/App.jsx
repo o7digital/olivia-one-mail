@@ -157,7 +157,7 @@ function App() {
           <main className={`grid ${aiOpen ? 'aiOn' : 'aiOff'}`}>
             <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => setComposeOpen(true)} onFolderChange={changeFolder} />
             <MailList activeFolder={activeFolder} error={inbox.error} messages={inbox.filteredMessages} onRetry={inbox.reload} onSelect={inbox.selectMessage} query={query} selectedId={inbox.selectedId} status={inbox.status} />
-            <MailReader aiOpen={aiOpen} analysis={aiWorkspace.analysis} message={inbox.selected} onAiToggle={() => setAiOpen((current) => !current)} onNotify={notify} />
+            <MailReader aiOpen={aiOpen} aiStatus={aiWorkspace.status} analysis={aiWorkspace.analysis} message={inbox.selected} onAiToggle={() => setAiOpen((current) => !current)} onNotify={notify} />
             {aiOpen ? <AIWorkspace analysis={aiWorkspace.analysis} message={inbox.selected} onCreateOpportunity={() => setOpportunityOpen(true)} onNotify={notify} status={aiWorkspace.status} /> : null}
             <AppRail />
           </main>

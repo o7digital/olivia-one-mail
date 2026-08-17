@@ -50,11 +50,29 @@ export interface AIAnalysis {
   summary: string[]
   leadScore: number
   urgency: string
-  tasks: string[]
-  opportunity: {
-    title: string
-    value: string
-    confidence: string
+  sentiment: {
+    label: string
+    confidence: number
   }
-  suggestedReply: string[]
+  intent: string
+  buyingSignals: string[]
+  tasks: Array<{
+    title: string
+    dueAt: string | null
+  }>
+  opportunity: {
+    detected: boolean
+    title: string
+    estimatedValue: number | null
+    currency: string | null
+    confidence: number
+  }
+  contactInsights: {
+    summary: string
+    engagement: string
+  }
+  suggestedReply: string
+  model: string | null
+  reasoningTier: string | null
+  toolsUsed: string[]
 }
