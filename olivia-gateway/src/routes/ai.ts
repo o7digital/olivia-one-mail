@@ -11,21 +11,21 @@ export async function registerAIRoutes(app: FastifyInstance) {
   app.post('/api/ai/summarize', async (request) => {
     const body = messageSchema.parse(request.body)
     const provider = createMailProvider(process.env.MAIL_PROVIDER, request.session)
-    const analysis = await analyzeMessage(provider, body.messageId)
+    const analysis = await analyzeMessage(provider, request.session!.email, body.messageId)
     return { summary: analysis.summary, urgency: analysis.urgency }
   })
 
   app.post('/api/ai/suggest-reply', async (request) => {
     const body = messageSchema.parse(request.body)
     const provider = createMailProvider(process.env.MAIL_PROVIDER, request.session)
-    const analysis = await analyzeMessage(provider, body.messageId)
+    const analysis = await analyzeMessage(provider, request.session!.email, body.messageId)
     return { suggestedReply: analysis.suggestedReply }
   })
 
   app.post('/api/ai/extract-tasks', async (request) => {
     const body = messageSchema.parse(request.body)
     const provider = createMailProvider(process.env.MAIL_PROVIDER, request.session)
-    const analysis = await analyzeMessage(provider, body.messageId)
+    const analysis = await analyzeMessage(provider, request.session!.email, body.messageId)
     return {
       tasks: analysis.tasks,
     }
@@ -34,7 +34,7 @@ export async function registerAIRoutes(app: FastifyInstance) {
   app.post('/api/ai/opportunity-score', async (request) => {
     const body = messageSchema.parse(request.body)
     const provider = createMailProvider(process.env.MAIL_PROVIDER, request.session)
-    const analysis = await analyzeMessage(provider, body.messageId)
+    const analysis = await analyzeMessage(provider, request.session!.email, body.messageId)
     return {
       leadScore: analysis.leadScore,
       opportunity: analysis.opportunity,
@@ -44,7 +44,7 @@ export async function registerAIRoutes(app: FastifyInstance) {
   app.post('/api/ai/contact-insights', async (request) => {
     const body = messageSchema.parse(request.body)
     const provider = createMailProvider(process.env.MAIL_PROVIDER, request.session)
-    const analysis = await analyzeMessage(provider, body.messageId)
+    const analysis = await analyzeMessage(provider, request.session!.email, body.messageId)
     return {
       summary: analysis.contactInsights.summary,
       urgency: analysis.urgency,
