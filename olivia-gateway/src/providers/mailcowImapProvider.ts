@@ -2,39 +2,9 @@ import { ImapFlow } from 'imapflow'
 import { simpleParser } from 'mailparser'
 import nodemailer from 'nodemailer'
 import { folders as mockFolders } from '../data/mockData.js'
-import type { Folder, MailMessage } from '../types/domain.js'
+import { getMailcowConnectionConfig, type MailboxCredentials, type MailcowConnectionConfig } from '../services/mailcowAuth.js'
+import type { Folder, MailAttachment, MailMessage } from '../types/domain.js'
 import type { MailProvider } from './mailProvider.js'
-
-interface MailcowConfig {
-  imapHost: string
-  imapPort: number
-  imapSecure: boolean
-  smtpHost: string
-  smtpPort: number
-  smtpSecure: boolean
-  authUser: string
-  authPass: string
-  fromName: string
-}
-
-function requireConfig(name: string, value: string | undefined) {
-  if (!value) throw new Error(`Missing required env var: ${name}`)
-  return value
-}
-
-function buildConfig(): MailcowConfig {
-  return {
-    imapHost: requireConfig('MAIL_IMAP_HOST', process.env.MAIL_IMAP_HOST),
-    imapPort: Number(process.env.MAIL_IMAP_PORT ?? 993),
-    imapSecure: process.env.MAIL_IMAP_SECURE !== 'false',
-    smtpHost: requireConfig('MAIL_SMTP_HOST', process.env.MAIL_SMTP_HOST),
-    smtpPort: Number(process.env.MAIL_SMTP_PORT ?? 587),
-    smtpSecure: process.env.MAIL_SMTP_SECURE === 'true',
-    authUser: requireConfig('MAIL_AUTH_USER', process.env.MAIL_AUTH_USER),
-    authPass: requireConfig('MAIL_AUTH_PASS', process.env.MAIL_AUTH_PASS),
-    fromName: process.env.MAIL_FROM_NAME ?? 'Olivia One',
-  }
-}
 
 function mapFolderLabel(folder: string) {
   const lower = folder.toLowerCase()
@@ -52,8 +22,29 @@ function decodeText(value: unknown) {
   return ''
 }
 
+function formatAttachmentMeta(size: number | undefined, contentType: string | undefined) {
+  const mime = contentType || 'application/octet-stream'
+  const bytes = size ?? 0
+  const kb = bytes / 1024
+  const sizeLabel = kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${Math.max(kb, 1).toFixed(kb >= 100 ? 0 : 1)} KB`
+  return `${mime} · ${sizeLabel}`
+}
+
+function mapAttachment(contentType: string | undefined): Pick<MailAttachment, 'type' | 'tone'> {
+  const mime = (contentType || '').toLowerCase()
+  if (mime.includes('sheet') || mime.includes('excel') || mime.includes('csv')) return { type: 'spreadsheet', tone: 'green' }
+  if (mime.includes('pdf')) return { type: 'report', tone: 'blue' }
+  return { type: 'document', tone: 'purple' }
+}
+
 export class MailcowImapProvider implements MailProvider {
-  private config = buildConfig()
+  private config: MailcowConnectionConfig
+  private credentials: MailboxCredentials
+
+  constructor(credentials: MailboxCredentials, config = getMailcowConnectionConfig()) {
+    this.credentials = credentials
+    this.config = config
+  }
 
   private createImapClient() {
     return new ImapFlow({
@@ -61,8 +52,8 @@ export class MailcowImapProvider implements MailProvider {
       port: this.config.imapPort,
       secure: this.config.imapSecure,
       auth: {
-        user: this.config.authUser,
-        pass: this.config.authPass,
+        user: this.credentials.email,
+        pass: this.credentials.password,
       },
     })
   }
@@ -73,8 +64,8 @@ export class MailcowImapProvider implements MailProvider {
       port: this.config.smtpPort,
       secure: this.config.smtpSecure,
       auth: {
-        user: this.config.authUser,
-        pass: this.config.authPass,
+        user: this.credentials.email,
+        pass: this.credentials.password,
       },
     })
   }
@@ -85,7 +76,6 @@ export class MailcowImapProvider implements MailProvider {
     try {
       const mailboxes = await client.list()
       const counts = new Map<string, number>()
-
       for (const mailbox of mailboxes) {
         try {
           const status = await client.status(mailbox.path, { messages: true })
@@ -120,17 +110,30 @@ export class MailcowImapProvider implements MailProvider {
         uid: true,
         envelope: true,
         flags: true,
-        bodyStructure: true,
         internalDate: true,
-        source: { maxLength: 20480 },
+        source: { maxLength: 1024 * 1024 * 3 },
       })) {
         const parsed = message.source ? await simpleParser(message.source) : null
         const from = message.envelope?.from?.[0]
-        const name = from?.name || from?.address || this.config.authUser
-        const email = from?.address || this.config.authUser
+        const name = from?.name || from?.address || this.credentials.email
+        const email = from?.address || this.credentials.email
         const date = message.internalDate ?? new Date()
         const bodyText = decodeText(parsed?.text).trim()
-        const preview = bodyText.split('\n').find(Boolean)?.slice(0, 120) ?? 'No preview available.'
+        const preview = bodyText.split('\n').find(Boolean)?.slice(0, 160) ?? 'No preview available.'
+        const attachments = (parsed?.attachments ?? []).map((attachment: {
+          contentType?: string
+          filename?: string
+          size?: number
+        }) => {
+          const mapped = mapAttachment(attachment.contentType)
+          return {
+            type: mapped.type,
+            tone: mapped.tone,
+            title: attachment.filename || 'Attachment',
+            sub: attachment.contentType || 'application/octet-stream',
+            meta: formatAttachmentMeta(attachment.size, attachment.contentType),
+          }
+        })
 
         rows.push({
           id: String(message.uid),
@@ -146,8 +149,8 @@ export class MailcowImapProvider implements MailProvider {
           company: email.split('@')[1] ?? '',
           subject: message.envelope?.subject || '(No subject)',
           preview,
-          body: bodyText ? bodyText.split('\n').filter(Boolean).slice(0, 8) : ['No body preview available.'],
-          attachments: [],
+          body: bodyText ? bodyText.split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 24) : ['No body preview available.'],
+          attachments,
         })
       }
 
@@ -158,14 +161,19 @@ export class MailcowImapProvider implements MailProvider {
   }
 
   async getMessage(id: string): Promise<MailMessage | null> {
-    const messages = await this.listMessages('Inbox')
-    return messages.find((message) => message.id === id) ?? null
+    const foldersToSearch = ['Inbox', 'Priority', 'Sent', 'Drafts', 'Archive', 'Trash', 'Spam']
+    for (const folder of foldersToSearch) {
+      const messages = await this.listMessages(folder)
+      const found = messages.find((message) => message.id === id)
+      if (found) return found
+    }
+    return null
   }
 
   async sendMessage(input: { to: string; subject: string; body: string }) {
     const transport = this.createTransport()
     const info = await transport.sendMail({
-      from: `"${this.config.fromName}" <${this.config.authUser}>`,
+      from: `"${this.config.fromName}" <${this.credentials.email}>`,
       to: input.to,
       subject: input.subject,
       text: input.body,
@@ -178,7 +186,7 @@ export class MailcowImapProvider implements MailProvider {
     if (!original) throw new Error('Message not found')
     const transport = this.createTransport()
     const info = await transport.sendMail({
-      from: `"${this.config.fromName}" <${this.config.authUser}>`,
+      from: `"${this.config.fromName}" <${this.credentials.email}>`,
       to: original.email,
       subject: original.subject.startsWith('Re:') ? original.subject : `Re: ${original.subject}`,
       text: input.body,
@@ -191,7 +199,7 @@ export class MailcowImapProvider implements MailProvider {
     if (!original) throw new Error('Message not found')
     const transport = this.createTransport()
     const info = await transport.sendMail({
-      from: `"${this.config.fromName}" <${this.config.authUser}>`,
+      from: `"${this.config.fromName}" <${this.credentials.email}>`,
       to: input.to,
       subject: original.subject.startsWith('Fwd:') ? original.subject : `Fwd: ${original.subject}`,
       text: `${input.body}\n\n---- Forwarded message ----\n${original.body.join('\n')}`,
@@ -218,11 +226,8 @@ export class MailcowImapProvider implements MailProvider {
       await client.mailboxOpen('INBOX')
       const message = await client.fetchOne(id, { flags: true }, { uid: true })
       const starred = !message?.flags?.has('\\Flagged')
-      if (starred) {
-        await client.messageFlagsAdd(id, ['\\Flagged'], { uid: true })
-      } else {
-        await client.messageFlagsRemove(id, ['\\Flagged'], { uid: true })
-      }
+      if (starred) await client.messageFlagsAdd(id, ['\\Flagged'], { uid: true })
+      else await client.messageFlagsRemove(id, ['\\Flagged'], { uid: true })
       return { id, starred }
     } finally {
       await client.logout().catch(() => {})

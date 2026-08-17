@@ -5,14 +5,14 @@ import Fastify from 'fastify'
 import { getEnv } from './config/env.js'
 import { registerAuthRoutes } from './routes/auth.js'
 import { registerProtectedRoutes } from './routes/protected.js'
-import { createMailProvider } from './services/providerRegistry.js'
+import { authenticateMailbox } from './services/mailcowAuth.js'
 import { requireSession } from './services/session.js'
 
 const env = getEnv()
 const app = Fastify({ logger: true })
-const provider = createMailProvider()
 
 app.decorate('env', env)
+app.decorate('authenticateMailbox', authenticateMailbox)
 app.decorate('requireSession', requireSession())
 
 await app.register(cors, {
@@ -42,7 +42,7 @@ app.addHook('onRequest', async (request, reply) => {
 })
 
 await registerAuthRoutes(app)
-await registerProtectedRoutes(app, provider, app.requireSession)
+await registerProtectedRoutes(app, app.requireSession)
 
 app.get('/health', async () => ({
   status: 'ok',
@@ -53,6 +53,7 @@ await app.listen({ port: env.port, host: env.host })
 
 declare module 'fastify' {
   interface FastifyInstance {
+    authenticateMailbox: typeof authenticateMailbox
     env: ReturnType<typeof getEnv>
     requireSession: ReturnType<typeof requireSession>
   }

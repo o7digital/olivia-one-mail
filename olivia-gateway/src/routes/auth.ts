@@ -1,7 +1,8 @@
 import type { FastifyInstance } from 'fastify'
 import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
-import { clearSessionCookies, readSessionEmail, setSessionCookies } from '../services/session.js'
+import { authenticateMailbox } from '../services/mailcowAuth.js'
+import { buildSessionUser, clearSessionCookies, createServerSession, deleteServerSession, getSignedSessionId, setSessionCookies } from '../services/session.js'
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -11,44 +12,43 @@ const loginSchema = z.object({
 export async function registerAuthRoutes(app: FastifyInstance) {
   app.post('/api/auth/login', async (request, reply) => {
     const body = loginSchema.parse(request.body)
-    if (body.email !== app.env.mailAuthUser || body.password !== app.env.mailAuthPass) {
+    try {
+      await app.authenticateMailbox({
+        email: body.email,
+        password: body.password,
+      })
+    } catch {
       return reply.code(401).send({ message: 'Invalid credentials' })
     }
 
+    const session = createServerSession({
+      email: body.email,
+      password: body.password,
+    })
     const csrfToken = randomUUID()
     setSessionCookies({
       reply,
-      email: body.email,
+      sessionId: session.id,
       csrfToken,
       appOrigin: app.env.appOrigin,
     })
 
     return {
-      user: {
-        id: 'user-1',
-        name: 'Olivier Steineur',
-        email: body.email,
-      },
+      user: buildSessionUser(body.email),
       csrfToken,
     }
   })
 
-  app.post('/api/auth/logout', async (_request, reply) => {
+  app.post('/api/auth/logout', async (request, reply) => {
+    deleteServerSession(getSignedSessionId(request) ?? undefined)
     clearSessionCookies(reply, app.env.appOrigin.startsWith('https://'))
     return { ok: true }
   })
 
   app.get('/api/me', { preHandler: app.requireSession }, async (request) => {
-    const signedSession = request.unsignCookie(request.cookies['__Host-olivia_session'] ?? '')
-    const email = signedSession.valid ? readSessionEmail(signedSession.value) : null
-
     return {
       authenticated: true,
-      user: {
-        id: 'user-1',
-        name: 'Olivier Steineur',
-        email,
-      },
+      user: buildSessionUser(request.session!.email),
     }
   })
 }

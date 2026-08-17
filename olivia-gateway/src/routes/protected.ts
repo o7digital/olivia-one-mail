@@ -3,12 +3,11 @@ import { registerAIRoutes } from './ai.js'
 import { registerMailRoutes } from './mail.js'
 import { registerPeopleRoutes } from './people.js'
 import { registerPulseRoutes } from './pulse.js'
-import type { MailProvider } from '../providers/mailProvider.js'
 
-export async function registerProtectedRoutes(app: FastifyInstance, provider: MailProvider, requireAuth: preHandlerHookHandler) {
+export async function registerProtectedRoutes(app: FastifyInstance, requireAuth: preHandlerHookHandler) {
   await app.register(async (protectedApp) => {
     protectedApp.addHook('preHandler', requireAuth)
-    await registerMailRoutes(protectedApp, provider)
+    await registerMailRoutes(protectedApp)
     await registerPeopleRoutes(protectedApp)
     await registerAIRoutes(protectedApp)
     await registerPulseRoutes(protectedApp)

@@ -117,7 +117,7 @@ function App() {
   }
 
   if (!session.ready) {
-    return <div className="authShell"><div className="authCard"><b>Restoring secure session…</b><p>Olivia One is checking the pilot mailbox session.</p></div></div>
+    return <div className="authShell"><div className="authCard"><b>Restoring secure session…</b><p>Olivia One is checking your mailbox session.</p></div></div>
   }
 
   if (!isAuthenticated) {
@@ -125,10 +125,10 @@ function App() {
       <div className="authShell">
         <div className="glow g1" /><div className="glow g2" />
         <form className="authCard" onSubmit={handleLogin}>
-          <div className="brand authBrand"><div className="brandmark">O1</div><span>Olivia One Pilot</span></div>
-          <h1>Single-mailbox access</h1>
-          <p>Sign in with the pilot mailbox configured on the gateway.</p>
-          <input autoFocus name="email" type="email" placeholder="Pilot mailbox email" aria-label="Email" />
+          <div className="brand authBrand"><div className="brandmark">O1</div><span>Olivia One</span></div>
+          <h1>Sign in to your mailbox</h1>
+          <p>Use your O7 Mail email address and password.</p>
+          <input autoFocus name="email" type="email" placeholder="you@o7digitalgroup.com" aria-label="Email" />
           <input name="password" type="password" placeholder="Password" aria-label="Password" />
           {loginError ? <p className="formError" role="alert">{loginError}</p> : null}
           <button className="sendAi" type="submit" disabled={loginLoading}>{loginLoading ? 'Signing in…' : 'Sign in securely'}</button>
