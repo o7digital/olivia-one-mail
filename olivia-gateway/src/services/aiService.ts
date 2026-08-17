@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { aiByMessage } from '../data/mockData.js'
 import type { MailProvider } from '../providers/mailProvider.js'
 import type { MailMessage } from '../types/domain.js'
 
@@ -13,6 +12,7 @@ const analysisSchema = z.object({
     label: z.string(),
     confidence: z.number().min(0).max(1),
   }),
+  intent: z.string(),
   buyingSignals: z.array(z.string()).default([]),
   tasks: z.array(z.object({
     title: z.string(),
@@ -30,9 +30,13 @@ const analysisSchema = z.object({
     engagement: z.string(),
   }),
   suggestedReply: z.string(),
+  model: z.string().nullable().default(null),
+  reasoningTier: z.string().nullable().default(null),
+  toolsUsed: z.array(z.string()).default([]),
 })
 
 type Analysis = z.infer<typeof analysisSchema>
+type RewriteAction = 'shorter' | 'longer' | 'formal' | 'friendly' | 'translate-fr' | 'translate-es' | 'translate-en' | 'improve'
 
 const cache = new Map<string, { expiresAt: number; value: Analysis }>()
 
@@ -44,180 +48,58 @@ function sanitizeText(value: string) {
   return value.replace(/[<>]/g, '').trim()
 }
 
-function mockAnalysis(message: MailMessage): Analysis {
-  const fallback = aiByMessage[message.id] ?? aiByMessage.default
-  return analysisSchema.parse({
-    summary: fallback.summary,
-    urgency: fallback.urgency,
-    leadScore: fallback.leadScore,
-    sentiment: { label: 'Neutral', confidence: 0.51 },
-    buyingSignals: fallback.summary.slice(0, 2),
-    tasks: fallback.tasks.map((title, index) => ({
-      title,
-      dueAt: new Date(Date.UTC(2026, 7, 17 + index, 16, 0, 0)).toISOString(),
-    })),
-    opportunity: {
-      detected: true,
-      title: fallback.opportunity.title,
-      estimatedValue: Number(fallback.opportunity.value.replace(/[$,]/g, '')) || null,
-      currency: 'USD',
-      confidence: fallback.opportunity.confidence === 'High potential' ? 0.91 : 0.68,
-    },
-    contactInsights: {
-      summary: fallback.summary.join(' '),
-      engagement: 'Recent inbound conversation detected.',
-    },
-    suggestedReply: fallback.suggestedReply.join('\n\n'),
-  })
+function resolveClientCode(mailboxEmail: string, env: { aiMailboxClientMap: Record<string, string>; aiDomainClientMap: Record<string, string>; aiDefaultClientCode: string }) {
+  const mailbox = mailboxEmail.trim().toLowerCase()
+  if (env.aiMailboxClientMap[mailbox]) return env.aiMailboxClientMap[mailbox]
+  const domain = mailbox.split('@')[1] ?? ''
+  if (domain && env.aiDomainClientMap[domain]) return env.aiDomainClientMap[domain]
+  return env.aiDefaultClientCode
 }
 
-async function generateOpenAICompatibleAnalysis(message: MailMessage): Promise<Analysis> {
-  const apiKey = process.env.AI_API_KEY
-  if (!apiKey) return mockAnalysis(message)
-
-  const apiUrl = process.env.AI_API_URL || 'https://api.openai.com/v1/chat/completions'
-  const model = process.env.AI_MODEL || 'gpt-4o-mini'
-  const prompt = [
-    'Analyze the email and return only JSON matching the requested schema.',
-    'Do not include markdown, HTML, or code fences.',
-    `Sender: ${sanitizeText(message.sender)} <${sanitizeText(message.email)}>`,
-    `Subject: ${sanitizeText(message.subject)}`,
-    `Body:\n${message.body.map(sanitizeText).join('\n')}`,
-  ].join('\n\n')
-
-  const response = await fetch(apiUrl, {
+async function callPythonOlivia<T>(appEnv: {
+  aiApiUrl: string
+  oliviaInternalToken: string
+}, path: string, body: unknown): Promise<T> {
+  if (!appEnv.aiApiUrl) throw new Error('Olivia AI temporarily unavailable')
+  const response = await fetch(appEnv.aiApiUrl.replace(/\/$/, '') + path, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      authorization: `Bearer ${apiKey}`,
+      'x-olivia-internal-token': appEnv.oliviaInternalToken,
     },
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      response_format: { type: 'json_object' },
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an email analyst. Return strict JSON only.',
-        },
-        {
-          role: 'user',
-          content: `${prompt}
-
-Schema:
-{
-  "summary": ["string"],
-  "urgency": "Low|Medium|High|Critical",
-  "leadScore": 0,
-  "sentiment": { "label": "string", "confidence": 0 },
-  "buyingSignals": ["string"],
-  "tasks": [{ "title": "string", "dueAt": null }],
-  "opportunity": { "detected": false, "title": "string", "estimatedValue": null, "currency": null, "confidence": 0 },
-  "contactInsights": { "summary": "string", "engagement": "string" },
-  "suggestedReply": "string"
-}`,
-        },
-      ],
-    }),
+    body: JSON.stringify(body),
   })
-
-  if (!response.ok) throw new Error(`AI provider error: ${response.status}`)
-  const payload = await response.json() as { choices?: Array<{ message?: { content?: string } }> }
-  const content = payload.choices?.[0]?.message?.content
-  if (!content) throw new Error('AI provider returned empty content')
-  return analysisSchema.parse(JSON.parse(content))
+  if (!response.ok) throw new Error('Olivia AI temporarily unavailable')
+  return response.json() as Promise<T>
 }
 
-function buildMailPrompt(message: MailMessage) {
-  return [
-    'Analyze this email for a sales and operations inbox.',
-    'Return concise operational insights only.',
-    `Sender: ${sanitizeText(message.sender)} <${sanitizeText(message.email)}>`,
-    `Company: ${sanitizeText(message.company || 'Unknown')}`,
-    `Subject: ${sanitizeText(message.subject)}`,
-    'Email body:',
-    ...message.body.map((line) => sanitizeText(line)),
-    '',
-    'Produce:',
-    '- a short summary',
-    '- urgency',
-    '- buyer intent and signals',
-    '- concrete follow-up tasks',
-    '- opportunity potential if any',
-    '- an editable reply draft',
-  ].join('\n')
-}
-
-async function generatePythonOliviaAnalysis(message: MailMessage): Promise<Analysis> {
-  const apiUrl = process.env.AI_API_URL
-  if (!apiUrl) return mockAnalysis(message)
-
-  const response = await fetch(apiUrl.replace(/\/$/, '') + '/chat', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      clientCode: process.env.AI_CLIENT_CODE ?? 'default',
-      language: 'en',
-      message: buildMailPrompt(message),
-      metadata: {
-        clientName: 'Olivia One',
-        clientIndustry: 'email productivity',
-        clientKnowledge: `Mailbox message analysis for ${sanitizeText(message.email)}.`,
-        pageTitle: sanitizeText(message.subject),
-        pageContent: message.body.map(sanitizeText).join('\n'),
-      },
-      history: [],
-      attachments: [],
-    }),
-  })
-
-  if (!response.ok) throw new Error(`Python Olivia error: ${response.status}`)
-  const payload = await response.json() as {
-    reply?: string
-    intent?: string
-    nextAction?: string
-    handoffRecommended?: boolean
+async function buildAnalyzePayload(provider: MailProvider, mailboxEmail: string, message: MailMessage, appEnv: {
+  aiMailboxClientMap: Record<string, string>
+  aiDomainClientMap: Record<string, string>
+  aiDefaultClientCode: string
+}) {
+  const clientCode = resolveClientCode(mailboxEmail, appEnv)
+  return {
+    clientCode,
+    mailbox: mailboxEmail,
+    sender: message.sender,
+    senderEmail: message.email,
+    recipients: [mailboxEmail],
+    subject: message.subject,
+    body: message.body.map(sanitizeText).join('\n'),
+    previousMessages: [],
+    language: 'auto',
   }
-
-  const reply = sanitizeText(payload.reply ?? '')
-  const intent = sanitizeText(payload.intent ?? 'faq')
-  const nextAction = sanitizeText(payload.nextAction ?? 'Review and reply')
-  const summary = [
-    sanitizeText(message.preview || message.subject),
-    nextAction,
-    intent === 'lead' ? 'Lead intent detected.' : `Intent: ${intent}.`,
-  ].filter(Boolean)
-
-  return analysisSchema.parse({
-    summary,
-    urgency: payload.handoffRecommended ? 'High' : 'Medium',
-    leadScore: intent === 'lead' || intent === 'booking' ? 78 : 55,
-    sentiment: { label: 'Neutral', confidence: 0.6 },
-    buyingSignals: intent === 'lead' || intent === 'booking' ? ['Commercial intent detected'] : [],
-    tasks: [
-      {
-        title: nextAction || 'Review message',
-        dueAt: null,
-      },
-    ],
-    opportunity: {
-      detected: intent === 'lead' || intent === 'booking',
-      title: intent === 'lead' || intent === 'booking' ? `Opportunity from ${sanitizeText(message.sender)}` : '',
-      estimatedValue: null,
-      currency: null,
-      confidence: intent === 'lead' || intent === 'booking' ? 0.72 : 0.35,
-    },
-    contactInsights: {
-      summary: `Contact ${sanitizeText(message.sender)} from ${sanitizeText(message.company || message.email)} about ${sanitizeText(message.subject)}.`,
-      engagement: payload.handoffRecommended ? 'Human follow-up recommended.' : 'Active inbound conversation.',
-    },
-    suggestedReply: reply || `Hi ${sanitizeText(message.sender).split(' ')[0] || 'there'},\n\nThank you for your message.\n\nBest regards,\n\nOlivier`,
-  })
 }
 
-export async function analyzeMessage(provider: MailProvider, mailboxEmail: string, messageId: string): Promise<Analysis> {
+export async function analyzeMessage(provider: MailProvider, mailboxEmail: string, messageId: string, appEnv: {
+  aiProvider: string
+  aiApiUrl: string
+  oliviaInternalToken: string
+  aiMailboxClientMap: Record<string, string>
+  aiDomainClientMap: Record<string, string>
+  aiDefaultClientCode: string
+}): Promise<Analysis> {
   const message = await provider.getMessage(messageId)
   if (!message) throw new Error('Message not found')
 
@@ -225,12 +107,59 @@ export async function analyzeMessage(provider: MailProvider, mailboxEmail: strin
   const cached = cache.get(cacheKey)
   if (cached && cached.expiresAt > Date.now()) return cached.value
 
-  const aiProvider = process.env.AI_PROVIDER ?? 'mock'
-  const value = aiProvider === 'python-olivia'
-    ? await generatePythonOliviaAnalysis(message)
-    : aiProvider === 'openai'
-      ? await generateOpenAICompatibleAnalysis(message)
-      : mockAnalysis(message)
+  if (appEnv.aiProvider !== 'python-olivia') throw new Error('Olivia AI temporarily unavailable')
+  const payload = await buildAnalyzePayload(provider, mailboxEmail, message, appEnv)
+  const value = analysisSchema.parse(await callPythonOlivia(appEnv, '/email/analyze', payload))
   cache.set(cacheKey, { value, expiresAt: Date.now() + TTL_MS })
   return value
+}
+
+export async function rewriteDraft(appEnv: {
+  aiApiUrl: string
+  oliviaInternalToken: string
+  aiMailboxClientMap: Record<string, string>
+  aiDomainClientMap: Record<string, string>
+  aiDefaultClientCode: string
+}, input: {
+  mailboxEmail: string
+  action: RewriteAction
+  draft: string
+  recipient?: string
+  subject?: string
+}) {
+  const clientCode = resolveClientCode(input.mailboxEmail, appEnv)
+  return callPythonOlivia<{ draft: string }>(appEnv, '/email/rewrite', {
+    clientCode,
+    mailbox: input.mailboxEmail,
+    action: input.action,
+    draft: input.draft,
+    recipient: input.recipient,
+    subject: input.subject,
+    language: 'auto',
+  })
+}
+
+export async function composeDraft(appEnv: {
+  aiApiUrl: string
+  oliviaInternalToken: string
+  aiMailboxClientMap: Record<string, string>
+  aiDomainClientMap: Record<string, string>
+  aiDefaultClientCode: string
+}, input: {
+  mailboxEmail: string
+  prompt: string
+  recipient?: string
+  subject?: string
+  currentDraft?: string
+}) {
+  const clientCode = resolveClientCode(input.mailboxEmail, appEnv)
+  return callPythonOlivia<{ draft: string }>(appEnv, '/email/compose', {
+    clientCode,
+    mailbox: input.mailboxEmail,
+    prompt: input.prompt,
+    recipient: input.recipient,
+    subject: input.subject,
+    currentDraft: input.currentDraft,
+    language: 'auto',
+  })
 }

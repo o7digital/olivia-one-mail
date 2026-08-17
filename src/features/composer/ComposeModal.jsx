@@ -1,6 +1,7 @@
 import { Paperclip, Send, Sparkles, X } from 'lucide-react'
 import { useState } from 'react'
 import { IconButton } from '../../components/common/IconButton'
+import { aiService } from '../../services/aiService'
 import { mailService } from '../../services/mailService'
 
 const emptyDraft = { to: '', subject: '', body: '' }
@@ -8,6 +9,7 @@ const emptyDraft = { to: '', subject: '', body: '' }
 export function ComposeModal({ onClose, onSent }) {
   const [draft, setDraft] = useState(emptyDraft)
   const [sending, setSending] = useState(false)
+  const [generating, setGenerating] = useState(false)
   const [error, setError] = useState('')
 
   function updateField(event) {
@@ -33,6 +35,24 @@ export function ComposeModal({ onClose, onSent }) {
     onClose()
   }
 
+  async function writeWithOlivia() {
+    setGenerating(true)
+    setError('')
+    try {
+      const response = await aiService.composeDraft({
+        prompt: draft.body || `Write an email to ${draft.to || 'the recipient'} about ${draft.subject || 'this topic'}.`,
+        recipient: draft.to,
+        subject: draft.subject,
+        currentDraft: draft.body,
+      })
+      setDraft((current) => ({ ...current, body: response.draft }))
+    } catch (composeError) {
+      setError(composeError.message)
+    } finally {
+      setGenerating(false)
+    }
+  }
+
   return (
     <div className="overlay" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <form className="modal" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="compose-title">
@@ -44,7 +64,7 @@ export function ComposeModal({ onClose, onSent }) {
         <div className="composeActions">
           <button className="sendAi" type="submit" disabled={sending}><Send size={15} />{sending ? 'Sending…' : 'Send'}</button>
           <button className="icon" type="button" aria-label="Attach file"><Paperclip size={16} /></button>
-          <button className="aiCompose" type="button"><Sparkles size={14} />Write with Olivia</button>
+          <button className="aiCompose" type="button" onClick={writeWithOlivia} disabled={generating}><Sparkles size={14} />{generating ? 'Writing…' : 'Write with Olivia'}</button>
         </div>
       </form>
     </div>
