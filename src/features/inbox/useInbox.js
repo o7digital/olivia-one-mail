@@ -86,7 +86,19 @@ export function useInbox(folder, query, enabled = true) {
     mailService.markRead(id)
   }, [])
 
+  const archiveMessage = useCallback(async (id) => {
+    await mailService.moveMessage(id, 'Archive')
+    await load()
+  }, [load])
+
+  const deleteMessage = useCallback(async (id) => {
+    await mailService.deleteMessage(id)
+    await load()
+  }, [load])
+
   return {
+    archiveMessage,
+    deleteMessage,
     error,
     filteredMessages,
     messages,

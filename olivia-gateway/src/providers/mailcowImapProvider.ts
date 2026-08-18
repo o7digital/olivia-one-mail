@@ -3,6 +3,7 @@ import { simpleParser } from 'mailparser'
 import nodemailer from 'nodemailer'
 import { folders as mockFolders } from '../data/mockData.js'
 import { getMailcowConnectionConfig, type MailboxCredentials, type MailcowConnectionConfig } from '../services/mailcowAuth.js'
+import { computeReplyAllRecipients } from '../services/mailRecipients.js'
 import type { Folder, MailAttachment, MailMessage } from '../types/domain.js'
 import type { MailProvider } from './mailProvider.js'
 
@@ -35,6 +36,10 @@ function mapAttachment(contentType: string | undefined): Pick<MailAttachment, 't
   if (mime.includes('sheet') || mime.includes('excel') || mime.includes('csv')) return { type: 'spreadsheet', tone: 'green' }
   if (mime.includes('pdf')) return { type: 'report', tone: 'blue' }
   return { type: 'document', tone: 'purple' }
+}
+
+function mapAddressList(list: Array<{ address?: string }> | undefined): string[] {
+  return (list ?? []).map((entry) => entry.address).filter((address): address is string => Boolean(address))
 }
 
 export class MailcowImapProvider implements MailProvider {
@@ -151,6 +156,8 @@ export class MailcowImapProvider implements MailProvider {
           preview,
           body: bodyText ? bodyText.split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 24) : ['No body preview available.'],
           attachments,
+          to: mapAddressList(message.envelope?.to),
+          cc: mapAddressList(message.envelope?.cc),
         })
       }
 
@@ -188,6 +195,26 @@ export class MailcowImapProvider implements MailProvider {
     const info = await transport.sendMail({
       from: `"${this.config.fromName}" <${this.credentials.email}>`,
       to: original.email,
+      subject: original.subject.startsWith('Re:') ? original.subject : `Re: ${original.subject}`,
+      text: input.body,
+    })
+    return { id: info.messageId, status: 'sent' }
+  }
+
+  async replyAll(id: string, input: { body: string }) {
+    const original = await this.getMessage(id)
+    if (!original) throw new Error('Message not found')
+    const recipients = computeReplyAllRecipients({
+      mailboxEmail: this.credentials.email,
+      senderEmail: original.email,
+      to: original.to,
+      cc: original.cc,
+    })
+    const transport = this.createTransport()
+    const info = await transport.sendMail({
+      from: `"${this.config.fromName}" <${this.credentials.email}>`,
+      to: recipients.to,
+      cc: recipients.cc.length ? recipients.cc : undefined,
       subject: original.subject.startsWith('Re:') ? original.subject : `Re: ${original.subject}`,
       text: input.body,
     })

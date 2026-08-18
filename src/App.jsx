@@ -21,7 +21,7 @@ function App() {
   const toastTimer = useRef(null)
   const [activeFolder, setActiveFolder] = useState('Inbox')
   const [aiOpen, setAiOpen] = useState(true)
-  const [composeOpen, setComposeOpen] = useState(false)
+  const [composeState, setComposeState] = useState(null)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [opportunityOpen, setOpportunityOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -54,7 +54,7 @@ function App() {
         window.setTimeout(() => searchRef.current?.focus(), 0)
       }
       if (event.key === 'Escape') {
-        setComposeOpen(false)
+        setComposeState(null)
         setOpportunityOpen(false)
         setMobileNavOpen(false)
       }
@@ -62,6 +62,18 @@ function App() {
     window.addEventListener('keydown', handleShortcut)
     return () => window.removeEventListener('keydown', handleShortcut)
   }, [navigate])
+
+  function openCompose(mode, message) {
+    if (mode === 'reply' || mode === 'reply-all') {
+      const subject = message.subject.startsWith('Re:') ? message.subject : `Re: ${message.subject}`
+      setComposeState({ mode, messageId: message.id, initialTo: message.email, initialSubject: subject })
+    } else if (mode === 'forward') {
+      const subject = message.subject.startsWith('Fwd:') ? message.subject : `Fwd: ${message.subject}`
+      setComposeState({ mode, messageId: message.id, initialTo: '', initialSubject: subject })
+    } else {
+      setComposeState({ mode: 'new', initialTo: '', initialSubject: '' })
+    }
+  }
 
   function changeFolder(folder) {
     setActiveFolder(folder)
@@ -78,25 +90,19 @@ function App() {
   async function confirmOpportunity() {
     if (!inbox.selected || !aiWorkspace.analysis) return
 
-    const contact = await pulseService.syncContact({
-      name: inbox.selected.sender,
-      email: inbox.selected.email,
-      company: inbox.selected.company,
-    })
     const opportunity = await pulseService.createOpportunity({
       title: aiWorkspace.analysis.opportunity.title,
       messageId: inbox.selected.id,
+      senderName: inbox.selected.sender,
+      senderEmail: inbox.selected.email,
+      company: inbox.selected.company,
       estimatedValue: aiWorkspace.analysis.opportunity.estimatedValue,
       currency: aiWorkspace.analysis.opportunity.currency,
-      confirmed: true,
+      confidence: aiWorkspace.analysis.opportunity.confidence,
+      tasks: aiWorkspace.analysis.tasks,
     })
-    await pulseService.linkConversation({
-      threadId: inbox.selected.id,
-      opportunityId: opportunity.opportunityId,
-    })
-    await pulseService.createTasks(aiWorkspace.analysis.tasks)
     setOpportunityOpen(false)
-    notify(`Opportunity created in O7 Pulse for ${contact.contactId}`)
+    notify(`Opportunity created in O7 Pulse (deal ${opportunity.dealId})`)
   }
 
   async function handleLogin(event) {
@@ -155,9 +161,21 @@ function App() {
         <Route path="/" element={<Navigate to="/mail" replace />} />
         <Route path="/mail" element={(
           <main className={`grid ${aiOpen ? 'aiOn' : 'aiOff'}`}>
-            <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => setComposeOpen(true)} onFolderChange={changeFolder} />
+            <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} />
             <MailList activeFolder={activeFolder} error={inbox.error} messages={inbox.filteredMessages} onRetry={inbox.reload} onSelect={inbox.selectMessage} query={query} selectedId={inbox.selectedId} status={inbox.status} />
-            <MailReader aiOpen={aiOpen} aiStatus={aiWorkspace.status} analysis={aiWorkspace.analysis} message={inbox.selected} onAiToggle={() => setAiOpen((current) => !current)} onNotify={notify} />
+            <MailReader
+              aiOpen={aiOpen}
+              aiStatus={aiWorkspace.status}
+              analysis={aiWorkspace.analysis}
+              message={inbox.selected}
+              onAiToggle={() => setAiOpen((current) => !current)}
+              onArchive={() => inbox.archiveMessage(inbox.selected.id)}
+              onDelete={() => inbox.deleteMessage(inbox.selected.id)}
+              onForward={() => openCompose('forward', inbox.selected)}
+              onNotify={notify}
+              onReply={() => openCompose('reply', inbox.selected)}
+              onReplyAll={() => openCompose('reply-all', inbox.selected)}
+            />
             {aiOpen ? <AIWorkspace analysis={aiWorkspace.analysis} message={inbox.selected} onCreateOpportunity={() => setOpportunityOpen(true)} onNotify={notify} status={aiWorkspace.status} /> : null}
             <AppRail />
           </main>
@@ -165,7 +183,7 @@ function App() {
         {['calendar', 'contacts', 'tasks', 'pulse', 'settings'].map((page) => (
           <Route key={page} path={`/${page}`} element={(
             <main className="grid pageGrid">
-              <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => setComposeOpen(true)} onFolderChange={changeFolder} />
+              <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} />
               <FeaturePage page={page} />
               <AppRail />
             </main>
@@ -174,7 +192,19 @@ function App() {
         <Route path="*" element={<Navigate to="/mail" replace />} />
       </Routes>
 
-      {composeOpen ? <ComposeModal onClose={() => setComposeOpen(false)} onSent={notify} /> : null}
+      {composeState ? (
+        <ComposeModal
+          initialSubject={composeState.initialSubject}
+          initialTo={composeState.initialTo}
+          messageId={composeState.messageId}
+          mode={composeState.mode}
+          onClose={() => setComposeState(null)}
+          onSent={(message) => {
+            notify(message)
+            if (composeState.mode !== 'new') inbox.reload()
+          }}
+        />
+      ) : null}
       {opportunityOpen && inbox.selected && aiWorkspace.analysis ? <OpportunityDialog analysis={aiWorkspace.analysis} message={inbox.selected} onCancel={() => setOpportunityOpen(false)} onConfirm={confirmOpportunity} /> : null}
       {toast ? <div className="toast" role="status"><span />{toast}</div> : null}
     </div>

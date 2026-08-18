@@ -11,5 +11,6 @@ export const mailService = {
   deleteMessage: (id) => apiClient.delete(`/api/mail/messages/${id}`),
   sendMessage: (input) => apiClient.post('/api/mail/send', input),
   replyToMessage: (id, body) => apiClient.post(`/api/mail/reply/${id}`, { body }),
+  replyAllMessage: (id, body) => apiClient.post(`/api/mail/reply-all/${id}`, { body }),
   forwardMessage: (id, input) => apiClient.post(`/api/mail/forward/${id}`, input),
 }

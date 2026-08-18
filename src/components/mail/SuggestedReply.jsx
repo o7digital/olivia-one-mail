@@ -19,9 +19,13 @@ export function SuggestedReply({ message, onSent, suggestedReply }) {
 
   async function sendReply() {
     setSending(true)
-    await mailService.replyToMessage(message.id, draft)
-    setSending(false)
-    onSent('Suggested reply sent')
+    try {
+      if (activeMode === 'Reply All') await mailService.replyAllMessage(message.id, draft)
+      else await mailService.replyToMessage(message.id, draft)
+      onSent(activeMode === 'Reply All' ? 'Reply sent to all recipients' : 'Suggested reply sent')
+    } finally {
+      setSending(false)
+    }
   }
 
   async function rewrite(action) {
@@ -64,7 +68,9 @@ export function SuggestedReply({ message, onSent, suggestedReply }) {
         ))}
       </div>
       <textarea className="draft" aria-label="Reply draft" value={draft} onChange={(event) => setDraft(event.target.value)} />
-      <button className="sendAi" type="button" onClick={sendReply} disabled={sending || rewriting}><Send size={15} />{sending ? 'Sending…' : rewriting ? 'Rewriting…' : 'Send suggested reply'}</button>
+      <button className="sendAi" type="button" onClick={sendReply} disabled={sending || rewriting || activeMode === 'Forward'}>
+        <Send size={15} />{activeMode === 'Forward' ? 'Use the Forward button above' : sending ? 'Sending…' : rewriting ? 'Rewriting…' : 'Send suggested reply'}
+      </button>
     </div>
   )
 }

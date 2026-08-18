@@ -61,6 +61,12 @@ export async function registerMailRoutes(app: FastifyInstance) {
     return createMailProvider(process.env.MAIL_PROVIDER, request.session).reply(params.id, body)
   })
 
+  app.post('/api/mail/reply-all/:id', async (request) => {
+    const params = z.object({ id: z.string() }).parse(request.params)
+    const body = replySchema.parse(request.body)
+    return createMailProvider(process.env.MAIL_PROVIDER, request.session).replyAll(params.id, body)
+  })
+
   app.post('/api/mail/forward/:id', async (request) => {
     const params = z.object({ id: z.string() }).parse(request.params)
     const body = forwardSchema.parse(request.body)

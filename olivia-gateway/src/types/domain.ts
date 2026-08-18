@@ -22,6 +22,8 @@ export interface MailMessage {
   preview: string
   body: string[]
   attachments: MailAttachment[]
+  to?: string[]
+  cc?: string[]
 }
 
 export interface Folder {
