@@ -53,7 +53,7 @@ export function MailReader({ aiOpen, analysis, message, onAiToggle, onArchive, o
           <><div className="attachTitle"><Paperclip size={15} />{message.attachments.length} Attachments</div><div className="attachments">{message.attachments.map((attachment) => <AttachmentCard key={attachment.title} attachment={attachment} />)}</div></>
         ) : null}
 
-        <SuggestedReply key={message.id} message={message} onSent={onNotify} suggestedReply={analysis?.suggestedReply ?? `Hi ${message.sender.split(' ')[0]},\n\nThank you for your message.\n\nBest regards,\n\nOlivier`} />
+        <SuggestedReply key={message.id} aiStatus={aiStatus} message={message} onSent={onNotify} suggestedReply={analysis?.suggestedReply ?? ''} />
       </article>
     </section>
   )

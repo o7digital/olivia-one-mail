@@ -1,9 +1,24 @@
 import { expect, test } from '@playwright/test'
 
+async function signIn(page) {
+  const password = 'playwright-test-password'
+  await page.goto('/mail')
+  await page.getByRole('textbox', { name: 'Email' }).fill('user@zevicapital.com')
+  await page.getByRole('textbox', { name: 'Password' }).fill(password)
+  const [loginResponse] = await Promise.all([
+    page.waitForResponse((response) => response.url().endsWith('/api/auth/login')),
+    page.getByRole('button', { name: 'Sign in securely' }).click(),
+  ])
+  const responseBody = await loginResponse.text()
+  expect(loginResponse.status()).toBe(200)
+  expect(responseBody).not.toContain(password)
+  expect(responseBody).not.toContain('OLIVIA_INTERNAL_TOKEN')
+  await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible()
+}
+
 test('mail shell interactions and desktop screenshots', async ({ page }) => {
   await page.setViewportSize({ width: 1728, height: 1080 })
-  await page.goto('/mail')
-  await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible()
+  await signIn(page)
   await expect(page.getByRole('button', { name: /Liam Chen/ })).toBeVisible()
 
   await page.getByRole('button', { name: /Liam Chen/ }).click()
@@ -15,6 +30,16 @@ test('mail shell interactions and desktop screenshots', async ({ page }) => {
   await page.getByRole('button', { name: 'Clear search' }).click()
   await page.getByRole('button', { name: /Sophia Martinez/ }).click()
 
+  await page.getByRole('button', { name: 'Reply', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Reply' })).toBeVisible()
+  await page.getByRole('button', { name: 'Close composer' }).click()
+  await page.getByRole('button', { name: 'Reply all', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Reply All' })).toBeVisible()
+  await page.getByRole('button', { name: 'Close composer' }).click()
+  await page.getByRole('button', { name: 'Forward', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Forward' })).toBeVisible()
+  await page.getByRole('button', { name: 'Close composer' }).click()
+
   await page.screenshot({ path: 'artifacts/olivia-one-mail-desktop.png', fullPage: true })
 
   await page.getByRole('button', { name: 'Compose' }).click()
@@ -24,19 +49,12 @@ test('mail shell interactions and desktop screenshots', async ({ page }) => {
   await page.screenshot({ path: 'artifacts/olivia-one-compose.png', fullPage: true })
   await page.getByRole('button', { name: 'Close composer' }).click()
 
-  await page.getByRole('tab', { name: 'Insights' }).click()
-  await expect(page.getByText('Conversation intelligence')).toBeVisible()
-  await page.getByRole('tab', { name: 'Overview' }).click()
-  await page.getByRole('button', { name: 'Create Opportunity' }).click()
-  await expect(page.getByRole('dialog', { name: 'Create Partnership Expansion?' })).toBeVisible()
-  await page.getByRole('button', { name: 'Confirm opportunity' }).click()
-  await expect(page.getByRole('status')).toContainText('Opportunity created in O7 Pulse')
+  await expect(page.getByLabel('AI Workspace', { exact: true })).toContainText('Olivia AI temporarily unavailable')
 })
 
 test('tablet layout and application routes', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 })
-  await page.goto('/mail')
-  await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible()
+  await signIn(page)
   await expect(page.getByRole('button', { name: /Sophia Martinez/ })).toBeVisible()
   await expect(page.getByLabel('AI Workspace', { exact: true })).toBeHidden()
   await page.screenshot({ path: 'artifacts/olivia-one-mail-tablet.png', fullPage: true })

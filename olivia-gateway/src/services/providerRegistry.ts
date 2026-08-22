@@ -1,7 +1,20 @@
 import { MailcowImapProvider } from '../providers/mailcowImapProvider.js'
 import { MockMailProvider } from '../providers/mockMailProvider.js'
 import type { MailProvider } from '../providers/mailProvider.js'
+import { authenticateMailbox, type MailboxCredentials } from './mailcowAuth.js'
 import type { SessionRecord } from './session.js'
+
+export function createMailboxAuthenticator(provider = process.env.MAIL_PROVIDER) {
+  switch (provider) {
+    case undefined:
+    case 'mock':
+      return async (_credentials: MailboxCredentials) => true
+    case 'mailcow-imap':
+      return authenticateMailbox
+    default:
+      throw new Error(`Unsupported mail provider: ${provider}`)
+  }
+}
 
 export function createMailProvider(provider = process.env.MAIL_PROVIDER, session?: SessionRecord): MailProvider {
   switch (provider) {

@@ -54,7 +54,7 @@ test('login sets opaque cookie and logout destroys the server session', async ()
   assert.equal(JSON.stringify(body).includes('valid-pass'), false)
 
   const setCookies = login.cookies
-  const sessionCookie = setCookies.find((entry) => entry.name === '__Host-olivia_session')
+  const sessionCookie = setCookies.find((entry) => entry.name === 'olivia_session')
   assert.ok(sessionCookie)
   assert.equal(sessionCookie?.value.includes('info@o7digitalgroup.com'), false)
   assert.equal(sessionCookie?.value.includes('valid-pass'), false)

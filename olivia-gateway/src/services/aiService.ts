@@ -35,6 +35,13 @@ const analysisSchema = z.object({
   toolsUsed: z.array(z.string()).default([]),
 })
 
+const draftResponseSchema = z.object({
+  draft: z.string().min(1),
+  model: z.string().nullable().default(null),
+  reasoningTier: z.enum(['fast', 'balanced', 'powerful']).nullable().default(null),
+  toolsUsed: z.array(z.string()).default([]),
+})
+
 type Analysis = z.infer<typeof analysisSchema>
 type RewriteAction = 'shorter' | 'longer' | 'formal' | 'friendly' | 'translate-fr' | 'translate-es' | 'translate-en' | 'improve'
 
@@ -60,7 +67,7 @@ async function callPythonOlivia<T>(appEnv: {
   aiApiUrl: string
   oliviaInternalToken: string
 }, path: string, body: unknown): Promise<T> {
-  if (!appEnv.aiApiUrl) throw new Error('Olivia AI temporarily unavailable')
+  if (!appEnv.aiApiUrl || !appEnv.oliviaInternalToken) throw new Error('Olivia AI temporarily unavailable')
   const response = await fetch(appEnv.aiApiUrl.replace(/\/$/, '') + path, {
     method: 'POST',
     headers: {
@@ -128,7 +135,7 @@ export async function rewriteDraft(appEnv: {
   subject?: string
 }) {
   const clientCode = resolveClientCode(input.mailboxEmail, appEnv)
-  return callPythonOlivia<{ draft: string }>(appEnv, '/email/rewrite', {
+  return draftResponseSchema.parse(await callPythonOlivia(appEnv, '/email/rewrite', {
     clientCode,
     mailbox: input.mailboxEmail,
     action: input.action,
@@ -136,7 +143,7 @@ export async function rewriteDraft(appEnv: {
     recipient: input.recipient,
     subject: input.subject,
     language: 'auto',
-  })
+  }))
 }
 
 export async function composeDraft(appEnv: {
@@ -153,7 +160,7 @@ export async function composeDraft(appEnv: {
   currentDraft?: string
 }) {
   const clientCode = resolveClientCode(input.mailboxEmail, appEnv)
-  return callPythonOlivia<{ draft: string }>(appEnv, '/email/compose', {
+  return draftResponseSchema.parse(await callPythonOlivia(appEnv, '/email/compose', {
     clientCode,
     mailbox: input.mailboxEmail,
     prompt: input.prompt,
@@ -161,5 +168,5 @@ export async function composeDraft(appEnv: {
     subject: input.subject,
     currentDraft: input.currentDraft,
     language: 'auto',
-  })
+  }))
 }

@@ -13,6 +13,17 @@ npm run dev
 
 The Vite app runs at `http://localhost:5173` and proxies API traffic to the gateway at `http://localhost:8787`.
 
+## Olivia AI v2 development
+
+Copy `olivia-gateway/.env.example` to `olivia-gateway/.env` and set `OLIVIA_INTERNAL_TOKEN` from the development service secret store. `npm run gateway:dev` loads this ignored file. The development gateway is configured for:
+
+```text
+AI_PROVIDER=python-olivia
+AI_API_URL=https://olivia-v2-python-dev-production.up.railway.app
+```
+
+The browser calls only `/api/ai/analyze`, `/api/ai/rewrite`, and `/api/ai/compose` on the Olivia gateway. The gateway adds `X-Olivia-Internal-Token` and resolves `clientCode` from `AI_MAILBOX_CLIENT_MAP`, then `AI_DOMAIN_CLIENT_MAP`, then `AI_DEFAULT_CLIENT_CODE`. Browser-provided tenant codes are not accepted. Keep the token server-side and configure mailbox/domain maps in the development environment secret store.
+
 ## Phase 2 scope
 
 - Componentized four-panel mail experience
