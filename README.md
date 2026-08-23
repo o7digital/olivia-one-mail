@@ -24,6 +24,21 @@ AI_API_URL=https://olivia-v2-python-dev-production.up.railway.app
 
 The browser calls only `/api/ai/analyze`, `/api/ai/rewrite`, and `/api/ai/compose` on the Olivia gateway. The gateway adds `X-Olivia-Internal-Token` and resolves `clientCode` from `AI_MAILBOX_CLIENT_MAP`, then `AI_DOMAIN_CLIENT_MAP`, then `AI_DEFAULT_CLIENT_CODE`. Browser-provided tenant codes are not accepted. Keep the token server-side and configure mailbox/domain maps in the development environment secret store.
 
+### VPS gateway configuration
+
+The public frontend proxies `/api` to the gateway on `one.o7digitalgroup.com`. Configure the gateway on the VPS in `/opt/o7/olivia-one-mail/.env.production`, never in Vercel or a `VITE_*` variable:
+
+```text
+AI_PROVIDER=python-olivia
+AI_API_URL=https://olivia-v2-python-dev-production.up.railway.app
+OLIVIA_INTERNAL_TOKEN=<matching Railway DEV internal token>
+AI_DEFAULT_CLIENT_CODE=default
+AI_MAILBOX_CLIENT_MAP={}
+AI_DOMAIN_CLIENT_MAP={"zevicapital.com":"zevicapital"}
+```
+
+Preserve any existing mailbox and domain mappings when editing this file. Restrict it to the deployment user with mode `600`. Docker Compose requires both `AI_API_URL` and `OLIVIA_INTERNAL_TOKEN` and refuses to render the production stack when either is missing. Do not pass the token on a command line, commit it to Git, or expose it to the browser.
+
 ## Phase 2 scope
 
 - Componentized four-panel mail experience
