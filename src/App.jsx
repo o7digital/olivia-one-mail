@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { AuthenticateWithRedirectCallback } from '@clerk/react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { AIWorkspace } from './components/ai/AIWorkspace'
 import { AppRail } from './components/layout/AppRail'
@@ -187,6 +188,18 @@ function App() {
       {mobileNavOpen ? <button type="button" className="navScrim" onClick={() => setMobileNavOpen(false)} aria-label="Close navigation" /> : null}
 
       <Routes>
+        <Route path="/sso-callback" element={(
+          <div className="authShell">
+            <div className="authCard">
+              <b>Connecting your Google account…</b>
+              <p>Olivia One is completing the secure authorization.</p>
+              <AuthenticateWithRedirectCallback
+                signInFallbackRedirectUrl="/settings?connect=google"
+                signUpFallbackRedirectUrl="/settings?connect=google"
+              />
+            </div>
+          </div>
+        )} />
         <Route path="/" element={<Navigate to="/mail" replace />} />
         <Route path="/mail" element={(
           <main className={`grid ${aiOpen ? 'aiOn' : 'aiOff'}`}>

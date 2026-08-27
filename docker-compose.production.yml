@@ -4,6 +4,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:?Set VITE_CLERK_PUBLISHABLE_KEY in .env.production}
     environment:
       APP_ORIGIN: ${APP_ORIGIN:-https://one.o7digitalgroup.com}
     networks:

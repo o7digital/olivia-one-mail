@@ -1,5 +1,7 @@
 import { Building2, CalendarDays, CheckSquare2, Cloud, ContactRound, ExternalLink, Mail, Settings2, ShieldCheck, Sparkles, X } from 'lucide-react'
+import { useClerk } from '@clerk/react'
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { peopleService } from '../../services/peopleService'
 
 const pageDetails = {
@@ -61,6 +63,13 @@ const accountProviders = [
 
 function ConnectedAccounts() {
   const [setupProvider, setSetupProvider] = useState(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  useEffect(() => {
+    if (searchParams.get('connect') !== 'google') return
+    setSetupProvider(accountProviders[0])
+    setSearchParams({}, { replace: true })
+  }, [searchParams, setSearchParams])
 
   return (
     <section className="connectedAccounts" aria-labelledby="connected-accounts-title">
@@ -87,16 +96,103 @@ function ConnectedAccounts() {
 
 function AccountSetupDialog({ onClose, provider }) {
   const [notice, setNotice] = useState('')
+  const [connecting, setConnecting] = useState(false)
+  const clerk = useClerk()
   const ProviderIcon = provider.icon
   const isOAuth = provider.name === 'Google' || provider.name === 'Microsoft'
   const defaultEmail = provider.name === 'Google' ? 'olivier.steineur@gmail.com' : provider.name === 'iCloud' ? 'olivier.steineur@icloud.com' : ''
 
-  function continueSetup(event) {
-    event.preventDefault()
-    setNotice(isOAuth
-      ? `${provider.name} OAuth must be configured on the Olivia server before authorization can start.`
-      : `${provider.name} server connector must be enabled before credentials can be securely validated.`)
+  const googleScopes = [
+    'https://www.googleapis.com/auth/gmail.readonly',
+    'https://www.googleapis.com/auth/calendar.readonly',
+  ]
+
+  async function connectGoogle(email) {
+    if (!clerk.loaded) throw new Error('Clerk is still loading. Please try again in a moment.')
+
+    if (!clerk.user) {
+      window.sessionStorage.setItem('olivia-google-link-pending', 'true')
+      await clerk.client.signIn.authenticateWithRedirect({
+        strategy: 'oauth_google',
+        redirectUrl: '/sso-callback',
+        redirectUrlComplete: '/settings?connect=google',
+        oidcPrompt: 'select_account',
+      })
+      return
+    }
+
+    const existingGoogleAccount = clerk.user.externalAccounts.find((account) => account.provider === 'google')
+    const externalAccount = existingGoogleAccount
+      ? await existingGoogleAccount.reauthorize({
+        additionalScopes: googleScopes,
+        redirectUrl: '/sso-callback',
+        oidcPrompt: 'consent',
+        oidcLoginHint: email,
+      })
+      : await clerk.user.createExternalAccount({
+        strategy: 'oauth_google',
+        additionalScopes: googleScopes,
+        redirectUrl: '/sso-callback',
+        oidcPrompt: 'consent',
+        oidcLoginHint: email,
+      })
+
+    const authorizationUrl = externalAccount.verification?.externalVerificationRedirectURL
+    if (!authorizationUrl) {
+      await clerk.user.reload()
+      setNotice('Google is connected. Gmail and Calendar permissions are active.')
+      window.sessionStorage.removeItem('olivia-google-link-pending')
+      return
+    }
+
+    window.sessionStorage.setItem('olivia-google-link-pending', 'true')
+    window.location.assign(authorizationUrl.toString())
   }
+
+  async function continueSetup(event) {
+    event.preventDefault()
+    const formData = new FormData(event.currentTarget)
+    const email = String(formData.get('connectedEmail') ?? '')
+    setNotice('')
+    setConnecting(true)
+
+    try {
+      if (provider.name === 'Google') {
+        await connectGoogle(email)
+        return
+      }
+
+      setNotice(isOAuth
+        ? `${provider.name} OAuth will be enabled in the next connector update.`
+        : `${provider.name} server connector must be enabled before credentials can be securely validated.`)
+    } catch (error) {
+      setNotice(error?.errors?.[0]?.longMessage || error?.message || `Unable to connect ${provider.name}.`)
+    } finally {
+      setConnecting(false)
+    }
+  }
+
+  useEffect(() => {
+    if (provider.name !== 'Google' || !clerk.loaded || !clerk.user) return
+    if (window.sessionStorage.getItem('olivia-google-link-pending') !== 'true') return
+
+    const googleAccount = clerk.user.externalAccounts.find((account) => account.provider === 'google')
+    const hasMailScope = googleAccount?.approvedScopes?.includes('gmail.readonly')
+    const hasCalendarScope = googleAccount?.approvedScopes?.includes('calendar.readonly')
+    if (hasMailScope && hasCalendarScope) {
+      window.sessionStorage.removeItem('olivia-google-link-pending')
+      setNotice(`Connected securely to ${googleAccount.emailAddress}. Gmail and Calendar are ready.`)
+      return
+    }
+
+    const email = googleAccount?.emailAddress || defaultEmail
+    connectGoogle(email).catch((error) => {
+      setNotice(error?.errors?.[0]?.longMessage || error?.message || 'Unable to request Gmail permissions.')
+      window.sessionStorage.removeItem('olivia-google-link-pending')
+    })
+  // This intentionally runs after Clerk finishes the OAuth return flow.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clerk.loaded, clerk.user, provider.name])
 
   return (
     <div className="overlay accountSetupOverlay" role="presentation">
@@ -119,7 +215,7 @@ function AccountSetupDialog({ onClose, provider }) {
           )}
           <label className="syncChoice"><input type="checkbox" defaultChecked />Sync mail and calendar</label>
           {notice ? <p className="setupNotice" role="status">{notice}</p> : null}
-          <div className="setupActions"><button type="button" onClick={onClose}>Cancel</button><button type="submit">{isOAuth ? <><ExternalLink size={14} />Continue with {provider.name}</> : `Connect ${provider.name}`}</button></div>
+          <div className="setupActions"><button type="button" onClick={onClose}>Cancel</button><button type="submit" disabled={connecting}>{connecting ? 'Connecting…' : isOAuth ? <><ExternalLink size={14} />Continue with {provider.name}</> : `Connect ${provider.name}`}</button></div>
         </form>
       </section>
     </div>
