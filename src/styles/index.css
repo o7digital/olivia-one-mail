@@ -305,9 +305,12 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
   padding: 13px 14px;
 }
 .authCard .sendAi { margin: 4px 0 0; justify-content: center; }
-.privacyConsent { display: grid; grid-template-columns: auto 1fr; gap: 9px; align-items: start; color: #9cadbf; font-size: 9px; line-height: 1.5; }
-.privacyConsent input { width: 15px; height: 15px; margin: 1px 0 0; accent-color: #24b8d4; }
-.privacyConsent button { border: 0; background: transparent; color: #64d8f0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.privacyConsentCard { border: 1px solid rgba(145, 181, 224, .2); border-radius: 11px; padding: 11px 12px; background: rgba(255, 255, 255, .035); }
+.privacyConsentCard.accepted { border-color: rgba(74, 222, 128, .3); background: rgba(74, 222, 128, .055); }
+.privacyConsent { display: grid !important; grid-template-columns: 20px 1fr; gap: 10px; align-items: start; color: #b9c7d6; font-size: 10px; line-height: 1.45; cursor: pointer; }
+.authCard .privacyConsent input { appearance: auto; -webkit-appearance: checkbox; display: block; width: 18px; height: 18px; min-width: 18px; margin: 1px 0 0; padding: 0; border: initial; border-radius: 3px; accent-color: #24b8d4; }
+.privacyConsent span { display: flex; flex-direction: column; gap: 2px; }.privacyConsent b { color: #edf5ff; font-size: 10px; }
+.privacyDocumentLink { margin: 8px 0 0 30px; border: 0; background: transparent; color: #64d8f0; padding: 0; cursor: pointer; font-size: 9px; text-decoration: underline; text-underline-offset: 2px; }
 .privacyOverlay { z-index: 80; overflow: auto; align-items: start; }
 .privacyDialog { width: min(760px, 96vw); max-height: calc(100vh - 40px); overflow: auto; position: relative; margin: 20px auto; border: 1px solid rgba(145, 181, 224, .2); border-radius: 17px; background: linear-gradient(180deg, #343840, #292d34); box-shadow: 0 30px 100px rgba(0, 0, 0, .55); padding: 28px; }
 .privacyClose { position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; border: 0; border-radius: 9px; background: rgba(255, 255, 255, .04); color: #b8c7d6; display: grid; place-items: center; cursor: pointer; }

@@ -19,7 +19,7 @@ async function signIn(page) {
 
 test('privacy notice is available and consent is required before authentication', async ({ page }) => {
   await page.goto('/mail')
-  await page.getByRole('button', { name: 'View privacy document' }).click()
+  await page.getByRole('button', { name: 'View the full privacy document' }).click()
   await expect(page.getByRole('heading', { name: 'Privacy & data-sharing notice' })).toBeVisible()
   await expect(page.getByRole('dialog')).toContainText('O7 Digital Consulting')
   await expect(page.getByRole('dialog')).toContainText('SIREN 899 748 560')

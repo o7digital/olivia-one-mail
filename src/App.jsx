@@ -110,6 +110,11 @@ function App() {
 
   async function handleLogin(event) {
     event.preventDefault()
+    if (!privacyAccepted) {
+      setLoginError('Please review and accept the privacy notice to continue.')
+      setPrivacyOpen(true)
+      return
+    }
     const formData = new FormData(event.currentTarget)
     setLoginError('')
     setLoginLoading(true)
@@ -141,12 +146,15 @@ function App() {
           <p>Use your O7 Mail email address and password.</p>
           <input autoFocus name="email" type="email" placeholder="you@o7digitalgroup.com" aria-label="Email" />
           <input name="password" type="password" placeholder="Password" aria-label="Password" />
-          <label className="privacyConsent">
-            <input name="privacyAccepted" type="checkbox" checked={privacyAccepted} onChange={(event) => setPrivacyAccepted(event.target.checked)} required />
-            <span>I agree to the processing of connected mail/calendar data and Olivia AI analysis. <button type="button" onClick={() => setPrivacyOpen(true)}>View privacy document</button></span>
-          </label>
+          <div className={`privacyConsentCard ${privacyAccepted ? 'accepted' : ''}`}>
+            <label className="privacyConsent">
+              <input name="privacyAccepted" type="checkbox" checked={privacyAccepted} onChange={(event) => { setPrivacyAccepted(event.target.checked); setLoginError('') }} required />
+              <span><b>Privacy agreement required</b>I agree to the processing of connected mail/calendar data and Olivia AI analysis.</span>
+            </label>
+            <button type="button" className="privacyDocumentLink" onClick={() => setPrivacyOpen(true)}>View the full privacy document</button>
+          </div>
           {loginError ? <p className="formError" role="alert">{loginError}</p> : null}
-          <button className="sendAi" type="submit" disabled={loginLoading}>{loginLoading ? 'Signing in…' : 'Sign in securely'}</button>
+          <button className="sendAi" type="submit" disabled={loginLoading || !privacyAccepted}>{loginLoading ? 'Signing in…' : 'Sign in securely'}</button>
         </form>
         {privacyOpen ? <PrivacyNotice onClose={() => setPrivacyOpen(false)} onAccept={() => { setPrivacyAccepted(true); setPrivacyOpen(false) }} /> : null}
       </div>
