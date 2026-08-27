@@ -5,18 +5,14 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Avatar } from '../common/Avatar'
 import { IconButton } from '../common/IconButton'
+import { getWorkspaceIdentity } from '../../utils/workspaceIdentity'
 
 export function TopBar({ aiOpen, onAiToggle, onLogout, onMenuToggle, query, searchRef, setQuery, user }) {
   const navigate = useNavigate()
   const [profileOpen, setProfileOpen] = useState(false)
   const [logoutPending, setLogoutPending] = useState(false)
   const profileRef = useRef(null)
-  const initials = (user?.name ?? user?.email ?? 'Olivier Steineur')
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0] ?? '')
-    .join('')
-    .toUpperCase()
+  const workspace = getWorkspaceIdentity(user)
 
   useEffect(() => {
     function closeProfile(event) {
@@ -59,8 +55,8 @@ export function TopBar({ aiOpen, onAiToggle, onLogout, onMenuToggle, query, sear
         <IconButton label="Apps" onClick={() => navigate('/pulse')}><LayoutGrid size={18} /></IconButton>
         <div className="profileWrap" ref={profileRef}>
           <button className="profile" type="button" aria-expanded={profileOpen} aria-haspopup="menu" onClick={() => setProfileOpen((current) => !current)}>
-            <Avatar initials={initials} small />
-            <span className="profileIdentity"><b>{user?.name ?? 'Olivier Steineur'}</b><small>{user?.email ?? 'info@o7digitalgroup.com'}</small></span>
+            <Avatar initials={workspace.initials} small />
+            <span className="profileIdentity"><b>{workspace.displayName}</b><small>{workspace.email}</small></span>
             <ChevronDown size={16} />
           </button>
           {profileOpen ? (

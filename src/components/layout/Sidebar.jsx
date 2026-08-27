@@ -4,7 +4,7 @@ import {
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Avatar } from '../common/Avatar'
-import { spaces } from '../../mocks/mail'
+import { getWorkspaceIdentity } from '../../utils/workspaceIdentity'
 
 const folderIcons = {
   Inbox, Priority: Sparkles, Snoozed: Clock3, Sent: Send, Drafts: FileText,
@@ -24,7 +24,7 @@ function SidebarSection({ items, title }) {
   )
 }
 
-function LabelsSection({ activeLabel, labels, onLabelSelect }) {
+function LabelsSection({ activeLabel, labels = [], onLabelSelect = () => {} }) {
   return (
     <div className="section">
       <div className="sectiontitle"><span>Labels</span></div>
@@ -42,15 +42,16 @@ function LabelsSection({ activeLabel, labels, onLabelSelect }) {
   )
 }
 
-export function Sidebar({ activeFolder, activeLabel, folders, knownLabels, mobileOpen, onClose, onCompose, onFolderChange, onLabelSelect }) {
+export function Sidebar({ activeFolder, activeLabel, folders, knownLabels, mobileOpen, onClose, onCompose, onFolderChange, onLabelSelect, user }) {
   const navigate = useNavigate()
+  const workspace = getWorkspaceIdentity(user)
 
   return (
     <aside className={`sidebar card ${mobileOpen ? 'mobileOpen' : ''}`}>
       <button type="button" className="closeSidebar" onClick={onClose} aria-label="Close navigation"><X size={18} /></button>
       <div className="account">
-        <Avatar initials="OS" />
-        <div><b>Olivier Steineur</b><small>info@o7digitalgroup.com</small></div>
+        <Avatar initials={workspace.initials} />
+        <div><b>{workspace.displayName}</b><small>{workspace.email}</small></div>
         <button type="button" className="accountSetup" aria-label="Setup connected accounts" onClick={() => { navigate('/settings'); onClose() }} title="Setup connected accounts"><Settings2 size={16} /></button>
       </div>
       <button className="compose" type="button" onClick={onCompose}><PenLine size={18} /><span>Compose</span><ChevronDown size={15} /></button>
@@ -64,7 +65,7 @@ export function Sidebar({ activeFolder, activeLabel, folders, knownLabels, mobil
           )
         })}
       </nav>
-      <SidebarSection title="Spaces" items={spaces} />
+      <SidebarSection title="Spaces" items={workspace.spaces} />
       <LabelsSection activeLabel={activeLabel} labels={knownLabels ?? []} onLabelSelect={onLabelSelect} />
       <div className="secure"><ShieldCheck size={15} />Protected by O7 Mail</div>
     </aside>

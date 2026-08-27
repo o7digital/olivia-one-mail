@@ -203,7 +203,7 @@ function App() {
         <Route path="/" element={<Navigate to="/mail" replace />} />
         <Route path="/mail" element={(
           <main className={`grid ${aiOpen ? 'aiOn' : 'aiOff'}`}>
-            <Sidebar activeFolder={activeFolder} activeLabel={inbox.labelFilter} folders={folders.folders} knownLabels={inbox.knownLabels} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} onLabelSelect={inbox.setLabelFilter} />
+            <Sidebar activeFolder={activeFolder} activeLabel={inbox.labelFilter} folders={folders.folders} knownLabels={inbox.knownLabels} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} onLabelSelect={inbox.setLabelFilter} user={session.session?.user} />
             <MailList
               activeFolder={activeFolder}
               category={inbox.category}
@@ -242,7 +242,7 @@ function App() {
         {['calendar', 'contacts', 'tasks', 'pulse', 'settings'].map((page) => (
           <Route key={page} path={`/${page}`} element={(
             <main className="grid pageGrid">
-              <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} />
+              <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} user={session.session?.user} />
               <FeaturePage page={page} />
               <AppRail />
             </main>
