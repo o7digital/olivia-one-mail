@@ -83,6 +83,19 @@ test('labels can be created, filtered, and cleared; sort reorders the list', asy
   await expect(page.locator('.rows .mailrow').first()).toContainText('Noah Williams')
 })
 
+test('default classification labels remain visible and can classify a message', async ({ page }) => {
+  await signIn(page)
+  await page.getByRole('button', { name: /Sophia Martinez/ }).click()
+
+  await expect(page.locator('.sidebar').getByRole('button', { name: 'Clients' })).toBeVisible()
+  await page.getByRole('button', { name: 'Add label' }).click()
+  await page.locator('.labelAddPanel').getByRole('button', { name: 'Clients' }).click()
+  await expect(page.locator('.labelChip', { hasText: 'Clients' })).toBeVisible()
+
+  await page.locator('.sidebar').getByRole('button', { name: 'Clients' }).click()
+  await expect(page.getByRole('button', { name: /Sophia Martinez/ })).toBeVisible()
+})
+
 test('inbox category tabs filter focused and other messages', async ({ page }) => {
   await signIn(page)
 

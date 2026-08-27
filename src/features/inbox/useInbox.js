@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { mailService } from '../../services/mailService'
 
+export const DEFAULT_LABELS = ['Clients', 'Partnerships', 'Projects', 'Personal']
+
 export function useMailFolders(enabled = true) {
   const [folders, setFolders] = useState([])
   const [status, setStatus] = useState('loading')
@@ -34,21 +36,21 @@ export function useInbox(folder, query, enabled = true) {
   const [selectedId, setSelectedId] = useState(null)
   const [status, setStatus] = useState('loading')
   const [error, setError] = useState(null)
-  const [knownLabels, setKnownLabels] = useState([])
+  const [knownLabels, setKnownLabels] = useState(DEFAULT_LABELS)
   const [labelFilter, setLabelFilter] = useState(null)
   const [category, setCategory] = useState('focused')
   const [sortBy, setSortBy] = useState('date-desc')
 
   const loadLabels = useCallback(async () => {
     if (!enabled) {
-      setKnownLabels([])
+      setKnownLabels(DEFAULT_LABELS)
       return
     }
     try {
       const { labels: nextLabels } = await mailService.listLabels(folder)
-      setKnownLabels(nextLabels)
+      setKnownLabels(Array.from(new Set([...DEFAULT_LABELS, ...nextLabels])))
     } catch {
-      setKnownLabels([])
+      setKnownLabels(DEFAULT_LABELS)
     }
   }, [enabled, folder])
 

@@ -38,6 +38,7 @@ function LabelsEditor({ knownLabels, labels, onChange }) {
 
   return (
     <div className="labelsEditor">
+      <span className="classifyLabel">Classify:</span>
       {currentLabels.map((label) => (
         <span className="labelChip" key={label}>
           {label}
@@ -49,7 +50,7 @@ function LabelsEditor({ knownLabels, labels, onChange }) {
         {open ? (
           <div className="labelAddPanel" role="menu">
             {suggestions.length ? suggestions.map((label) => (
-              <button type="button" key={label} onClick={() => { toggleLabel(label); setOpen(false) }}>{label}</button>
+              <button type="button" key={label} onClick={() => { toggleLabel(label); setOpen(false) }}><i className={`dot d${knownLabels.indexOf(label) % 4}`} />{label}</button>
             )) : null}
             <form onSubmit={addNewLabel}>
               <input

@@ -311,14 +311,11 @@ export class MailcowImapProvider implements MailProvider {
   }
 
   async listLabels(folder: string): Promise<string[]> {
-    const client = this.createImapClient()
-    await client.connect()
-    try {
-      await client.mailboxOpen(mapFolderLabel(folder))
-      return decodeLabelsFromFlags(client.mailbox ? client.mailbox.flags : undefined)
-    } finally {
-      await client.logout().catch(() => {})
+    const labels = new Set<string>()
+    for (const message of await this.listMessages(folder)) {
+      for (const label of message.labels ?? []) labels.add(label)
     }
+    return Array.from(labels).sort((a, b) => a.localeCompare(b))
   }
 
   async setMessageLabels(id: string, labels: string[]) {

@@ -1,11 +1,11 @@
 :root {
   font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: #edf5ff;
-  background: #17191e;
+  background: #292b30;
   font-synthesis: none;
-  --bg: #17191e;
-  --panel: #20242b;
-  --panel-2: #252a32;
+  --bg: #292b30;
+  --panel: #32353b;
+  --panel-2: #383c43;
   --stroke: rgba(145, 181, 224, .15);
   --muted: #7f93ad;
   --cyan: #39d9ff;
@@ -29,7 +29,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
   background:
     radial-gradient(circle at 78% 0, rgba(100, 82, 150, .11), transparent 34%),
     radial-gradient(circle at 15% 100%, rgba(72, 130, 145, .09), transparent 35%),
-    linear-gradient(145deg, #1d2025, #15171b 58%, #202228);
+    linear-gradient(145deg, #32353a, #292b30 58%, #34363c);
 }
 .glow { position: fixed; border-radius: 999px; filter: blur(90px); opacity: .18; pointer-events: none; }
 .g1 { width: 450px; height: 450px; background: #06b6d4; top: -330px; left: 25%; }
@@ -43,7 +43,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
   gap: 18px;
   align-items: center;
   border-bottom: 1px solid var(--stroke);
-  background: rgba(24, 27, 32, .9);
+  background: rgba(38, 41, 47, .92);
   backdrop-filter: blur(24px);
   position: relative;
   z-index: 10;
@@ -78,7 +78,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 .grid.aiOn { grid-template-columns: 225px 330px minmax(460px, 1fr) 350px 48px; }
 .grid.aiOff { grid-template-columns: 225px 345px minmax(520px, 1fr) 48px; }
 .pageGrid { grid-template-columns: 225px minmax(600px, 1fr) 48px; }
-.card { background: linear-gradient(180deg, rgba(36, 40, 48, .96), rgba(27, 31, 38, .95)); border: 1px solid var(--stroke); border-radius: 14px; overflow: hidden; box-shadow: inset 0 1px rgba(255, 255, 255, .025), 0 12px 35px rgba(0, 0, 0, .16); min-width: 0; }
+.card { background: linear-gradient(180deg, rgba(52, 56, 64, .97), rgba(43, 47, 54, .96)); border: 1px solid var(--stroke); border-radius: 14px; overflow: hidden; box-shadow: inset 0 1px rgba(255, 255, 255, .035), 0 12px 35px rgba(0, 0, 0, .16); min-width: 0; }
 
 .avatar { flex: 0 0 auto; width: 37px; height: 37px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 800; border: 1px solid rgba(255, 255, 255, .13); }
 .avatar.small { width: 29px; height: 29px; font-size: 8px; }
@@ -173,13 +173,14 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 .sender > div:nth-child(2) { display: flex; flex-direction: column; }
 .sender b { font-size: 10px; }.sender small, .sender time { font-size: 8px; color: #8194aa; }
 .labelsEditor { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 11px; }
+.classifyLabel { color: #91a3b8; font-size: 8.5px; font-weight: 700; }
 .labelChip { display: inline-flex; align-items: center; gap: 5px; font-size: 8.5px; padding: 4px 5px 4px 9px; border-radius: 999px; background: rgba(57, 217, 255, .1); border: 1px solid rgba(57, 217, 255, .24); color: #6bd9ff; }
 .labelChip button { border: 0; background: transparent; color: inherit; display: grid; place-items: center; cursor: pointer; opacity: .75; }
 .labelChip button:hover { opacity: 1; }
 .labelAdd { position: relative; display: inline-flex; }
 .labelAdd > .icon { width: auto; height: 26px; padding: 0 8px; gap: 2px; border: 1px dashed rgba(145, 181, 224, .28); border-radius: 999px; }
 .labelAddPanel { position: absolute; top: 32px; left: 0; z-index: 20; min-width: 180px; background: #0f1e2e; border: 1px solid rgba(145, 181, 224, .18); border-radius: 9px; padding: 6px; box-shadow: 0 12px 30px rgba(0, 0, 0, .4); display: flex; flex-direction: column; gap: 2px; }
-.labelAddPanel > button { border: 0; background: transparent; color: #c3d3e4; font-size: 9px; padding: 6px 8px; border-radius: 6px; text-align: left; cursor: pointer; }
+.labelAddPanel > button { border: 0; background: transparent; color: #c3d3e4; font-size: 9px; padding: 7px 8px; border-radius: 6px; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 8px; }
 .labelAddPanel > button:hover { background: rgba(255, 255, 255, .05); }
 .labelAddPanel form { display: flex; gap: 5px; margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(145, 181, 224, .12); }
 .labelAddPanel input { flex: 1; min-width: 0; background: rgba(255, 255, 255, .04); border: 1px solid rgba(145, 181, 224, .18); border-radius: 6px; color: #e7eefc; font-size: 9px; padding: 6px 7px; }
