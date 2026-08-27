@@ -5,6 +5,7 @@ async function signIn(page) {
   await page.goto('/mail')
   await page.getByRole('textbox', { name: 'Email' }).fill('user@zevicapital.com')
   await page.getByRole('textbox', { name: 'Password' }).fill(password)
+  await page.getByRole('checkbox').check()
   const [loginResponse] = await Promise.all([
     page.waitForResponse((response) => response.url().endsWith('/api/auth/login')),
     page.getByRole('button', { name: 'Sign in securely' }).click(),
@@ -15,6 +16,16 @@ async function signIn(page) {
   expect(responseBody).not.toContain('OLIVIA_INTERNAL_TOKEN')
   await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible()
 }
+
+test('privacy notice is available and consent is required before authentication', async ({ page }) => {
+  await page.goto('/mail')
+  await page.getByRole('button', { name: 'privacy and data-sharing notice' }).click()
+  await expect(page.getByRole('heading', { name: 'Privacy & data-sharing notice' })).toBeVisible()
+  await expect(page.getByRole('dialog')).toContainText('O7 Digital Consulting')
+  await expect(page.getByRole('dialog')).toContainText('SIREN 899 748 560')
+  await page.getByRole('button', { name: 'I have read the notice' }).click()
+  await expect(page.getByRole('checkbox')).not.toBeChecked()
+})
 
 test('mail shell interactions and desktop screenshots', async ({ page }) => {
   await page.setViewportSize({ width: 1728, height: 1080 })

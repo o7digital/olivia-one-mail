@@ -12,6 +12,8 @@ export interface SessionRecord {
   password: string
   createdAt: number
   expiresAt: number
+  privacyAcceptedAt?: number
+  privacyVersion?: string
 }
 
 const sessions = new Map<string, SessionRecord>()
@@ -42,7 +44,7 @@ export function buildSessionUser(email: string) {
   }
 }
 
-export function createServerSession(input: { email: string; password: string }) {
+export function createServerSession(input: { email: string; password: string; privacyVersion?: string }) {
   cleanupExpiredSessions()
   const createdAt = now()
   const session: SessionRecord = {
@@ -51,6 +53,8 @@ export function createServerSession(input: { email: string; password: string }) 
     password: input.password,
     createdAt,
     expiresAt: createdAt + SESSION_TTL_MS,
+    privacyAcceptedAt: input.privacyVersion ? createdAt : undefined,
+    privacyVersion: input.privacyVersion,
   }
   sessions.set(session.id, session)
   return session

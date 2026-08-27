@@ -19,3 +19,12 @@ test('deleteServerSession removes session state', () => {
   deleteServerSession(session.id)
   assert.equal(getServerSession(session.id), null)
 })
+
+test('server session records privacy notice acceptance metadata', () => {
+  __resetSessionsForTests()
+  __setSessionClockForTests(() => 42_000)
+  const session = createServerSession({ email: 'privacy@o7digitalgroup.com', password: 'secret-pass', privacyVersion: '2026-08-27' })
+
+  assert.equal(session.privacyVersion, '2026-08-27')
+  assert.equal(session.privacyAcceptedAt, 42_000)
+})

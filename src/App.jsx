@@ -9,6 +9,7 @@ import { MailList } from './components/mail/MailList'
 import { MailReader } from './components/mail/MailReader'
 import { OpportunityDialog } from './features/ai-workspace/OpportunityDialog'
 import { ComposeModal } from './features/composer/ComposeModal'
+import { PrivacyNotice, PRIVACY_VERSION } from './components/legal/PrivacyNotice'
 import { useAIWorkspace } from './hooks/useAIWorkspace'
 import { useSession } from './hooks/useSession'
 import { pulseService } from './services/pulseService'
@@ -28,6 +29,7 @@ function App() {
   const [toast, setToast] = useState('')
   const [loginError, setLoginError] = useState('')
   const [loginLoading, setLoginLoading] = useState(false)
+  const [privacyOpen, setPrivacyOpen] = useState(false)
   const session = useSession()
   const isAuthenticated = session.isAuthenticated
   const folders = useMailFolders(isAuthenticated)
@@ -114,6 +116,8 @@ function App() {
       await session.login({
         email: String(formData.get('email') ?? ''),
         password: String(formData.get('password') ?? ''),
+        privacyAccepted: formData.get('privacyAccepted') === 'on',
+        privacyVersion: PRIVACY_VERSION,
       })
     } catch (error) {
       setLoginError(error.message)
@@ -136,9 +140,14 @@ function App() {
           <p>Use your O7 Mail email address and password.</p>
           <input autoFocus name="email" type="email" placeholder="you@o7digitalgroup.com" aria-label="Email" />
           <input name="password" type="password" placeholder="Password" aria-label="Password" />
+          <label className="privacyConsent">
+            <input name="privacyAccepted" type="checkbox" required />
+            <span>I have read and accept the <button type="button" onClick={() => setPrivacyOpen(true)}>privacy and data-sharing notice</button>, including processing of connected mail/calendar data and Olivia AI analysis.</span>
+          </label>
           {loginError ? <p className="formError" role="alert">{loginError}</p> : null}
           <button className="sendAi" type="submit" disabled={loginLoading}>{loginLoading ? 'Signing in…' : 'Sign in securely'}</button>
         </form>
+        {privacyOpen ? <PrivacyNotice onClose={() => setPrivacyOpen(false)} /> : null}
       </div>
     )
   }

@@ -305,6 +305,15 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
   padding: 13px 14px;
 }
 .authCard .sendAi { margin: 4px 0 0; justify-content: center; }
+.privacyConsent { display: grid; grid-template-columns: auto 1fr; gap: 9px; align-items: start; color: #9cadbf; font-size: 9px; line-height: 1.5; }
+.privacyConsent input { width: 15px; height: 15px; margin: 1px 0 0; accent-color: #24b8d4; }
+.privacyConsent button { border: 0; background: transparent; color: #64d8f0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.privacyOverlay { z-index: 80; overflow: auto; align-items: start; }
+.privacyDialog { width: min(760px, 96vw); max-height: calc(100vh - 40px); overflow: auto; position: relative; margin: 20px auto; border: 1px solid rgba(145, 181, 224, .2); border-radius: 17px; background: linear-gradient(180deg, #343840, #292d34); box-shadow: 0 30px 100px rgba(0, 0, 0, .55); padding: 28px; }
+.privacyClose { position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; border: 0; border-radius: 9px; background: rgba(255, 255, 255, .04); color: #b8c7d6; display: grid; place-items: center; cursor: pointer; }
+.privacyDialog > small { color: #62d8ef; font-size: 8px; letter-spacing: .14em; }.privacyDialog h2 { margin: 6px 40px 8px 0; font-size: 25px; }.privacyDialog h3 { margin: 18px 0 5px; color: #e3ebf4; font-size: 11px; }.privacyDialog p { margin: 0; color: #9fafc0; font-size: 10px; line-height: 1.65; }.privacyDialog a { color: #69d9ef; }.privacyLead { font-size: 11px !important; color: #bdcad7 !important; }.privacyLegalNote { margin-top: 18px !important; border-left: 2px solid #d3a84d; padding-left: 10px; color: #b9aa87 !important; }
+.privacySources { margin-top: 8px !important; }
+.privacyDone { margin-top: 20px; border: 1px solid rgba(57, 217, 255, .3); border-radius: 9px; background: linear-gradient(180deg, #159ab3, #08708d); color: white; padding: 10px 13px; font-size: 10px; font-weight: 800; cursor: pointer; }
 
 @media (max-width: 1500px) {
   .grid.aiOn { grid-template-columns: 205px 305px minmax(450px, 1fr) 315px; }

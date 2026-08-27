@@ -7,6 +7,8 @@ import { buildSessionUser, clearSessionCookies, createServerSession, deleteServe
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
+  privacyAccepted: z.literal(true),
+  privacyVersion: z.string().min(1).max(40),
 })
 
 export async function registerAuthRoutes(app: FastifyInstance) {
@@ -24,6 +26,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     const session = createServerSession({
       email: body.email,
       password: body.password,
+      privacyVersion: body.privacyVersion,
     })
     const csrfToken = randomUUID()
     setSessionCookies({
@@ -36,6 +39,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     return {
       user: buildSessionUser(body.email),
       csrfToken,
+      privacy: { accepted: true, version: body.privacyVersion },
     }
   })
 
