@@ -78,7 +78,6 @@ export const folders = [
 ]
 
 export const spaces = ['O7 Digital Group', 'Product & Design', 'Sales Team', 'Marketing']
-export const labels = ['Clients', 'Partnerships', 'Projects', 'Personal']
 
 export const aiByMessage = {
   default: {

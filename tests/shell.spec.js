@@ -52,6 +52,50 @@ test('mail shell interactions and desktop screenshots', async ({ page }) => {
   await expect(page.getByLabel('AI Workspace', { exact: true })).toContainText('Olivia AI temporarily unavailable')
 })
 
+test('labels can be created, filtered, and cleared; sort reorders the list', async ({ page }) => {
+  await page.setViewportSize({ width: 1728, height: 1080 })
+  await signIn(page)
+
+  await page.getByRole('button', { name: /Sophia Martinez/ }).click()
+  await expect(page.getByRole('heading', { name: 'Partnership Proposal — Next Steps' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Add label' }).click()
+  await page.getByPlaceholder('Create label…').fill('VIP Client')
+  await page.getByRole('button', { name: 'Add', exact: true }).click()
+  await expect(page.locator('.labelChip', { hasText: 'VIP Client' })).toBeVisible()
+
+  const sidebarLabel = page.locator('.sidebar').getByRole('button', { name: 'VIP Client' })
+  await expect(sidebarLabel).toBeVisible()
+
+  await sidebarLabel.click()
+  await expect(page.locator('.labelFilterBar')).toContainText('VIP Client')
+  await expect(page.getByRole('button', { name: /Sophia Martinez/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Liam Chen/ })).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Clear', exact: true }).click()
+  await expect(page.locator('.labelFilterBar')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Liam Chen/ })).toBeVisible()
+
+  await expect(page.locator('.rows .mailrow').first()).toContainText('Sophia Martinez')
+  await page.getByRole('tab', { name: 'Other' }).click()
+  await page.getByRole('button', { name: /Sort messages/ }).click()
+  await page.getByRole('menuitemradio', { name: 'Oldest first' }).click()
+  await expect(page.locator('.rows .mailrow').first()).toContainText('Noah Williams')
+})
+
+test('inbox category tabs filter focused and other messages', async ({ page }) => {
+  await signIn(page)
+
+  await expect(page.getByRole('tab', { name: 'Focused' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('button', { name: /Sophia Martinez/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Noah Williams/ })).toHaveCount(0)
+
+  await page.getByRole('tab', { name: 'Other' }).click()
+  await expect(page.getByRole('tab', { name: 'Other' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('button', { name: /Noah Williams/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Sophia Martinez/ })).toHaveCount(0)
+})
+
 test('tablet layout and application routes', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 })
   await signIn(page)

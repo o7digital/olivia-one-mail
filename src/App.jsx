@@ -161,17 +161,34 @@ function App() {
         <Route path="/" element={<Navigate to="/mail" replace />} />
         <Route path="/mail" element={(
           <main className={`grid ${aiOpen ? 'aiOn' : 'aiOff'}`}>
-            <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} />
-            <MailList activeFolder={activeFolder} error={inbox.error} messages={inbox.filteredMessages} onRetry={inbox.reload} onSelect={inbox.selectMessage} query={query} selectedId={inbox.selectedId} status={inbox.status} />
+            <Sidebar activeFolder={activeFolder} activeLabel={inbox.labelFilter} folders={folders.folders} knownLabels={inbox.knownLabels} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} onLabelSelect={inbox.setLabelFilter} />
+            <MailList
+              activeFolder={activeFolder}
+              category={inbox.category}
+              error={inbox.error}
+              labelFilter={inbox.labelFilter}
+              messages={inbox.filteredMessages}
+              onClearLabelFilter={() => inbox.setLabelFilter(null)}
+              onCategoryChange={inbox.setCategory}
+              onRetry={inbox.reload}
+              onSelect={inbox.selectMessage}
+              onSortChange={inbox.setSortBy}
+              query={query}
+              selectedId={inbox.selectedId}
+              sortBy={inbox.sortBy}
+              status={inbox.status}
+            />
             <MailReader
               aiOpen={aiOpen}
               aiStatus={aiWorkspace.status}
               analysis={aiWorkspace.analysis}
+              knownLabels={inbox.knownLabels}
               message={inbox.selected}
               onAiToggle={() => setAiOpen((current) => !current)}
               onArchive={() => inbox.archiveMessage(inbox.selected.id)}
               onDelete={() => inbox.deleteMessage(inbox.selected.id)}
               onForward={() => openCompose('forward', inbox.selected)}
+              onLabelsChange={inbox.updateMessageLabels}
               onNotify={notify}
               onReply={() => openCompose('reply', inbox.selected)}
               onReplyAll={() => openCompose('reply-all', inbox.selected)}

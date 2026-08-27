@@ -11,6 +11,7 @@ const sendSchema = z.object({
 const replySchema = z.object({ body: z.string().min(1) })
 const forwardSchema = z.object({ to: z.string().min(1), body: z.string().default('') })
 const moveSchema = z.object({ folder: z.string().min(1) })
+const labelsSchema = z.object({ labels: z.array(z.string().min(1).max(60)).max(20) })
 
 export async function registerMailRoutes(app: FastifyInstance) {
   app.get('/api/mail/folders', async (request) => createMailProvider(process.env.MAIL_PROVIDER, request.session).listFolders())
@@ -48,6 +49,18 @@ export async function registerMailRoutes(app: FastifyInstance) {
   app.delete('/api/mail/messages/:id', async (request) => {
     const params = z.object({ id: z.string() }).parse(request.params)
     return createMailProvider(process.env.MAIL_PROVIDER, request.session).delete(params.id)
+  })
+
+  app.get('/api/mail/labels', async (request) => {
+    const { folder } = folderQuery.parse(request.query)
+    const labels = await createMailProvider(process.env.MAIL_PROVIDER, request.session).listLabels(folder)
+    return { labels }
+  })
+
+  app.put('/api/mail/messages/:id/labels', async (request) => {
+    const params = z.object({ id: z.string() }).parse(request.params)
+    const body = labelsSchema.parse(request.body)
+    return createMailProvider(process.env.MAIL_PROVIDER, request.session).setMessageLabels(params.id, body.labels)
   })
 
   app.post('/api/mail/send', async (request) => {

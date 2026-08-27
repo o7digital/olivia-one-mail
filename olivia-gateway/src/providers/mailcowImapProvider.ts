@@ -42,6 +42,36 @@ function mapAddressList(list: Array<{ address?: string }> | undefined): string[]
   return (list ?? []).map((entry) => entry.address).filter((address): address is string => Boolean(address))
 }
 
+// User labels are stored as real IMAP keywords so they persist on the mail
+// server itself (no extra database needed). The display name is base64url
+// encoded to keep the flag a valid IMAP atom while preserving any characters
+// (spaces, accents, emoji) losslessly.
+const LABEL_FLAG_PREFIX = 'OL-'
+
+function encodeLabelFlag(label: string): string {
+  return `${LABEL_FLAG_PREFIX}${Buffer.from(label, 'utf8').toString('base64url')}`
+}
+
+function decodeLabelFlag(flag: string): string | null {
+  if (!flag.startsWith(LABEL_FLAG_PREFIX)) return null
+  try {
+    const decoded = Buffer.from(flag.slice(LABEL_FLAG_PREFIX.length), 'base64url').toString('utf8')
+    return decoded || null
+  } catch {
+    return null
+  }
+}
+
+function decodeLabelsFromFlags(flags: Set<string> | undefined): string[] {
+  if (!flags) return []
+  const labels: string[] = []
+  for (const flag of flags) {
+    const label = decodeLabelFlag(flag)
+    if (label) labels.push(label)
+  }
+  return labels.sort((a, b) => a.localeCompare(b))
+}
+
 export class MailcowImapProvider implements MailProvider {
   private config: MailcowConnectionConfig
   private credentials: MailboxCredentials
@@ -146,6 +176,7 @@ export class MailcowImapProvider implements MailProvider {
           sender: name,
           initials: name.split(/\s+/).slice(0, 2).map((part: string) => part[0] ?? '').join('').toUpperCase() || 'OO',
           time: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+          receivedAt: date.toISOString(),
           unread: !message.flags?.has('\\Seen'),
           starred: Boolean(message.flags?.has('\\Flagged')),
           tone: 'cyan',
@@ -158,6 +189,7 @@ export class MailcowImapProvider implements MailProvider {
           attachments,
           to: mapAddressList(message.envelope?.to),
           cc: mapAddressList(message.envelope?.cc),
+          labels: decodeLabelsFromFlags(message.flags),
         })
       }
 
@@ -276,5 +308,42 @@ export class MailcowImapProvider implements MailProvider {
   async delete(id: string) {
     await this.move(id, 'Trash')
     return { id, deleted: true as const }
+  }
+
+  async listLabels(folder: string): Promise<string[]> {
+    const client = this.createImapClient()
+    await client.connect()
+    try {
+      await client.mailboxOpen(mapFolderLabel(folder))
+      return decodeLabelsFromFlags(client.mailbox ? client.mailbox.flags : undefined)
+    } finally {
+      await client.logout().catch(() => {})
+    }
+  }
+
+  async setMessageLabels(id: string, labels: string[]) {
+    const unique = Array.from(new Set(labels.map((label) => label.trim()).filter(Boolean)))
+    const client = this.createImapClient()
+    await client.connect()
+    try {
+      await client.mailboxOpen('INBOX')
+      const message = await client.fetchOne(id, { flags: true }, { uid: true })
+      const currentLabelFlags = new Set(
+        Array.from(message?.flags ?? []).filter(
+          (flag): flag is string => typeof flag === 'string' && flag.startsWith(LABEL_FLAG_PREFIX),
+        ),
+      )
+      const nextFlags = new Set(unique.map(encodeLabelFlag))
+
+      const toRemove = Array.from(currentLabelFlags).filter((flag) => !nextFlags.has(flag))
+      const toAdd = Array.from(nextFlags).filter((flag) => !currentLabelFlags.has(flag))
+
+      if (toRemove.length) await client.messageFlagsRemove(id, toRemove, { uid: true })
+      if (toAdd.length) await client.messageFlagsAdd(id, toAdd, { uid: true })
+
+      return { id, labels: unique }
+    } finally {
+      await client.logout().catch(() => {})
+    }
   }
 }

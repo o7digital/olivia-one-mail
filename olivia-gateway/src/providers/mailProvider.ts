@@ -12,4 +12,6 @@ export interface MailProvider {
   toggleStar(id: string): Promise<{ id: string; starred: boolean }>
   move(id: string, folder: string): Promise<{ id: string; folder: string }>
   delete(id: string): Promise<{ id: string; deleted: true }>
+  listLabels(folder: string): Promise<string[]>
+  setMessageLabels(id: string, labels: string[]): Promise<{ id: string; labels: string[] }>
 }

@@ -79,4 +79,21 @@ export class MockMailProvider implements MailProvider {
     message.folder = 'Trash'
     return { id, deleted: true as const }
   }
+
+  async listLabels(folder: string): Promise<string[]> {
+    const set = new Set<string>()
+    for (const message of state.messages) {
+      if (message.folder !== folder) continue
+      for (const label of message.labels ?? []) set.add(label)
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }
+
+  async setMessageLabels(id: string, labels: string[]) {
+    const message = findMessage(id)
+    if (!message) throw new Error('Message not found')
+    const unique = Array.from(new Set(labels.map((label) => label.trim()).filter(Boolean)))
+    message.labels = unique
+    return { id, labels: unique }
+  }
 }

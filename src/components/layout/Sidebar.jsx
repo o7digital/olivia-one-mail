@@ -3,27 +3,45 @@ import {
   Sparkles, Trash2, X,
 } from 'lucide-react'
 import { Avatar } from '../common/Avatar'
-import { labels, spaces } from '../../mocks/mail'
+import { spaces } from '../../mocks/mail'
 
 const folderIcons = {
   Inbox, Priority: Sparkles, Snoozed: Clock3, Sent: Send, Drafts: FileText,
   Scheduled: CalendarDays, Spam: ShieldCheck, Trash: Trash2, Archive,
 }
 
-function SidebarSection({ items, labels: withLabels = false, title }) {
+function SidebarSection({ items, title }) {
   return (
     <div className="section">
       <div className="sectiontitle"><span>{title}</span></div>
-      {items.map((item, index) => (
+      {items.map((item) => (
         <button type="button" key={item}>
-          {withLabels ? <i className={`dot d${index}`} /> : <i className="spaceicon" />}{item}
+          <i className="spaceicon" />{item}
         </button>
       ))}
     </div>
   )
 }
 
-export function Sidebar({ activeFolder, folders, mobileOpen, onClose, onCompose, onFolderChange }) {
+function LabelsSection({ activeLabel, labels, onLabelSelect }) {
+  return (
+    <div className="section">
+      <div className="sectiontitle"><span>Labels</span></div>
+      {labels.length ? labels.map((label, index) => (
+        <button
+          type="button"
+          key={label}
+          className={label === activeLabel ? 'active' : ''}
+          onClick={() => onLabelSelect(label === activeLabel ? null : label)}
+        >
+          <i className={`dot d${index % 4}`} />{label}
+        </button>
+      )) : <p className="labelsEmpty">No labels yet. Open a message to create one.</p>}
+    </div>
+  )
+}
+
+export function Sidebar({ activeFolder, activeLabel, folders, knownLabels, mobileOpen, onClose, onCompose, onFolderChange, onLabelSelect }) {
   return (
     <aside className={`sidebar card ${mobileOpen ? 'mobileOpen' : ''}`}>
       <button type="button" className="closeSidebar" onClick={onClose} aria-label="Close navigation"><X size={18} /></button>
@@ -40,7 +58,7 @@ export function Sidebar({ activeFolder, folders, mobileOpen, onClose, onCompose,
         })}
       </nav>
       <SidebarSection title="Spaces" items={spaces} />
-      <SidebarSection title="Labels" items={labels} labels />
+      <LabelsSection activeLabel={activeLabel} labels={knownLabels ?? []} onLabelSelect={onLabelSelect} />
       <div className="secure"><ShieldCheck size={15} />Protected by O7 Mail</div>
     </aside>
   )
