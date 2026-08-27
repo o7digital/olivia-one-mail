@@ -1,4 +1,4 @@
-import { Building2, CalendarDays, CheckSquare2, Cloud, ContactRound, Mail, Settings2, ShieldCheck, Sparkles } from 'lucide-react'
+import { Building2, CalendarDays, CheckSquare2, Cloud, ContactRound, ExternalLink, Mail, Settings2, ShieldCheck, Sparkles, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { peopleService } from '../../services/peopleService'
 
@@ -60,7 +60,7 @@ const accountProviders = [
 ]
 
 function ConnectedAccounts() {
-  const [selectedProvider, setSelectedProvider] = useState(null)
+  const [setupProvider, setSetupProvider] = useState(null)
 
   return (
     <section className="connectedAccounts" aria-labelledby="connected-accounts-title">
@@ -72,20 +72,56 @@ function ConnectedAccounts() {
         {accountProviders.map((provider) => {
           const ProviderIcon = provider.icon
           return (
-            <button type="button" key={provider.name} className={selectedProvider === provider.name ? 'selected' : ''} onClick={() => setSelectedProvider(provider.name)}>
+            <button type="button" key={provider.name} onClick={() => setSetupProvider(provider)}>
               <i className={`providerIcon ${provider.tone}`}><ProviderIcon size={20} /></i>
               <span><b>{provider.name}</b><small>{provider.detail}</small></span>
-              <em>{selectedProvider === provider.name ? 'Selected' : 'Set up'}</em>
+              <em>Set up</em>
             </button>
           )
         })}
       </div>
-      {selectedProvider ? (
-        <div className="providerNotice" role="status">
-          <ShieldCheck size={17} />
-          <div><b>{selectedProvider} setup selected</b><p>{accountProviders.find(({ name }) => name === selectedProvider)?.method}. Credentials will be stored server-side and isolated for each client workspace.</p></div>
-        </div>
-      ) : null}
+      {setupProvider ? <AccountSetupDialog provider={setupProvider} onClose={() => setSetupProvider(null)} /> : null}
     </section>
+  )
+}
+
+function AccountSetupDialog({ onClose, provider }) {
+  const [notice, setNotice] = useState('')
+  const ProviderIcon = provider.icon
+  const isOAuth = provider.name === 'Google' || provider.name === 'Microsoft'
+  const defaultEmail = provider.name === 'Google' ? 'olivier.steineur@gmail.com' : provider.name === 'iCloud' ? 'olivier.steineur@icloud.com' : ''
+
+  function continueSetup(event) {
+    event.preventDefault()
+    setNotice(isOAuth
+      ? `${provider.name} OAuth must be configured on the Olivia server before authorization can start.`
+      : `${provider.name} server connector must be enabled before credentials can be securely validated.`)
+  }
+
+  return (
+    <div className="overlay accountSetupOverlay" role="presentation">
+      <section className="accountSetupDialog" role="dialog" aria-modal="true" aria-labelledby="account-setup-title">
+        <button type="button" className="setupClose" onClick={onClose} aria-label="Close account setup"><X size={18} /></button>
+        <i className={`providerIcon ${provider.tone}`}><ProviderIcon size={21} /></i>
+        <small>CONNECTED ACCOUNT</small>
+        <h2 id="account-setup-title">Add {provider.name}</h2>
+        <p>{provider.detail} will appear in the unified Olivia workspace after the provider validates the connection.</p>
+
+        <form className="accountSetupForm" onSubmit={continueSetup}>
+          <label>Email address<input name="connectedEmail" type="email" defaultValue={defaultEmail} placeholder="name@example.com" required /></label>
+          {isOAuth ? (
+            <div className="oauthExplanation"><ShieldCheck size={17} /><span>Olivia never asks for your {provider.name} password. Authorization uses the provider’s secure OAuth page.</span></div>
+          ) : (
+            <>
+              <label>App-specific password<input name="appPassword" type="password" placeholder="App password" autoComplete="new-password" required /></label>
+              {provider.name === 'Other account' ? <label>IMAP server<input name="imapHost" placeholder="imap.example.com" required /></label> : null}
+            </>
+          )}
+          <label className="syncChoice"><input type="checkbox" defaultChecked />Sync mail and calendar</label>
+          {notice ? <p className="setupNotice" role="status">{notice}</p> : null}
+          <div className="setupActions"><button type="button" onClick={onClose}>Cancel</button><button type="submit">{isOAuth ? <><ExternalLink size={14} />Continue with {provider.name}</> : `Connect ${provider.name}`}</button></div>
+        </form>
+      </section>
+    </div>
   )
 }

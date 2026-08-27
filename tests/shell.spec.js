@@ -135,7 +135,9 @@ test('account setup opens connected provider choices', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Connected accounts' })).toBeVisible()
   await expect(page.getByRole('button', { name: /Google/ })).toBeVisible()
   await page.getByRole('button', { name: /iCloud/ }).click()
-  await expect(page.getByRole('status')).toContainText('iCloud setup selected')
+  await expect(page.getByRole('dialog', { name: 'Add iCloud' })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Email address' })).toHaveValue('olivier.steineur@icloud.com')
+  await expect(page.getByRole('textbox', { name: 'App-specific password' })).toBeVisible()
 })
 
 test('tablet layout and application routes', async ({ page }) => {
