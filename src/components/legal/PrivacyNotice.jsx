@@ -2,7 +2,7 @@ import { X } from 'lucide-react'
 
 export const PRIVACY_VERSION = '2026-08-27'
 
-export function PrivacyNotice({ onClose }) {
+export function PrivacyNotice({ onAccept, onClose }) {
   return (
     <div className="overlay privacyOverlay" role="presentation">
       <section className="privacyDialog" role="dialog" aria-modal="true" aria-labelledby="privacy-title">
@@ -31,7 +31,10 @@ export function PrivacyNotice({ onClose }) {
         <p className="privacySources">Official references: <a href="https://www.cnil.fr/fr/reglement-europeen-protection-donnees/chapitre3" target="_blank" rel="noreferrer">EU GDPR guidance</a> · <a href="https://www.diputados.gob.mx/LeyesBiblio/pdf/LFPDPPP.pdf" target="_blank" rel="noreferrer">Mexico LFPDPPP</a> · <a href="https://oag.ca.gov/privacy/ccpa" target="_blank" rel="noreferrer">California CCPA</a> · <a href="https://www.priv.gc.ca/en/privacy-topics/privacy-laws-in-canada/the-personal-information-protection-and-electronic-documents-act-pipeda/" target="_blank" rel="noreferrer">Canada PIPEDA</a>.</p>
 
         <p className="privacyLegalNote">This operational notice must be reviewed by qualified privacy counsel before broad commercial rollout, especially for international transfers, retention schedules, subprocessors, minors, and sensitive data.</p>
-        <button type="button" className="privacyDone" onClick={onClose}>I have read the notice</button>
+        <div className="privacyActions">
+          <button type="button" className="privacyCancel" onClick={onClose}>Close</button>
+          <button type="button" className="privacyDone" onClick={onAccept}>Accept and continue</button>
+        </div>
       </section>
     </div>
   )

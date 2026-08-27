@@ -13,7 +13,11 @@ const loginSchema = z.object({
 
 export async function registerAuthRoutes(app: FastifyInstance) {
   app.post('/api/auth/login', async (request, reply) => {
-    const body = loginSchema.parse(request.body)
+    const parsed = loginSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.code(400).send({ message: 'Please view and accept the privacy and data-sharing notice before signing in.' })
+    }
+    const body = parsed.data
     try {
       await app.authenticateMailbox({
         email: body.email,

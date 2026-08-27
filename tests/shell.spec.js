@@ -19,12 +19,12 @@ async function signIn(page) {
 
 test('privacy notice is available and consent is required before authentication', async ({ page }) => {
   await page.goto('/mail')
-  await page.getByRole('button', { name: 'privacy and data-sharing notice' }).click()
+  await page.getByRole('button', { name: 'View privacy document' }).click()
   await expect(page.getByRole('heading', { name: 'Privacy & data-sharing notice' })).toBeVisible()
   await expect(page.getByRole('dialog')).toContainText('O7 Digital Consulting')
   await expect(page.getByRole('dialog')).toContainText('SIREN 899 748 560')
-  await page.getByRole('button', { name: 'I have read the notice' }).click()
-  await expect(page.getByRole('checkbox')).not.toBeChecked()
+  await page.getByRole('button', { name: 'Accept and continue' }).click()
+  await expect(page.getByRole('checkbox')).toBeChecked()
 })
 
 test('mail shell interactions and desktop screenshots', async ({ page }) => {

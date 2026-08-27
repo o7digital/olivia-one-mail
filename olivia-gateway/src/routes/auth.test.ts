@@ -37,6 +37,21 @@ test('login returns 401 for invalid mailbox or password', async () => {
   await app.close()
 })
 
+test('login returns a readable error when privacy acceptance is missing', async () => {
+  __resetSessionsForTests()
+  const app = await buildApp(async () => true)
+
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/auth/login',
+    payload: { email: 'info@o7digitalgroup.com', password: 'valid-pass' },
+  })
+
+  assert.equal(response.statusCode, 400)
+  assert.match(response.json().message, /accept the privacy/i)
+  await app.close()
+})
+
 test('login sets opaque cookie and logout destroys the server session', async () => {
   __resetSessionsForTests()
   __setSessionClockForTests(() => 10_000)

@@ -30,6 +30,7 @@ function App() {
   const [loginError, setLoginError] = useState('')
   const [loginLoading, setLoginLoading] = useState(false)
   const [privacyOpen, setPrivacyOpen] = useState(false)
+  const [privacyAccepted, setPrivacyAccepted] = useState(false)
   const session = useSession()
   const isAuthenticated = session.isAuthenticated
   const folders = useMailFolders(isAuthenticated)
@@ -116,7 +117,7 @@ function App() {
       await session.login({
         email: String(formData.get('email') ?? ''),
         password: String(formData.get('password') ?? ''),
-        privacyAccepted: formData.get('privacyAccepted') === 'on',
+        privacyAccepted,
         privacyVersion: PRIVACY_VERSION,
       })
     } catch (error) {
@@ -141,13 +142,13 @@ function App() {
           <input autoFocus name="email" type="email" placeholder="you@o7digitalgroup.com" aria-label="Email" />
           <input name="password" type="password" placeholder="Password" aria-label="Password" />
           <label className="privacyConsent">
-            <input name="privacyAccepted" type="checkbox" required />
-            <span>I have read and accept the <button type="button" onClick={() => setPrivacyOpen(true)}>privacy and data-sharing notice</button>, including processing of connected mail/calendar data and Olivia AI analysis.</span>
+            <input name="privacyAccepted" type="checkbox" checked={privacyAccepted} onChange={(event) => setPrivacyAccepted(event.target.checked)} required />
+            <span>I agree to the processing of connected mail/calendar data and Olivia AI analysis. <button type="button" onClick={() => setPrivacyOpen(true)}>View privacy document</button></span>
           </label>
           {loginError ? <p className="formError" role="alert">{loginError}</p> : null}
           <button className="sendAi" type="submit" disabled={loginLoading}>{loginLoading ? 'Signing in…' : 'Sign in securely'}</button>
         </form>
-        {privacyOpen ? <PrivacyNotice onClose={() => setPrivacyOpen(false)} /> : null}
+        {privacyOpen ? <PrivacyNotice onClose={() => setPrivacyOpen(false)} onAccept={() => { setPrivacyAccepted(true); setPrivacyOpen(false) }} /> : null}
       </div>
     )
   }
