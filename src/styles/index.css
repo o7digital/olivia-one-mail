@@ -63,10 +63,16 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 .aiTop:not(.active) span { background: #687a91; box-shadow: none; }
 .icon { flex: 0 0 auto; width: 34px; height: 34px; border: 0; background: transparent; border-radius: 9px; display: grid; place-items: center; color: #a5b7ca; cursor: pointer; }
 .icon:hover { background: rgba(255, 255, 255, .05); color: white; }
-.profile { display: flex; align-items: center; gap: 8px; margin-left: 4px; padding-left: 9px; border-left: 1px solid var(--stroke); min-width: 0; }
-.profile > div:nth-child(2) { display: flex; flex-direction: column; min-width: 140px; }
+.profileWrap { position: relative; margin-left: 4px; }
+.profile { display: flex; align-items: center; gap: 8px; padding: 3px 5px 3px 9px; border: 0; border-left: 1px solid var(--stroke); border-radius: 0 9px 9px 0; background: transparent; min-width: 0; cursor: pointer; text-align: left; }
+.profile:hover, .profile[aria-expanded='true'] { background: rgba(255, 255, 255, .045); }
+.profileIdentity { display: flex; flex-direction: column; min-width: 140px; }
 .profile b { font-size: 11px; }
 .profile small { font-size: 9px; color: #7f93aa; margin-top: 2px; }
+.profileMenu { position: absolute; z-index: 40; top: calc(100% + 9px); right: 0; width: 170px; padding: 6px; border: 1px solid var(--stroke); border-radius: 10px; background: #282c33; box-shadow: 0 18px 45px rgba(0, 0, 0, .38); }
+.profileMenu button { width: 100%; border: 0; border-radius: 7px; background: transparent; color: #dce5ef; padding: 9px; display: flex; align-items: center; gap: 8px; font-size: 10px; cursor: pointer; }
+.profileMenu button:hover { background: rgba(255, 255, 255, .06); color: white; }
+.profileMenu button:disabled { opacity: .6; cursor: progress; }
 
 .grid { height: calc(100vh - 72px); display: grid; gap: 7px; padding: 7px; position: relative; z-index: 2; }
 .grid.aiOn { grid-template-columns: 225px 330px minmax(460px, 1fr) 350px 48px; }
@@ -300,7 +306,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
   .grid.aiOn, .grid.aiOff { grid-template-columns: 190px 310px minmax(430px, 1fr); }
   .topbar { grid-template-columns: 190px minmax(260px, 420px) 1fr; padding: 0 15px; gap: 12px; }
   .topright > .icon { display: none; }
-  .profile > div:nth-child(2) { display: none; }.profile { padding-left: 4px; }
+  .profileIdentity { display: none; }.profile { padding-left: 4px; }
   .attachments { grid-template-columns: 1fr; }
 }
 
@@ -308,7 +314,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
   .topbar { height: 64px; grid-template-columns: auto minmax(220px, 1fr) auto; }
   .brand { font-size: 0; gap: 6px; }.brandmark { width: 32px; height: 27px; }
   .menuButton { display: grid !important; }
-  .profile { display: none; }
+  .profileWrap { margin-left: 0; }
   .aiTop { font-size: 0; padding: 0 11px; }.aiTop svg { width: 18px; height: 18px; }
   .grid { height: calc(100vh - 64px); }
   .grid.aiOn, .grid.aiOff { grid-template-columns: minmax(270px, 37vw) minmax(430px, 1fr); }

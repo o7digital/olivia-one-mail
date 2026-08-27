@@ -149,10 +149,21 @@ function App() {
       <TopBar
         aiOpen={aiOpen}
         onAiToggle={() => setAiOpen((current) => !current)}
+        onLogout={async () => {
+          try {
+            await session.logout()
+            setQuery('')
+            setComposeState(null)
+            setOpportunityOpen(false)
+          } catch (error) {
+            notify(error.message || 'Unable to sign out')
+          }
+        }}
         onMenuToggle={() => setMobileNavOpen((current) => !current)}
         query={query}
         searchRef={searchRef}
         setQuery={updateQuery}
+        user={session.session?.user}
       />
 
       {mobileNavOpen ? <button type="button" className="navScrim" onClick={() => setMobileNavOpen(false)} aria-label="Close navigation" /> : null}

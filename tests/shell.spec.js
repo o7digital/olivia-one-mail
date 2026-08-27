@@ -96,6 +96,14 @@ test('inbox category tabs filter focused and other messages', async ({ page }) =
   await expect(page.getByRole('button', { name: /Sophia Martinez/ })).toHaveCount(0)
 })
 
+test('profile menu signs out and returns to login', async ({ page }) => {
+  await signIn(page)
+
+  await page.getByRole('button', { name: /User Zevicapital/ }).click()
+  await page.getByRole('menuitem', { name: 'Sign out' }).click()
+  await expect(page.getByRole('heading', { name: 'Sign in to your mailbox' })).toBeVisible()
+})
+
 test('tablet layout and application routes', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 })
   await signIn(page)
