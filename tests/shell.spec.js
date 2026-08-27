@@ -117,6 +117,16 @@ test('profile menu signs out and returns to login', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Sign in to your mailbox' })).toBeVisible()
 })
 
+test('account setup opens connected provider choices', async ({ page }) => {
+  await signIn(page)
+
+  await page.getByRole('button', { name: 'Setup connected accounts' }).click()
+  await expect(page.getByRole('heading', { name: 'Connected accounts' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Google/ })).toBeVisible()
+  await page.getByRole('button', { name: /iCloud/ }).click()
+  await expect(page.getByRole('status')).toContainText('iCloud setup selected')
+})
+
 test('tablet layout and application routes', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 })
   await signIn(page)

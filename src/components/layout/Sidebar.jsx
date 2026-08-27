@@ -1,7 +1,8 @@
 import {
   Archive, CalendarDays, ChevronDown, Clock3, FileText, Inbox, PenLine, Send, ShieldCheck,
-  Sparkles, Trash2, X,
+  Settings2, Sparkles, Trash2, X,
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { Avatar } from '../common/Avatar'
 import { spaces } from '../../mocks/mail'
 
@@ -42,10 +43,16 @@ function LabelsSection({ activeLabel, labels, onLabelSelect }) {
 }
 
 export function Sidebar({ activeFolder, activeLabel, folders, knownLabels, mobileOpen, onClose, onCompose, onFolderChange, onLabelSelect }) {
+  const navigate = useNavigate()
+
   return (
     <aside className={`sidebar card ${mobileOpen ? 'mobileOpen' : ''}`}>
       <button type="button" className="closeSidebar" onClick={onClose} aria-label="Close navigation"><X size={18} /></button>
-      <div className="account"><Avatar initials="OS" /><div><b>Olivier Steineur</b><small>info@o7digitalgroup.com</small></div><ChevronDown size={15} /></div>
+      <div className="account">
+        <Avatar initials="OS" />
+        <div><b>Olivier Steineur</b><small>info@o7digitalgroup.com</small></div>
+        <button type="button" className="accountSetup" aria-label="Setup connected accounts" onClick={() => { navigate('/settings'); onClose() }} title="Setup connected accounts"><Settings2 size={16} /></button>
+      </div>
       <button className="compose" type="button" onClick={onCompose}><PenLine size={18} /><span>Compose</span><ChevronDown size={15} /></button>
       <nav aria-label="Mail folders">
         {folders.map(({ label, count }) => {

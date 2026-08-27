@@ -1,4 +1,4 @@
-import { CalendarDays, CheckSquare2, ContactRound, Settings2, Sparkles } from 'lucide-react'
+import { Building2, CalendarDays, CheckSquare2, Cloud, ContactRound, Mail, Settings2, ShieldCheck, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { peopleService } from '../../services/peopleService'
 
@@ -45,8 +45,47 @@ export function FeaturePage({ page }) {
   return (
     <section className="featurePage card">
       <div className="featureHero"><span className="featureIcon"><Icon size={24} /></span><small>{detail.eyebrow}</small><h1>{detail.title}</h1><p>{detail.copy}</p></div>
+      {page === 'settings' ? <ConnectedAccounts /> : null}
       <div className="featureStats">{(dynamicStats ?? detail.stats).map((stat) => <div key={stat}><span /><b>{stat}</b></div>)}</div>
       <div className="phaseNote"><Sparkles size={17} /><div><b>Phase 2 gateway ready</b><p>This route now has a server-side boundary. Live provider adapters can replace the mock gateway without redesigning the UI.</p></div></div>
+    </section>
+  )
+}
+
+const accountProviders = [
+  { name: 'Google', detail: 'Gmail + Google Calendar', method: 'Secure OAuth connection', icon: Mail, tone: 'google' },
+  { name: 'Microsoft', detail: 'Outlook + Microsoft Calendar', method: 'Secure OAuth connection', icon: Building2, tone: 'microsoft' },
+  { name: 'iCloud', detail: 'iCloud Mail + Calendar', method: 'App password + CalDAV', icon: Cloud, tone: 'icloud' },
+  { name: 'Other account', detail: 'OVH, O7 Mail or custom provider', method: 'IMAP/SMTP + CalDAV', icon: Settings2, tone: 'other' },
+]
+
+function ConnectedAccounts() {
+  const [selectedProvider, setSelectedProvider] = useState(null)
+
+  return (
+    <section className="connectedAccounts" aria-labelledby="connected-accounts-title">
+      <div className="connectedHead">
+        <div><small>MAIL & CALENDAR</small><h2 id="connected-accounts-title">Connected accounts</h2><p>Add another mailbox and let Olivia analyze it in the same workspace.</p></div>
+        <span><Settings2 size={16} />Setup</span>
+      </div>
+      <div className="providerGrid">
+        {accountProviders.map((provider) => {
+          const ProviderIcon = provider.icon
+          return (
+            <button type="button" key={provider.name} className={selectedProvider === provider.name ? 'selected' : ''} onClick={() => setSelectedProvider(provider.name)}>
+              <i className={`providerIcon ${provider.tone}`}><ProviderIcon size={20} /></i>
+              <span><b>{provider.name}</b><small>{provider.detail}</small></span>
+              <em>{selectedProvider === provider.name ? 'Selected' : 'Set up'}</em>
+            </button>
+          )
+        })}
+      </div>
+      {selectedProvider ? (
+        <div className="providerNotice" role="status">
+          <ShieldCheck size={17} />
+          <div><b>{selectedProvider} setup selected</b><p>{accountProviders.find(({ name }) => name === selectedProvider)?.method}. Credentials will be stored server-side and isolated for each client workspace.</p></div>
+        </div>
+      ) : null}
     </section>
   )
 }
