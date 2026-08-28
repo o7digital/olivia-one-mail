@@ -1,64 +1,74 @@
-import { BrainCircuit, BriefcaseBusiness, CheckCircle2, ChevronDown, Circle, ContactRound, Lightbulb, ListTodo, Sparkles, Target, UsersRound } from 'lucide-react'
+import { BrainCircuit, BriefcaseBusiness, Link2, Mail, Settings2, UsersRound } from 'lucide-react'
 import { useState } from 'react'
 import { Avatar } from '../common/Avatar'
+import { InsightCard } from './InsightCard'
 
-function WorkspaceSection({ children, icon: Icon, title }) {
-  return (
-    <details className="workspaceSection">
-      <summary><Icon size={15} /><span>{title}</span><ChevronDown size={14} /></summary>
-      <div className="workspaceSectionBody">{children}</div>
-    </details>
-  )
-}
+const tabs = ['Overview', 'Insights', 'Context']
 
 export function AIWorkspace({ analysis, message, onCreateOpportunity, onNotify, status }) {
+  const [activeTab, setActiveTab] = useState('Overview')
   const [completedTasks, setCompletedTasks] = useState([])
+  const [customTasks, setCustomTasks] = useState([])
+
   if (!message) return null
+  if (status === 'error') return <aside className="ai card" aria-label="AI Workspace"><div className="aihead"><b><BrainCircuit size={18} />AI Workspace</b><Settings2 size={15} /></div><div className="aiTabContent"><BrainCircuit size={24} /><b>Olivia AI temporarily unavailable</b><p>The gateway could not reach the internal Olivia AI service.</p></div></aside>
+  if (!analysis && status !== 'loading') return null
 
   function toggleTask(task) {
     setCompletedTasks((current) => current.includes(task) ? current.filter((item) => item !== task) : [...current, task])
   }
 
-  if (status === 'error') {
-    return <aside className="ai aiWorkspace" aria-label="AI Workspace"><div className="aiWorkspaceHead"><span><Sparkles size={16} /></span><div><b>Olivia AI</b><small>Workspace</small></div></div><div className="aiUnavailable"><BrainCircuit size={22} /><b>AI temporarily unavailable</b><p>Your email remains fully available. Try again in a moment.</p></div></aside>
+  function addTask() {
+    const nextIndex = customTasks.length + 1
+    setCustomTasks((current) => [...current, `Follow-up task ${nextIndex}`])
+    onNotify('Mock task added')
   }
-  if (!analysis && status !== 'loading') return null
-  if (status === 'loading') {
-    return <aside className="ai aiWorkspace" aria-label="AI Workspace"><div className="aiWorkspaceHead"><span><Sparkles size={16} /></span><div><b>Olivia AI</b><small>Workspace</small></div></div><div className="aiLoading"><i /><i /><i /><small>Reading this conversation…</small></div></aside>
-  }
-
-  const tasks = analysis.tasks ?? []
-  const money = analysis.opportunity.estimatedValue && analysis.opportunity.currency
-    ? new Intl.NumberFormat('en-US', { style: 'currency', currency: analysis.opportunity.currency, maximumFractionDigits: 0 }).format(analysis.opportunity.estimatedValue)
-    : 'Value not estimated'
 
   return (
-    <aside className="ai aiWorkspace" aria-label="AI Workspace">
-      <div className="aiWorkspaceHead"><span><Sparkles size={16} /></span><div><b>Olivia AI</b><small>Workspace</small></div></div>
-      <section className="aiSummaryBlock"><div className="eyebrow"><BrainCircuit size={13} />AI Summary</div>{analysis.summary.map((line) => <p key={line}>{line}</p>)}</section>
-      <section className="recommendedActions">
-        <div className="eyebrow"><Lightbulb size={13} />Recommended actions</div>
-        {tasks.slice(0, 2).map((task) => <button type="button" key={task.title} onClick={() => toggleTask(task.title)}>{completedTasks.includes(task.title) ? <CheckCircle2 size={15} /> : <Circle size={15} />}<span>{task.title}</span></button>)}
-        {!tasks.length ? <p>No action required right now.</p> : null}
-      </section>
-
-      <div className="workspaceSections">
-        <WorkspaceSection icon={Lightbulb} title="Insights">
-          <dl className="insightList"><div><dt>Sentiment</dt><dd>{analysis.sentiment.label} · {Math.round(analysis.sentiment.confidence * 100)}%</dd></div><div><dt>Urgency</dt><dd>{analysis.urgency}</dd></div><div><dt>Intent</dt><dd>{analysis.intent}</dd></div></dl>
-          {analysis.buyingSignals?.length ? <p>{analysis.buyingSignals.join(' · ')}</p> : null}
-        </WorkspaceSection>
-        <WorkspaceSection icon={ListTodo} title={`Tasks${tasks.length ? ` · ${tasks.length}` : ''}`}>
-          {tasks.map((task) => <button className={`workspaceTask ${completedTasks.includes(task.title) ? 'complete' : ''}`} type="button" key={task.title} onClick={() => toggleTask(task.title)}>{completedTasks.includes(task.title) ? <CheckCircle2 size={14} /> : <Circle size={14} />}<span>{task.title}</span></button>)}
-          <button className="quietAction" type="button" onClick={() => onNotify('Task creation is coming soon')}>+ Add task</button>
-        </WorkspaceSection>
-        <WorkspaceSection icon={ContactRound} title="Contact">
-          <div className="workspaceContact"><Avatar initials={message.initials} tone={message.tone} small /><div><b>{message.sender}</b><small>{message.role}</small><small>{message.company}</small></div></div><p>{analysis.contactInsights.summary}</p>
-        </WorkspaceSection>
-        <WorkspaceSection icon={Target} title="Opportunity">
-          <div className="compactOpportunity"><div><b>{analysis.opportunity.title || 'No active opportunity'}</b><small>{money} · {Math.round(analysis.opportunity.confidence * 100)}% confidence</small></div><button type="button" onClick={onCreateOpportunity}><BriefcaseBusiness size={14} />Create in Pulse</button></div>
-        </WorkspaceSection>
-        <WorkspaceSection icon={UsersRound} title="Context"><p>{message.sender} represents {message.company}. Relationship context is kept secondary to this conversation.</p></WorkspaceSection>
+    <aside className="ai card" aria-label="AI Workspace">
+      <div className="aihead"><b><BrainCircuit size={18} />AI Workspace</b><Settings2 size={15} /></div>
+      <div className="aitabs" role="tablist">
+        {tabs.map((tab) => <button type="button" role="tab" aria-selected={activeTab === tab} className={activeTab === tab ? 'active' : ''} key={tab} onClick={() => setActiveTab(tab)}>{tab}</button>)}
       </div>
+
+      {activeTab === 'Overview' && status === 'loading' ? (
+        <div className="aiTabContent"><BrainCircuit size={24} /><b>Analyzing conversation</b><p>Olivia is preparing summary, tasks, and opportunity signals.</p></div>
+      ) : null}
+
+      {activeTab === 'Overview' && analysis ? (
+        <>
+          <InsightCard title="Email Summary">{analysis.summary.map((line) => <p key={line}>{line}</p>)}</InsightCard>
+          <div className="twocol">
+            <InsightCard title="Lead Score"><div className="score">{Math.round(analysis.leadScore)}</div><small className="good">{analysis.sentiment.label} · {Math.round(analysis.sentiment.confidence * 100)}%</small></InsightCard>
+            <InsightCard title="Urgency"><div className="urgency">{analysis.urgency}</div><small>{analysis.intent}</small></InsightCard>
+          </div>
+          <InsightCard title="Extracted Tasks">
+            {[...analysis.tasks.map((task) => task.title), ...customTasks].map((task) => (
+              <button className={`task ${completedTasks.includes(task) ? 'complete' : ''}`} type="button" key={task} onClick={() => toggleTask(task)}>
+                <span /><b>{task}</b><small>Follow-up</small>
+              </button>
+            ))}
+            <button className="textbtn" type="button" onClick={addTask}>+ Add task</button>
+          </InsightCard>
+          <InsightCard title="Business Opportunity">
+            <div className="opp"><div><b>{analysis.opportunity.title || 'No active opportunity detected'}</b><small>Estimated value</small></div><em>{Math.round(analysis.opportunity.confidence * 100)}%</em></div>
+            <div className="money">{analysis.opportunity.estimatedValue && analysis.opportunity.currency ? new Intl.NumberFormat('en-US', { style: 'currency', currency: analysis.opportunity.currency }).format(analysis.opportunity.estimatedValue) : 'Not estimated'}</div><div className="spark" aria-label="Opportunity trend"><i /><i /><i /><i /><i /><i /><i /></div>
+          </InsightCard>
+          <InsightCard title="Contact Insights">
+            <div className="contact"><Avatar initials={message.initials} tone={message.tone} small /><div><b>{message.sender}</b><small>{message.role}</small><small>{message.company}</small></div><div><Mail size={14} /><Link2 size={14} /><UsersRound size={14} /></div></div>
+            <p>{analysis.contactInsights.summary}</p><small className="engage">● {analysis.contactInsights.engagement}</small>
+          </InsightCard>
+          <div className="pulse"><div><b>Convert to Opportunity in O7 Pulse</b><p>Create a new opportunity and sync this conversation.</p><button type="button" onClick={onCreateOpportunity}><BriefcaseBusiness size={15} />Create Opportunity</button></div><strong>O7</strong></div>
+        </>
+      ) : null}
+
+      {activeTab === 'Insights' ? (
+        <div className="aiTabContent"><BrainCircuit size={24} /><b>Conversation intelligence</b><p>{analysis?.buyingSignals?.[0] || 'No strong buying signal detected.'}</p><div className="signal"><span>Sentiment</span><strong>{analysis?.sentiment.label} · {Math.round((analysis?.sentiment.confidence || 0) * 100)}%</strong></div><div className="signal"><span>Buying signals</span><strong>{analysis?.buyingSignals?.join(' · ') || 'None'}</strong></div></div>
+      ) : null}
+
+      {activeTab === 'Context' ? (
+        <div className="aiTabContent"><UsersRound size={24} /><b>Relationship context</b><p>{message.sender} has exchanged 18 messages with O7 in the last 90 days.</p><div className="contextChip">{message.company}</div><div className="contextChip">Active opportunity</div><div className="contextChip">Last contact: today</div></div>
+      ) : null}
     </aside>
   )
 }

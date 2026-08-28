@@ -236,6 +236,7 @@ function App() {
               onReplyAll={() => openCompose('reply-all', inbox.selected)}
             />
             {aiOpen ? <AIWorkspace analysis={aiWorkspace.analysis} message={inbox.selected} onCreateOpportunity={() => setOpportunityOpen(true)} onNotify={notify} status={aiWorkspace.status} /> : null}
+            <AppRail />
           </main>
         )} />
         {['calendar', 'contacts', 'tasks', 'pulse', 'settings'].map((page) => (

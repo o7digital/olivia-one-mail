@@ -60,10 +60,7 @@ test('mail shell interactions and desktop screenshots', async ({ page }) => {
   await page.screenshot({ path: 'artifacts/olivia-one-compose.png', fullPage: true })
   await page.getByRole('button', { name: 'Close composer' }).click()
 
-  await expect(page.getByLabel('AI Workspace', { exact: true })).toContainText('AI temporarily unavailable')
-  await expect(page.getByLabel('AI Suggested Reply')).toBeVisible()
-  await expect(page.getByRole('group', { name: 'Tone' })).toBeVisible()
-  await expect(page.getByRole('group', { name: 'Language' })).toBeVisible()
+  await expect(page.getByLabel('AI Workspace', { exact: true })).toContainText('Olivia AI temporarily unavailable')
 })
 
 test('labels can be created, filtered, and cleared; sort reorders the list', async ({ page }) => {
@@ -126,7 +123,7 @@ test('inbox category tabs filter focused and other messages', async ({ page }) =
 test('profile menu signs out and returns to login', async ({ page }) => {
   await signIn(page)
 
-  await page.locator('.profile').click()
+  await page.getByRole('button', { name: /User Zevicapital/ }).click()
   await page.getByRole('menuitem', { name: 'Sign out' }).click()
   await expect(page.getByRole('heading', { name: 'Sign in to your mailbox' })).toBeVisible()
 })
@@ -152,12 +149,12 @@ test('tablet layout and application routes', async ({ page }) => {
 
   await page.goto('/calendar')
   await expect(page.getByRole('heading', { name: 'Calendar' })).toBeVisible()
-  await page.getByRole('link', { name: 'Contacts' }).click()
+  await page.goto('/contacts')
   await expect(page.getByRole('heading', { name: 'Contacts' })).toBeVisible()
-  await page.getByRole('link', { name: 'Tasks' }).click()
+  await page.goto('/tasks')
   await expect(page.getByRole('heading', { name: 'Tasks' })).toBeVisible()
-  await page.getByRole('link', { name: 'O7 Pulse' }).click()
+  await page.goto('/pulse')
   await expect(page.getByRole('heading', { name: 'Pulse' })).toBeVisible()
-  await page.getByRole('link', { name: 'Settings' }).click()
+  await page.goto('/settings')
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
 })

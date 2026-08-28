@@ -1,10 +1,14 @@
-import { ChevronDown, Command, LogOut, Menu, Search, Sparkles } from 'lucide-react'
+import {
+  CalendarDays, CheckSquare2, ChevronDown, Command, LayoutGrid, LogOut, Menu, Search, Sparkles,
+} from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Avatar } from '../common/Avatar'
 import { IconButton } from '../common/IconButton'
 import { getWorkspaceIdentity } from '../../utils/workspaceIdentity'
 
 export function TopBar({ aiOpen, onAiToggle, onLogout, onMenuToggle, query, searchRef, setQuery, user }) {
+  const navigate = useNavigate()
   const [profileOpen, setProfileOpen] = useState(false)
   const [logoutPending, setLogoutPending] = useState(false)
   const profileRef = useRef(null)
@@ -46,6 +50,9 @@ export function TopBar({ aiOpen, onAiToggle, onLogout, onMenuToggle, query, sear
         <button className={`aiTop ${aiOpen ? 'active' : ''}`} type="button" onClick={onAiToggle} aria-pressed={aiOpen}>
           <Sparkles size={16} />AI Workspace<span />
         </button>
+        <IconButton label="Calendar" onClick={() => navigate('/calendar')}><CalendarDays size={18} /></IconButton>
+        <IconButton label="Tasks" onClick={() => navigate('/tasks')}><CheckSquare2 size={18} /></IconButton>
+        <IconButton label="Apps" onClick={() => navigate('/pulse')}><LayoutGrid size={18} /></IconButton>
         <div className="profileWrap" ref={profileRef}>
           <button className="profile" type="button" aria-expanded={profileOpen} aria-haspopup="menu" onClick={() => setProfileOpen((current) => !current)}>
             <Avatar initials={workspace.initials} small />
