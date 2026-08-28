@@ -201,13 +201,25 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 .attachment.purple svg { background: linear-gradient(135deg, #6d28d9, #4338ca); }.attachment.green svg { background: linear-gradient(135deg, #047857, #14b8a6); }.attachment.blue svg { background: linear-gradient(135deg, #1d4ed8, #0e7490); }
 .attachment > span { display: flex; flex-direction: column; min-width: 0; }
 .attachment b { font-size: 8.2px; }.attachment span span { font-size: 7px; color: #91a4bb; }.attachment small { font-size: 6.7px; color: #6f839c; margin-top: 3px; }
-.replybox { margin-top: 14px; border: 1px solid rgba(145, 181, 224, .13); border-radius: 9px; background: rgba(4, 15, 30, .33); overflow: hidden; padding-bottom: 10px; }
+.replybox { margin-top: 14px; border: 1px solid rgba(57, 217, 255, .16); border-radius: 11px; background: linear-gradient(160deg, rgba(8, 28, 49, .88), rgba(7, 18, 36, .94)); overflow: hidden; box-shadow: inset 0 1px rgba(255, 255, 255, .025), 0 12px 34px rgba(0, 5, 18, .18); }
 .replytabs { display: flex; border-bottom: 1px solid rgba(145, 181, 224, .1); overflow-x: auto; }
 .replytabs button { white-space: nowrap; border: 0; background: transparent; color: #8497af; padding: 9px 10px; display: flex; align-items: center; gap: 5px; font-size: 8px; }
 .replytabs .active { color: #65d8ff; background: rgba(34, 211, 238, .045); }
-.draft { padding: 10px 12px 4px; outline: 0; }
-.draft:focus { background: rgba(255, 255, 255, .012); }
-.draft p { font-size: 8.2px; line-height: 1.4; color: #adbed1; margin: 0 0 6px; }
+.replyControls { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(180px, .8fr); gap: 18px; padding: 13px 14px 11px; }
+.replyControlGroup { min-width: 0; }
+.replyControlGroup > span { display: block; margin-bottom: 7px; color: #6f89a4; font-size: 7px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+.replyPills { display: flex; flex-wrap: wrap; gap: 5px; }
+.replyPills button { min-height: 27px; border: 1px solid rgba(145, 181, 224, .14); border-radius: 999px; background: rgba(255, 255, 255, .025); color: #91a5bc; padding: 0 9px; font-size: 8px; cursor: pointer; }
+.replyPills button:hover { border-color: rgba(57, 217, 255, .3); color: #dff8ff; background: rgba(57, 217, 255, .06); }
+.replyPills button.active { border-color: rgba(139, 92, 246, .42); color: #e5dcff; background: linear-gradient(180deg, rgba(94, 60, 175, .3), rgba(49, 34, 106, .28)); }
+.replyPills button:disabled { opacity: .5; cursor: progress; }
+.replybox .draft { display: block; width: calc(100% - 28px); min-height: 132px; margin: 0 14px; padding: 13px 14px; resize: vertical; outline: 0; border: 1px solid rgba(145, 181, 224, .14); border-radius: 8px; background: rgba(3, 14, 28, .58); color: #dce8f5; font-size: 10px; line-height: 1.6; }
+.replybox .draft::placeholder { color: #667d96; }
+.replybox .draft:focus { border-color: rgba(57, 217, 255, .38); background: rgba(4, 18, 35, .72); box-shadow: 0 0 0 3px rgba(57, 217, 255, .045); }
+.replyFooter { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 11px 14px 13px; }
+.regenerateReply { border: 1px solid rgba(139, 92, 246, .25); border-radius: 7px; background: rgba(91, 56, 164, .1); color: #bcaaf1; padding: 7px 9px; display: flex; align-items: center; gap: 6px; font-size: 8px; cursor: pointer; }
+.regenerateReply:disabled { opacity: .5; cursor: progress; }
+.replyFooter .sendAi { margin-left: auto; }
 .sendAi { margin-left: 10px; border: 1px solid rgba(45, 212, 191, .38); background: linear-gradient(180deg, #159ab3, #08708d); border-radius: 7px; padding: 7px 10px; color: #eafaff; font-size: 8.5px; font-weight: 800; display: flex; align-items: center; gap: 6px; cursor: pointer; }
 .sendAi:disabled { opacity: .65; cursor: progress; }
 

@@ -1,10 +1,12 @@
-import { Forward, Reply, ReplyAll, Send, Sparkles } from 'lucide-react'
+import { Forward, RefreshCw, Reply, ReplyAll, Send, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { aiService } from '../../services/aiService'
 import { mailService } from '../../services/mailService'
 
 export function SuggestedReply({ aiStatus, message, onSent, suggestedReply }) {
   const [activeMode, setActiveMode] = useState('AI Suggested Reply')
+  const [activeTone, setActiveTone] = useState('formal')
+  const [activeLanguage, setActiveLanguage] = useState('auto')
   const [sending, setSending] = useState(false)
   const [rewriting, setRewriting] = useState(false)
   const [draft, setDraft] = useState(suggestedReply)
@@ -61,26 +63,42 @@ export function SuggestedReply({ aiStatus, message, onSent, suggestedReply }) {
           </button>
         ))}
       </div>
-      <div className="composeActions">
-        {[
-          ['formal', 'Professional'],
-          ['shorter', 'Shorter'],
-          ['friendly', 'Friendlier'],
-          ['improve', 'Clearer'],
-          ['translate-fr', 'FR'],
-          ['translate-es', 'ES'],
-          ['translate-en', 'EN'],
-        ].map(([action, label]) => (
-          <button key={action} className="icon" type="button" onClick={() => rewrite(action)} disabled={rewriting || !draft.trim()}>
-            {label}
-          </button>
-        ))}
+      <div className="replyControls">
+        <div className="replyControlGroup">
+          <span>Tone</span>
+          <div className="replyPills">
+            {[
+              ['formal', 'Professional'],
+              ['shorter', 'Shorter'],
+              ['friendly', 'Friendly'],
+              ['improve', 'Clearer'],
+            ].map(([action, label]) => (
+              <button key={action} className={activeTone === action ? 'active' : ''} type="button" onClick={() => { setActiveTone(action); rewrite(action) }} disabled={rewriting || !draft.trim()}>{label}</button>
+            ))}
+          </div>
+        </div>
+        <div className="replyControlGroup languageControl">
+          <span>Language</span>
+          <div className="replyPills">
+            <button className={activeLanguage === 'auto' ? 'active' : ''} type="button" onClick={() => setActiveLanguage('auto')}>Auto</button>
+            {[
+              ['translate-fr', 'FR'],
+              ['translate-es', 'ES'],
+              ['translate-en', 'EN'],
+            ].map(([action, label]) => (
+              <button key={action} className={activeLanguage === action ? 'active' : ''} type="button" onClick={() => { setActiveLanguage(action); rewrite(action) }} disabled={rewriting || !draft.trim()}>{label}</button>
+            ))}
+          </div>
+        </div>
       </div>
       <textarea className="draft" aria-label="Reply draft" placeholder={aiStatus === 'error' ? 'Olivia AI is temporarily unavailable.' : 'Olivia is preparing a suggested reply…'} value={draft} onChange={(event) => setDraft(event.target.value)} />
       {error ? <p className="formError" role="alert">{error}</p> : null}
-      <button className="sendAi" type="button" onClick={sendReply} disabled={sending || rewriting || !draft.trim() || activeMode === 'Forward'}>
-        <Send size={15} />{activeMode === 'Forward' ? 'Use the Forward button above' : sending ? 'Sending…' : rewriting ? 'Rewriting…' : 'Send suggested reply'}
-      </button>
+      <div className="replyFooter">
+        <button className="regenerateReply" type="button" onClick={() => rewrite('improve')} disabled={rewriting || !draft.trim()}><RefreshCw size={14} />{rewriting ? 'Rewriting…' : 'Regenerate'}</button>
+        <button className="sendAi" type="button" onClick={sendReply} disabled={sending || rewriting || !draft.trim() || activeMode === 'Forward'}>
+          <Send size={15} />{activeMode === 'Forward' ? 'Use Forward above' : sending ? 'Sending…' : 'Send reply'}
+        </button>
+      </div>
     </div>
   )
 }
