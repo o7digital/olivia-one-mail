@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { AuthenticateWithRedirectCallback } from '@clerk/react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { AIWorkspace } from './components/ai/AIWorkspace'
+import { CalendarPage } from './components/calendar/CalendarPage'
 import { AppRail } from './components/layout/AppRail'
 import { FeaturePage } from './components/layout/FeaturePage'
 import { Sidebar } from './components/layout/Sidebar'
@@ -250,7 +251,14 @@ function App() {
             <AppRail />
           </main>
         )} />
-        {['calendar', 'contacts', 'pulse', 'settings'].map((page) => (
+        <Route path="/calendar" element={(
+          <main className="grid pageGrid">
+            <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} user={session.session?.user} />
+            <CalendarPage />
+            <AppRail />
+          </main>
+        )} />
+        {['contacts', 'pulse', 'settings'].map((page) => (
           <Route key={page} path={`/${page}`} element={(
             <main className="grid pageGrid">
               <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} user={session.session?.user} />

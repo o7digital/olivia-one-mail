@@ -204,3 +204,18 @@ test('tasks can be created, completed, filtered, and deleted', async ({ page }) 
   await expect(page.getByRole('status')).toContainText('Task deleted')
   await expect(page.getByText('Prepare client follow-up')).toHaveCount(0)
 })
+
+test('calendar shows a navigable month grid and event agenda', async ({ page }) => {
+  await signIn(page)
+  await page.getByRole('button', { name: 'Calendar' }).click()
+
+  await expect(page.getByRole('grid', { name: /August 2026/ })).toBeVisible()
+  await page.getByRole('gridcell', { name: /Sunday, August 16, 2 events/ }).click()
+  await expect(page.getByLabel('Selected day agenda')).toContainText('Acme partnership review')
+  await expect(page.getByLabel('Selected day agenda')).toContainText('Northstar performance recap')
+
+  await page.getByRole('button', { name: 'Next month' }).click()
+  await expect(page.getByRole('grid', { name: /September 2026/ })).toBeVisible()
+  await page.getByRole('button', { name: 'Today' }).click()
+  await expect(page.getByRole('grid', { name: /August 2026/ })).toBeVisible()
+})
