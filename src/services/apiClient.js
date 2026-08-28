@@ -45,6 +45,7 @@ async function request(path, options = {}) {
 export const apiClient = {
   get: (path, params) => request(path, { params }),
   post: (path, body) => request(path, { method: 'POST', body }),
+  put: (path, body) => request(path, { method: 'PUT', body }),
   delete: (path) => request(path, { method: 'DELETE' }),
   async getCurrentUser() {
     const response = await fetch(buildUrl('/api/me'), {

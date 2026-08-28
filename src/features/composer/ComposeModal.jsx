@@ -4,13 +4,19 @@ import { IconButton } from '../../components/common/IconButton'
 import { aiService } from '../../services/aiService'
 import { mailService } from '../../services/mailService'
 
-const emptyDraft = { to: '', subject: '', body: '' }
+const modeConfig = {
+  new: { title: 'New Message', sentMessage: 'Message sent', toDisabled: false, subjectDisabled: false },
+  reply: { title: 'Reply', sentMessage: 'Reply sent', toDisabled: true, subjectDisabled: true },
+  'reply-all': { title: 'Reply All', sentMessage: 'Reply sent to all recipients', toDisabled: true, subjectDisabled: true },
+  forward: { title: 'Forward', sentMessage: 'Message forwarded', toDisabled: false, subjectDisabled: true },
+}
 
-export function ComposeModal({ onClose, onSent }) {
-  const [draft, setDraft] = useState(emptyDraft)
+export function ComposeModal({ mode = 'new', messageId, initialTo = '', initialSubject = '', onClose, onSent }) {
+  const [draft, setDraft] = useState({ to: initialTo, subject: initialSubject, body: '' })
   const [sending, setSending] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState('')
+  const config = modeConfig[mode] ?? modeConfig.new
 
   function updateField(event) {
     setDraft((current) => ({ ...current, [event.target.name]: event.target.value }))
@@ -19,19 +25,26 @@ export function ComposeModal({ onClose, onSent }) {
 
   async function submit(event) {
     event.preventDefault()
-    if (!draft.to.trim() || !draft.subject.trim()) {
+    if (mode === 'new' && (!draft.to.trim() || !draft.subject.trim())) {
       setError('Add a recipient and subject before sending.')
+      return
+    }
+    if (mode === 'forward' && !draft.to.trim()) {
+      setError('Add a recipient before sending.')
       return
     }
     setSending(true)
     try {
-      await mailService.sendMessage(draft)
+      if (mode === 'reply') await mailService.replyToMessage(messageId, draft.body)
+      else if (mode === 'reply-all') await mailService.replyAllMessage(messageId, draft.body)
+      else if (mode === 'forward') await mailService.forwardMessage(messageId, { to: draft.to, body: draft.body })
+      else await mailService.sendMessage(draft)
     } catch (sendError) {
       setError(sendError.message)
       setSending(false)
       return
     }
-    onSent('Message sent')
+    onSent(config.sentMessage)
     onClose()
   }
 
@@ -56,10 +69,10 @@ export function ComposeModal({ onClose, onSent }) {
   return (
     <div className="overlay" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <form className="modal" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="compose-title">
-        <div><b id="compose-title">New Message</b><IconButton label="Close composer" onClick={onClose}><X size={17} /></IconButton></div>
-        <input autoFocus name="to" value={draft.to} onChange={updateField} placeholder="To" aria-label="Recipient" />
-        <input name="subject" value={draft.subject} onChange={updateField} placeholder="Subject" aria-label="Subject" />
-        <textarea name="body" value={draft.body} onChange={updateField} placeholder="Write something brilliant…" aria-label="Message body" />
+        <div><b id="compose-title">{config.title}</b><IconButton label="Close composer" onClick={onClose}><X size={17} /></IconButton></div>
+        <input autoFocus name="to" value={draft.to} onChange={updateField} placeholder="To" aria-label="Recipient" disabled={config.toDisabled} />
+        <input name="subject" value={draft.subject} onChange={updateField} placeholder="Subject" aria-label="Subject" disabled={config.subjectDisabled} />
+        <textarea name="body" value={draft.body} onChange={updateField} placeholder={mode === 'forward' ? 'Add a note (the original message is attached automatically)…' : 'Write something brilliant…'} aria-label="Message body" />
         {error ? <p className="formError" role="alert">{error}</p> : null}
         <div className="composeActions">
           <button className="sendAi" type="submit" disabled={sending}><Send size={15} />{sending ? 'Sending…' : 'Send'}</button>

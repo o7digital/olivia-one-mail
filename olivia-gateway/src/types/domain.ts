@@ -22,6 +22,11 @@ export interface MailMessage {
   preview: string
   body: string[]
   attachments: MailAttachment[]
+  to?: string[]
+  cc?: string[]
+  labels?: string[]
+  receivedAt?: string
+  category?: 'focused' | 'other'
 }
 
 export interface Folder {

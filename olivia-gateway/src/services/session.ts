@@ -1,7 +1,8 @@
 import { createHash, randomBytes } from 'node:crypto'
 import type { FastifyReply, FastifyRequest, preHandlerHookHandler } from 'fastify'
 
-const SESSION_COOKIE = '__Host-olivia_session'
+const SECURE_SESSION_COOKIE = '__Host-olivia_session'
+const LOCAL_SESSION_COOKIE = 'olivia_session'
 const CSRF_COOKIE = 'olivia_csrf'
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000
 
@@ -11,6 +12,8 @@ export interface SessionRecord {
   password: string
   createdAt: number
   expiresAt: number
+  privacyAcceptedAt?: number
+  privacyVersion?: string
 }
 
 const sessions = new Map<string, SessionRecord>()
@@ -41,7 +44,7 @@ export function buildSessionUser(email: string) {
   }
 }
 
-export function createServerSession(input: { email: string; password: string }) {
+export function createServerSession(input: { email: string; password: string; privacyVersion?: string }) {
   cleanupExpiredSessions()
   const createdAt = now()
   const session: SessionRecord = {
@@ -50,6 +53,8 @@ export function createServerSession(input: { email: string; password: string }) 
     password: input.password,
     createdAt,
     expiresAt: createdAt + SESSION_TTL_MS,
+    privacyAcceptedAt: input.privacyVersion ? createdAt : undefined,
+    privacyVersion: input.privacyVersion,
   }
   sessions.set(session.id, session)
   return session
@@ -73,7 +78,7 @@ export function deleteServerSession(sessionId: string | undefined) {
 }
 
 export function clearSessionCookies(reply: FastifyReply, secureCookies: boolean) {
-  reply.clearCookie(SESSION_COOKIE, {
+  reply.clearCookie(secureCookies ? SECURE_SESSION_COOKIE : LOCAL_SESSION_COOKIE, {
     path: '/',
     sameSite: 'lax',
     secure: secureCookies,
@@ -93,7 +98,7 @@ export function setSessionCookies(args: {
 }) {
   const secureCookies = isProductionOrigin(args.appOrigin)
   args.reply
-    .setCookie(SESSION_COOKIE, args.sessionId, {
+    .setCookie(secureCookies ? SECURE_SESSION_COOKIE : LOCAL_SESSION_COOKIE, args.sessionId, {
       httpOnly: true,
       sameSite: 'lax',
       path: '/',
@@ -111,7 +116,8 @@ export function setSessionCookies(args: {
 }
 
 export function getSignedSessionId(request: FastifyRequest) {
-  const signedSession = request.unsignCookie(request.cookies[SESSION_COOKIE] ?? '')
+  const cookie = request.cookies[SECURE_SESSION_COOKIE] ?? request.cookies[LOCAL_SESSION_COOKIE] ?? ''
+  const signedSession = request.unsignCookie(cookie)
   return signedSession.valid ? signedSession.value : null
 }
 

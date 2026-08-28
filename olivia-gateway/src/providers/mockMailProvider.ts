@@ -1,6 +1,9 @@
 import { folders, messages } from '../data/mockData.js'
+import { computeReplyAllRecipients } from '../services/mailRecipients.js'
 import type { Folder, MailMessage } from '../types/domain.js'
 import type { MailProvider } from './mailProvider.js'
+
+const MOCK_MAILBOX_EMAIL = 'olivier.steineur@o7digitalgroup.com'
 
 const state = {
   folders: structuredClone(folders),
@@ -32,9 +35,22 @@ export class MockMailProvider implements MailProvider {
     return { id: `${id}:reply`, status: `queued:${input.body.length}` }
   }
 
+  async replyAll(id: string, input: { body: string }) {
+    const original = findMessage(id)
+    if (!original) throw new Error('Message not found')
+    const recipients = computeReplyAllRecipients({
+      mailboxEmail: MOCK_MAILBOX_EMAIL,
+      senderEmail: original.email,
+      to: original.to,
+      cc: original.cc,
+    })
+    return { id: `${id}:reply-all`, status: `queued:${recipients.to.length + recipients.cc.length}:${input.body.length}` }
+  }
+
   async forward(id: string, input: { to: string; body: string }) {
     return { id: `${id}:forward`, status: `queued:${input.to}:${input.body.length}` }
   }
+
 
   async markRead(id: string) {
     const message = findMessage(id)
@@ -62,5 +78,22 @@ export class MockMailProvider implements MailProvider {
     if (!message) throw new Error('Message not found')
     message.folder = 'Trash'
     return { id, deleted: true as const }
+  }
+
+  async listLabels(folder: string): Promise<string[]> {
+    const set = new Set<string>()
+    for (const message of state.messages) {
+      if (message.folder !== folder) continue
+      for (const label of message.labels ?? []) set.add(label)
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }
+
+  async setMessageLabels(id: string, labels: string[]) {
+    const message = findMessage(id)
+    if (!message) throw new Error('Message not found')
+    const unique = Array.from(new Set(labels.map((label) => label.trim()).filter(Boolean)))
+    message.labels = unique
+    return { id, labels: unique }
   }
 }

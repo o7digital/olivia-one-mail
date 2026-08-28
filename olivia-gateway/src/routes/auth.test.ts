@@ -29,11 +29,26 @@ test('login returns 401 for invalid mailbox or password', async () => {
   const response = await app.inject({
     method: 'POST',
     url: '/api/auth/login',
-    payload: { email: 'bad@o7digitalgroup.com', password: 'wrong-pass' },
+    payload: { email: 'bad@o7digitalgroup.com', password: 'wrong-pass', privacyAccepted: true, privacyVersion: '2026-08-27' },
   })
 
   assert.equal(response.statusCode, 401)
   assert.match(response.body, /Invalid credentials/)
+  await app.close()
+})
+
+test('login returns a readable error when privacy acceptance is missing', async () => {
+  __resetSessionsForTests()
+  const app = await buildApp(async () => true)
+
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/auth/login',
+    payload: { email: 'info@o7digitalgroup.com', password: 'valid-pass' },
+  })
+
+  assert.equal(response.statusCode, 400)
+  assert.match(response.json().message, /accept the privacy/i)
   await app.close()
 })
 
@@ -45,16 +60,17 @@ test('login sets opaque cookie and logout destroys the server session', async ()
   const login = await app.inject({
     method: 'POST',
     url: '/api/auth/login',
-    payload: { email: 'info@o7digitalgroup.com', password: 'valid-pass' },
+    payload: { email: 'info@o7digitalgroup.com', password: 'valid-pass', privacyAccepted: true, privacyVersion: '2026-08-27' },
   })
 
   assert.equal(login.statusCode, 200)
   const body = login.json()
   assert.equal(body.user.email, 'info@o7digitalgroup.com')
+  assert.deepEqual(body.privacy, { accepted: true, version: '2026-08-27' })
   assert.equal(JSON.stringify(body).includes('valid-pass'), false)
 
   const setCookies = login.cookies
-  const sessionCookie = setCookies.find((entry) => entry.name === '__Host-olivia_session')
+  const sessionCookie = setCookies.find((entry) => entry.name === 'olivia_session')
   assert.ok(sessionCookie)
   assert.equal(sessionCookie?.value.includes('info@o7digitalgroup.com'), false)
   assert.equal(sessionCookie?.value.includes('valid-pass'), false)
@@ -94,7 +110,7 @@ test('session expires after 8 hours for authenticated routes', async () => {
   const login = await app.inject({
     method: 'POST',
     url: '/api/auth/login',
-    payload: { email: 'ops@o7digitalgroup.com', password: 'valid-pass' },
+    payload: { email: 'ops@o7digitalgroup.com', password: 'valid-pass', privacyAccepted: true, privacyVersion: '2026-08-27' },
   })
 
   const cookies = Object.fromEntries(login.cookies.map((entry) => [entry.name, entry.value]))

@@ -4,6 +4,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:?Set VITE_CLERK_PUBLISHABLE_KEY in .env.production}
     environment:
       APP_ORIGIN: ${APP_ORIGIN:-https://one.o7digitalgroup.com}
     networks:
@@ -26,11 +28,13 @@ services:
       MAIL_SMTP_PORT: ${MAIL_SMTP_PORT:-587}
       MAIL_SMTP_SECURE: ${MAIL_SMTP_SECURE:-false}
       AI_PROVIDER: ${AI_PROVIDER:-python-olivia}
-      AI_API_URL: ${AI_API_URL:-http://olivia-ai-python:8000}
+      AI_API_URL: ${AI_API_URL:?Set AI_API_URL in .env.production}
       AI_DEFAULT_CLIENT_CODE: ${AI_DEFAULT_CLIENT_CODE:-default}
       AI_MAILBOX_CLIENT_MAP: ${AI_MAILBOX_CLIENT_MAP:-{}}
       AI_DOMAIN_CLIENT_MAP: ${AI_DOMAIN_CLIENT_MAP:-{}}
-      OLIVIA_INTERNAL_TOKEN: ${OLIVIA_INTERNAL_TOKEN:-CHANGE_ME}
+      OLIVIA_INTERNAL_TOKEN: ${OLIVIA_INTERNAL_TOKEN:?Set OLIVIA_INTERNAL_TOKEN in .env.production}
+      PULSE_CRM_API_URL: ${PULSE_CRM_API_URL:-}
+      PULSE_CRM_INTEGRATION_SECRET: ${PULSE_CRM_INTEGRATION_SECRET:-CHANGE_ME}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Olivier Steineur}
       COOKIE_SECRET: ${COOKIE_SECRET:-CHANGE_ME}
       PORT: ${PORT:-8787}
@@ -57,9 +61,9 @@ services:
       OPENAI_VECTOR_STORES_JSON: ${OPENAI_VECTOR_STORES_JSON:-{}}
       OLIVIA_WEB_SEARCH_ENABLED: ${OLIVIA_WEB_SEARCH_ENABLED:-true}
       OLIVIA_MAX_TOOL_ROUNDS: ${OLIVIA_MAX_TOOL_ROUNDS:-3}
-      OLIVIA_INTERNAL_TOKEN: ${OLIVIA_INTERNAL_TOKEN:-CHANGE_ME}
+      OLIVIA_INTERNAL_TOKEN: ${OLIVIA_INTERNAL_TOKEN:?Set OLIVIA_INTERNAL_TOKEN in .env.production}
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/health"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"]
       interval: 30s
       timeout: 10s
       retries: 3

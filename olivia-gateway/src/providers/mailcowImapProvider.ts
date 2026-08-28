@@ -3,6 +3,7 @@ import { simpleParser } from 'mailparser'
 import nodemailer from 'nodemailer'
 import { folders as mockFolders } from '../data/mockData.js'
 import { getMailcowConnectionConfig, type MailboxCredentials, type MailcowConnectionConfig } from '../services/mailcowAuth.js'
+import { computeReplyAllRecipients } from '../services/mailRecipients.js'
 import type { Folder, MailAttachment, MailMessage } from '../types/domain.js'
 import type { MailProvider } from './mailProvider.js'
 
@@ -35,6 +36,40 @@ function mapAttachment(contentType: string | undefined): Pick<MailAttachment, 't
   if (mime.includes('sheet') || mime.includes('excel') || mime.includes('csv')) return { type: 'spreadsheet', tone: 'green' }
   if (mime.includes('pdf')) return { type: 'report', tone: 'blue' }
   return { type: 'document', tone: 'purple' }
+}
+
+function mapAddressList(list: Array<{ address?: string }> | undefined): string[] {
+  return (list ?? []).map((entry) => entry.address).filter((address): address is string => Boolean(address))
+}
+
+// User labels are stored as real IMAP keywords so they persist on the mail
+// server itself (no extra database needed). The display name is base64url
+// encoded to keep the flag a valid IMAP atom while preserving any characters
+// (spaces, accents, emoji) losslessly.
+const LABEL_FLAG_PREFIX = 'OL-'
+
+function encodeLabelFlag(label: string): string {
+  return `${LABEL_FLAG_PREFIX}${Buffer.from(label, 'utf8').toString('base64url')}`
+}
+
+function decodeLabelFlag(flag: string): string | null {
+  if (!flag.startsWith(LABEL_FLAG_PREFIX)) return null
+  try {
+    const decoded = Buffer.from(flag.slice(LABEL_FLAG_PREFIX.length), 'base64url').toString('utf8')
+    return decoded || null
+  } catch {
+    return null
+  }
+}
+
+function decodeLabelsFromFlags(flags: Set<string> | undefined): string[] {
+  if (!flags) return []
+  const labels: string[] = []
+  for (const flag of flags) {
+    const label = decodeLabelFlag(flag)
+    if (label) labels.push(label)
+  }
+  return labels.sort((a, b) => a.localeCompare(b))
 }
 
 export class MailcowImapProvider implements MailProvider {
@@ -141,6 +176,7 @@ export class MailcowImapProvider implements MailProvider {
           sender: name,
           initials: name.split(/\s+/).slice(0, 2).map((part: string) => part[0] ?? '').join('').toUpperCase() || 'OO',
           time: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+          receivedAt: date.toISOString(),
           unread: !message.flags?.has('\\Seen'),
           starred: Boolean(message.flags?.has('\\Flagged')),
           tone: 'cyan',
@@ -151,6 +187,9 @@ export class MailcowImapProvider implements MailProvider {
           preview,
           body: bodyText ? bodyText.split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 24) : ['No body preview available.'],
           attachments,
+          to: mapAddressList(message.envelope?.to),
+          cc: mapAddressList(message.envelope?.cc),
+          labels: decodeLabelsFromFlags(message.flags),
         })
       }
 
@@ -188,6 +227,26 @@ export class MailcowImapProvider implements MailProvider {
     const info = await transport.sendMail({
       from: `"${this.config.fromName}" <${this.credentials.email}>`,
       to: original.email,
+      subject: original.subject.startsWith('Re:') ? original.subject : `Re: ${original.subject}`,
+      text: input.body,
+    })
+    return { id: info.messageId, status: 'sent' }
+  }
+
+  async replyAll(id: string, input: { body: string }) {
+    const original = await this.getMessage(id)
+    if (!original) throw new Error('Message not found')
+    const recipients = computeReplyAllRecipients({
+      mailboxEmail: this.credentials.email,
+      senderEmail: original.email,
+      to: original.to,
+      cc: original.cc,
+    })
+    const transport = this.createTransport()
+    const info = await transport.sendMail({
+      from: `"${this.config.fromName}" <${this.credentials.email}>`,
+      to: recipients.to,
+      cc: recipients.cc.length ? recipients.cc : undefined,
       subject: original.subject.startsWith('Re:') ? original.subject : `Re: ${original.subject}`,
       text: input.body,
     })
@@ -249,5 +308,39 @@ export class MailcowImapProvider implements MailProvider {
   async delete(id: string) {
     await this.move(id, 'Trash')
     return { id, deleted: true as const }
+  }
+
+  async listLabels(folder: string): Promise<string[]> {
+    const labels = new Set<string>()
+    for (const message of await this.listMessages(folder)) {
+      for (const label of message.labels ?? []) labels.add(label)
+    }
+    return Array.from(labels).sort((a, b) => a.localeCompare(b))
+  }
+
+  async setMessageLabels(id: string, labels: string[]) {
+    const unique = Array.from(new Set(labels.map((label) => label.trim()).filter(Boolean)))
+    const client = this.createImapClient()
+    await client.connect()
+    try {
+      await client.mailboxOpen('INBOX')
+      const message = await client.fetchOne(id, { flags: true }, { uid: true })
+      const currentLabelFlags = new Set(
+        Array.from(message?.flags ?? []).filter(
+          (flag): flag is string => typeof flag === 'string' && flag.startsWith(LABEL_FLAG_PREFIX),
+        ),
+      )
+      const nextFlags = new Set(unique.map(encodeLabelFlag))
+
+      const toRemove = Array.from(currentLabelFlags).filter((flag) => !nextFlags.has(flag))
+      const toAdd = Array.from(nextFlags).filter((flag) => !currentLabelFlags.has(flag))
+
+      if (toRemove.length) await client.messageFlagsRemove(id, toRemove, { uid: true })
+      if (toAdd.length) await client.messageFlagsAdd(id, toAdd, { uid: true })
+
+      return { id, labels: unique }
+    } finally {
+      await client.logout().catch(() => {})
+    }
   }
 }

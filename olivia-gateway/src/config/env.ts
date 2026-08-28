@@ -23,6 +23,8 @@ export function getEnv() {
     aiMailboxClientMap: parseJsonMap(process.env.AI_MAILBOX_CLIENT_MAP, {}),
     aiDomainClientMap: parseJsonMap(process.env.AI_DOMAIN_CLIENT_MAP, {}),
     oliviaInternalToken: process.env.OLIVIA_INTERNAL_TOKEN ?? '',
+    pulseCrmApiUrl: process.env.PULSE_CRM_API_URL ?? '',
+    pulseCrmIntegrationSecret: process.env.PULSE_CRM_INTEGRATION_SECRET ?? '',
     appOrigin: process.env.APP_ORIGIN ?? 'http://localhost:5173',
     cookieSecret: process.env.COOKIE_SECRET ?? 'olivia-one-dev-secret',
     host: process.env.HOST ?? '0.0.0.0',

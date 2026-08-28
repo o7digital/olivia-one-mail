@@ -71,11 +71,19 @@ test('analyzeMessage uses mailbox/domain tenant mapping and does not send mailbo
 })
 
 test('rewriteDraft and composeDraft call internal Olivia endpoints', async () => {
-  const paths: string[] = []
+  const calls: Array<{ path: string; payload: Record<string, unknown> }> = []
   const originalFetch = globalThis.fetch
-  globalThis.fetch = async (input) => {
-    paths.push(String(input))
-    return new Response(JSON.stringify({ draft: 'Updated draft' }))
+  globalThis.fetch = async (input, init) => {
+    calls.push({
+      path: String(input),
+      payload: JSON.parse(String(init?.body ?? '{}')),
+    })
+    return new Response(JSON.stringify({
+      draft: 'Updated draft',
+      model: 'gpt-test',
+      reasoningTier: 'fast',
+      toolsUsed: [],
+    }))
   }
 
   try {
@@ -86,12 +94,45 @@ test('rewriteDraft and composeDraft call internal Olivia endpoints', async () =>
       aiDomainClientMap: { 'brand.com': 'brand-domain' },
       aiDefaultClientCode: 'default',
     }
-    const rewrite = await rewriteDraft(env, { mailboxEmail: 'ops@brand.com', action: 'formal', draft: 'hey' })
+    const rewrite = await rewriteDraft(env, {
+      mailboxEmail: 'ops@brand.com',
+      action: 'formal',
+      draft: 'hey',
+      clientCode: 'other-tenant',
+    } as Parameters<typeof rewriteDraft>[1])
     const compose = await composeDraft(env, { mailboxEmail: 'ops@brand.com', prompt: 'Write follow-up' })
     assert.equal(rewrite.draft, 'Updated draft')
     assert.equal(compose.draft, 'Updated draft')
-    assert.match(paths[0], /\/email\/rewrite$/)
-    assert.match(paths[1], /\/email\/compose$/)
+    assert.match(calls[0].path, /\/email\/rewrite$/)
+    assert.match(calls[1].path, /\/email\/compose$/)
+    assert.equal(calls[0].payload.clientCode, 'brand-domain')
+    assert.notEqual(calls[0].payload.clientCode, 'other-tenant')
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+})
+
+test('Olivia calls fail closed when the internal token is missing', async () => {
+  let fetchCalled = false
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = async () => {
+    fetchCalled = true
+    return new Response(JSON.stringify({ draft: 'Unexpected draft' }))
+  }
+
+  try {
+    const env = {
+      aiApiUrl: 'https://olivia-v2-python-dev-production.up.railway.app',
+      oliviaInternalToken: '',
+      aiMailboxClientMap: {},
+      aiDomainClientMap: { 'brand.com': 'brand-domain' },
+      aiDefaultClientCode: 'default',
+    }
+    await assert.rejects(
+      rewriteDraft(env, { mailboxEmail: 'ops@brand.com', action: 'formal', draft: 'hey' }),
+      /temporarily unavailable/,
+    )
+    assert.equal(fetchCalled, false)
   } finally {
     globalThis.fetch = originalFetch
   }
