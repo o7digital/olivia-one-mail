@@ -1,13 +1,13 @@
 :root {
   font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: #edf5ff;
-  background: #292b30;
+  background: #07111f;
   font-synthesis: none;
-  --bg: #292b30;
-  --panel: #32353b;
-  --panel-2: #383c43;
-  --stroke: rgba(145, 181, 224, .15);
-  --muted: #7f93ad;
+  --bg: #07111f;
+  --panel: #0d1d30;
+  --panel-2: #12263d;
+  --stroke: rgba(112, 169, 224, .17);
+  --muted: #8298b2;
   --cyan: #39d9ff;
   --violet: #8b5cf6;
   --green: #4ade80;
@@ -27,9 +27,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(circle at 78% 0, rgba(100, 82, 150, .11), transparent 34%),
-    radial-gradient(circle at 15% 100%, rgba(72, 130, 145, .09), transparent 35%),
-    linear-gradient(145deg, #32353a, #292b30 58%, #34363c);
+    radial-gradient(circle at 78% 0, rgba(103, 68, 181, .18), transparent 35%),
+    radial-gradient(circle at 12% 100%, rgba(6, 182, 212, .13), transparent 38%),
+    linear-gradient(145deg, #0d2035, #07111f 56%, #0b1a2e);
 }
 .glow { position: fixed; border-radius: 999px; filter: blur(90px); opacity: .18; pointer-events: none; }
 .g1 { width: 450px; height: 450px; background: #06b6d4; top: -330px; left: 25%; }
@@ -43,7 +43,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
   gap: 18px;
   align-items: center;
   border-bottom: 1px solid var(--stroke);
-  background: rgba(38, 41, 47, .92);
+  background: rgba(6, 16, 29, .93);
   backdrop-filter: blur(24px);
   position: relative;
   z-index: 10;
@@ -69,7 +69,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 .profileIdentity { display: flex; flex-direction: column; min-width: 140px; }
 .profile b { font-size: 11px; }
 .profile small { font-size: 9px; color: #7f93aa; margin-top: 2px; }
-.profileMenu { position: absolute; z-index: 40; top: calc(100% + 9px); right: 0; width: 170px; padding: 6px; border: 1px solid var(--stroke); border-radius: 10px; background: #282c33; box-shadow: 0 18px 45px rgba(0, 0, 0, .38); }
+.profileMenu { position: absolute; z-index: 40; top: calc(100% + 9px); right: 0; width: 170px; padding: 6px; border: 1px solid var(--stroke); border-radius: 10px; background: #0c1b2d; box-shadow: 0 18px 45px rgba(0, 0, 0, .38); }
 .profileMenu button { width: 100%; border: 0; border-radius: 7px; background: transparent; color: #dce5ef; padding: 9px; display: flex; align-items: center; gap: 8px; font-size: 10px; cursor: pointer; }
 .profileMenu button:hover { background: rgba(255, 255, 255, .06); color: white; }
 .profileMenu button:disabled { opacity: .6; cursor: progress; }
@@ -78,7 +78,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 .grid.aiOn { grid-template-columns: 225px 330px minmax(460px, 1fr) 350px 48px; }
 .grid.aiOff { grid-template-columns: 225px 345px minmax(520px, 1fr) 48px; }
 .pageGrid { grid-template-columns: 225px minmax(600px, 1fr) 48px; }
-.card { background: linear-gradient(180deg, rgba(52, 56, 64, .97), rgba(43, 47, 54, .96)); border: 1px solid var(--stroke); border-radius: 14px; overflow: hidden; box-shadow: inset 0 1px rgba(255, 255, 255, .035), 0 12px 35px rgba(0, 0, 0, .16); min-width: 0; }
+.card { background: linear-gradient(180deg, rgba(15, 34, 55, .98), rgba(8, 24, 42, .97)); border: 1px solid var(--stroke); border-radius: 14px; overflow: hidden; box-shadow: inset 0 1px rgba(255, 255, 255, .04), 0 14px 38px rgba(0, 5, 15, .25); min-width: 0; }
 
 .avatar { flex: 0 0 auto; width: 37px; height: 37px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 800; border: 1px solid rgba(255, 255, 255, .13); }
 .avatar.small { width: 29px; height: 29px; font-size: 8px; }
