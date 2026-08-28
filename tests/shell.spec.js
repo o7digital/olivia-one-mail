@@ -183,3 +183,24 @@ test('message toolbar actions update the mailbox and expose the More menu', asyn
   await expect(page.getByRole('status')).toContainText('Message moved to Trash')
   await expect(page.getByRole('button', { name: /Ava Johnson/ })).toHaveCount(0)
 })
+
+test('tasks can be created, completed, filtered, and deleted', async ({ page }) => {
+  await signIn(page)
+  await page.getByRole('button', { name: 'Tasks' }).click()
+
+  await page.getByRole('textbox', { name: 'Task title' }).fill('Prepare client follow-up')
+  await page.getByLabel('Due date').fill('2026-08-29')
+  await page.getByLabel('Priority').selectOption('high')
+  await page.getByRole('button', { name: 'Add task' }).click()
+  await expect(page.getByRole('status')).toContainText('Task created')
+  await expect(page.getByText('Prepare client follow-up')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Complete Prepare client follow-up' }).click()
+  await expect(page.getByRole('status')).toContainText('Task completed')
+  await expect(page.getByText('Prepare client follow-up')).toHaveCount(0)
+  await page.getByRole('tab', { name: 'Completed' }).click()
+  await expect(page.getByText('Prepare client follow-up')).toBeVisible()
+  await page.getByRole('button', { name: 'Delete Prepare client follow-up' }).click()
+  await expect(page.getByRole('status')).toContainText('Task deleted')
+  await expect(page.getByText('Prepare client follow-up')).toHaveCount(0)
+})

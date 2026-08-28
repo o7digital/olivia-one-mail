@@ -8,6 +8,7 @@ import { Sidebar } from './components/layout/Sidebar'
 import { TopBar } from './components/layout/TopBar'
 import { MailList } from './components/mail/MailList'
 import { MailReader } from './components/mail/MailReader'
+import { TasksPage } from './components/tasks/TasksPage'
 import { OpportunityDialog } from './features/ai-workspace/OpportunityDialog'
 import { ComposeModal } from './features/composer/ComposeModal'
 import { PrivacyNotice, PRIVACY_VERSION } from './components/legal/PrivacyNotice'
@@ -242,7 +243,14 @@ function App() {
             <AppRail />
           </main>
         )} />
-        {['calendar', 'contacts', 'tasks', 'pulse', 'settings'].map((page) => (
+        <Route path="/tasks" element={(
+          <main className="grid pageGrid">
+            <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} user={session.session?.user} />
+            <TasksPage onNotify={notify} />
+            <AppRail />
+          </main>
+        )} />
+        {['calendar', 'contacts', 'pulse', 'settings'].map((page) => (
           <Route key={page} path={`/${page}`} element={(
             <main className="grid pageGrid">
               <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} user={session.session?.user} />

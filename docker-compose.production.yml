@@ -39,6 +39,9 @@ services:
       COOKIE_SECRET: ${COOKIE_SECRET:-CHANGE_ME}
       PORT: ${PORT:-8787}
       HOST: ${HOST:-0.0.0.0}
+      TASK_DATA_PATH: /data/tasks.json
+    volumes:
+      - olivia-task-data:/data
     networks:
       mailcow:
         aliases:
@@ -78,3 +81,6 @@ networks:
     name: ${MAILCOW_NETWORK:-mailcowdockerized_mailcow-network}
   olivia-ai-network:
     name: olivia-ai-network
+
+volumes:
+  olivia-task-data:
