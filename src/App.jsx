@@ -231,9 +231,12 @@ function App() {
               onDelete={() => inbox.deleteMessage(inbox.selected.id)}
               onForward={() => openCompose('forward', inbox.selected)}
               onLabelsChange={inbox.updateMessageLabels}
+              onMoveToSpam={() => inbox.moveMessage(inbox.selected.id, 'Spam')}
               onNotify={notify}
               onReply={() => openCompose('reply', inbox.selected)}
               onReplyAll={() => openCompose('reply-all', inbox.selected)}
+              onSnooze={() => inbox.moveMessage(inbox.selected.id, 'Snoozed')}
+              onToggleStar={() => inbox.toggleStarMessage(inbox.selected.id)}
             />
             {aiOpen ? <AIWorkspace analysis={aiWorkspace.analysis} message={inbox.selected} onCreateOpportunity={() => setOpportunityOpen(true)} onNotify={notify} status={aiWorkspace.status} /> : null}
             <AppRail />

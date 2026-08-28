@@ -39,7 +39,7 @@ test('mail shell interactions and desktop screenshots', async ({ page }) => {
   await expect(page.getByRole('button', { name: /Sophia Martinez/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Liam Chen/ })).toHaveCount(0)
   await page.getByRole('button', { name: 'Clear search' }).click()
-  await page.getByRole('button', { name: /Sophia Martinez/ }).click()
+  await page.getByRole('button', { name: /Liam Chen/ }).click()
 
   await page.getByRole('button', { name: 'Reply', exact: true }).click()
   await expect(page.getByRole('dialog', { name: 'Reply' })).toBeVisible()
@@ -123,7 +123,7 @@ test('inbox category tabs filter focused and other messages', async ({ page }) =
 test('profile menu signs out and returns to login', async ({ page }) => {
   await signIn(page)
 
-  await page.getByRole('button', { name: /User Zevicapital/ }).click()
+  await page.locator('.profile').click()
   await page.getByRole('menuitem', { name: 'Sign out' }).click()
   await expect(page.getByRole('heading', { name: 'Sign in to your mailbox' })).toBeVisible()
 })
@@ -149,12 +149,37 @@ test('tablet layout and application routes', async ({ page }) => {
 
   await page.goto('/calendar')
   await expect(page.getByRole('heading', { name: 'Calendar' })).toBeVisible()
-  await page.goto('/contacts')
+  await page.getByRole('link', { name: 'Contacts' }).click()
   await expect(page.getByRole('heading', { name: 'Contacts' })).toBeVisible()
-  await page.goto('/tasks')
+  await page.getByRole('link', { name: 'Tasks' }).click()
   await expect(page.getByRole('heading', { name: 'Tasks' })).toBeVisible()
-  await page.goto('/pulse')
+  await page.getByRole('link', { name: 'O7 Pulse' }).click()
   await expect(page.getByRole('heading', { name: 'Pulse' })).toBeVisible()
-  await page.goto('/settings')
+  await page.getByRole('link', { name: 'Settings' }).click()
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
+})
+
+test('message toolbar actions update the mailbox and expose the More menu', async ({ page }) => {
+  await signIn(page)
+
+  await page.getByRole('button', { name: /Liam Chen/ }).click()
+  await page.getByRole('button', { name: 'More', exact: true }).click()
+  await expect(page.getByRole('menuitem', { name: 'Add star' })).toBeVisible()
+  await page.getByRole('menuitem', { name: 'Add star' }).click()
+  await expect(page.getByRole('status')).toContainText('Message starred')
+
+  await page.getByRole('button', { name: 'Snooze', exact: true }).click()
+  await expect(page.getByRole('status')).toContainText('Message moved to Snoozed')
+  await expect(page.getByRole('button', { name: /Liam Chen/ })).toHaveCount(0)
+
+  await page.getByRole('button', { name: /Sophia Martinez/ }).click()
+  await page.getByLabel('Message from Sophia Martinez').getByRole('button', { name: 'Archive', exact: true }).click()
+  await expect(page.getByRole('status')).toContainText('Message archived')
+  await expect(page.getByRole('button', { name: /Sophia Martinez/ })).toHaveCount(0)
+
+  await page.getByRole('tab', { name: 'Other' }).click()
+  await page.getByRole('button', { name: /Ava Johnson/ }).click()
+  await page.getByRole('button', { name: 'Delete', exact: true }).click()
+  await expect(page.getByRole('status')).toContainText('Message moved to Trash')
+  await expect(page.getByRole('button', { name: /Ava Johnson/ })).toHaveCount(0)
 })

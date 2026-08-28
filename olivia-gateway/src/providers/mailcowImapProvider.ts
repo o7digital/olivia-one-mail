@@ -297,8 +297,13 @@ export class MailcowImapProvider implements MailProvider {
     const client = this.createImapClient()
     await client.connect()
     try {
+      const targetMailbox = mapFolderLabel(folder)
+      const mailboxes = await client.list()
+      if (!mailboxes.some((mailbox: { path: string }) => mailbox.path.toLowerCase() === targetMailbox.toLowerCase())) {
+        await client.mailboxCreate(targetMailbox)
+      }
       await client.mailboxOpen('INBOX')
-      await client.messageMove(id, mapFolderLabel(folder), { uid: true })
+      await client.messageMove(id, targetMailbox, { uid: true })
       return { id, folder }
     } finally {
       await client.logout().catch(() => {})

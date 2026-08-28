@@ -71,27 +71,69 @@ function LabelsEditor({ knownLabels, labels, onChange }) {
 
 export function MailReader({
   aiOpen, analysis, knownLabels, message, onAiToggle, onArchive, onDelete, onForward, onLabelsChange,
-  onNotify, onReply, onReplyAll, aiStatus,
+  onMoveToSpam, onNotify, onReply, onReplyAll, onSnooze, onToggleStar, aiStatus,
 }) {
+  const [moreOpen, setMoreOpen] = useState(false)
+  const [pendingAction, setPendingAction] = useState('')
+
   if (!message) {
     return <section className="reader card readerEmpty"><MailReaderPlaceholder /></section>
   }
 
   async function handleArchive() {
+    setPendingAction('archive')
     try {
       await onArchive()
       onNotify('Message archived')
     } catch (error) {
       onNotify(error.message || 'Unable to archive message')
+    } finally {
+      setPendingAction('')
     }
   }
 
   async function handleDelete() {
+    setPendingAction('delete')
     try {
       await onDelete()
       onNotify('Message moved to Trash')
     } catch (error) {
       onNotify(error.message || 'Unable to delete message')
+    } finally {
+      setPendingAction('')
+    }
+  }
+
+  async function handleSnooze() {
+    setPendingAction('snooze')
+    try {
+      await onSnooze()
+      onNotify('Message moved to Snoozed')
+    } catch (error) {
+      onNotify(error.message || 'Unable to snooze message')
+    } finally {
+      setPendingAction('')
+    }
+  }
+
+  async function handleMoreAction(action) {
+    setMoreOpen(false)
+    setPendingAction(action)
+    try {
+      if (action === 'star') {
+        const result = await onToggleStar()
+        onNotify(result.starred ? 'Message starred' : 'Star removed')
+      } else if (action === 'spam') {
+        await onMoveToSpam()
+        onNotify('Message moved to Spam')
+      } else if (action === 'copy') {
+        await navigator.clipboard.writeText(message.email)
+        onNotify('Sender address copied')
+      }
+    } catch (error) {
+      onNotify(error.message || 'Unable to update message')
+    } finally {
+      setPendingAction('')
     }
   }
 
@@ -106,10 +148,19 @@ export function MailReader({
   return (
     <section className="reader card" aria-label={`Message from ${message.sender}`}>
       <div className="toolbar">
-        <button type="button" onClick={handleArchive}><Archive size={15} />Archive</button>
-        <button type="button" disabled title="Snooze is not available yet"><Clock3 size={15} />Snooze</button>
-        <button type="button" onClick={handleDelete}><Trash2 size={15} />Delete</button>
-        <button type="button"><MoreHorizontal size={16} />More</button>
+        <button type="button" onClick={handleArchive} disabled={Boolean(pendingAction)}><Archive size={15} />{pendingAction === 'archive' ? 'Archiving…' : 'Archive'}</button>
+        <button type="button" onClick={handleSnooze} disabled={Boolean(pendingAction)}><Clock3 size={15} />{pendingAction === 'snooze' ? 'Snoozing…' : 'Snooze'}</button>
+        <button type="button" onClick={handleDelete} disabled={Boolean(pendingAction)}><Trash2 size={15} />{pendingAction === 'delete' ? 'Deleting…' : 'Delete'}</button>
+        <div className="toolbarMenu">
+          <button type="button" className="toolbarMenuTrigger" aria-expanded={moreOpen} aria-haspopup="menu" onClick={() => setMoreOpen((current) => !current)} disabled={Boolean(pendingAction)}><MoreHorizontal size={16} />More</button>
+          {moreOpen ? (
+            <div className="toolbarMenuPanel" role="menu">
+              <button type="button" role="menuitem" onClick={() => handleMoreAction('star')}><Star size={14} />{message.starred ? 'Remove star' : 'Add star'}</button>
+              <button type="button" role="menuitem" onClick={() => handleMoreAction('copy')}>Copy sender address</button>
+              <button type="button" role="menuitem" onClick={() => handleMoreAction('spam')}>Move to Spam</button>
+            </div>
+          ) : null}
+        </div>
         <span />
         <IconButton label={aiOpen ? 'Collapse AI Workspace' : 'Expand AI Workspace'} onClick={onAiToggle}>{aiOpen ? <PanelRightClose size={17} /> : <PanelRightOpen size={17} />}</IconButton>
       </div>

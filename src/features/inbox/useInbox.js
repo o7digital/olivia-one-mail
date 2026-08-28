@@ -54,7 +54,7 @@ export function useInbox(folder, query, enabled = true) {
     }
   }, [enabled, folder])
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (silent = false) => {
     if (!enabled) {
       setMessages([])
       setSelectedId(null)
@@ -62,7 +62,7 @@ export function useInbox(folder, query, enabled = true) {
       setError(null)
       return
     }
-    setStatus('loading')
+    if (!silent) setStatus('loading')
     setError(null)
     try {
       await mailService.ensureSession()
@@ -138,15 +138,39 @@ export function useInbox(folder, query, enabled = true) {
     mailService.markRead(id)
   }, [])
 
-  const archiveMessage = useCallback(async (id) => {
-    await mailService.moveMessage(id, 'Archive')
-    await load()
+  const runOptimisticMove = useCallback(async (id, action) => {
+    let previousMessages = []
+    setMessages((current) => {
+      previousMessages = current
+      return current.filter((message) => message.id !== id)
+    })
+    try {
+      const result = await action()
+      await load(true)
+      return result
+    } catch (error) {
+      setMessages(previousMessages)
+      setSelectedId(id)
+      setStatus('ready')
+      throw error
+    }
   }, [load])
 
-  const deleteMessage = useCallback(async (id) => {
-    await mailService.deleteMessage(id)
-    await load()
-  }, [load])
+  const moveMessage = useCallback(async (id, targetFolder) => (
+    runOptimisticMove(id, () => mailService.moveMessage(id, targetFolder))
+  ), [runOptimisticMove])
+
+  const archiveMessage = useCallback(async (id) => moveMessage(id, 'Archive'), [moveMessage])
+
+  const deleteMessage = useCallback(async (id) => (
+    runOptimisticMove(id, () => mailService.deleteMessage(id))
+  ), [runOptimisticMove])
+
+  const toggleStarMessage = useCallback(async (id) => {
+    const result = await mailService.toggleStar(id)
+    setMessages((current) => current.map((message) => message.id === id ? { ...message, starred: result.starred } : message))
+    return result
+  }, [])
 
   const updateMessageLabels = useCallback(async (id, labels) => {
     const result = await mailService.setMessageLabels(id, labels)
@@ -166,7 +190,8 @@ export function useInbox(folder, query, enabled = true) {
     knownLabels,
     labelFilter,
     messages,
-    reload: load,
+    moveMessage,
+    reload: () => load(),
     selected: messages.find(({ id }) => id === selectedId) ?? null,
     selectedId,
     selectMessage,
@@ -175,6 +200,7 @@ export function useInbox(folder, query, enabled = true) {
     setSortBy,
     sortBy,
     status,
+    toggleStarMessage,
     updateMessageLabels,
   }
 }

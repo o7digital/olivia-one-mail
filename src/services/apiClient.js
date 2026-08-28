@@ -23,15 +23,16 @@ function buildUrl(path, params) {
 }
 
 async function request(path, options = {}) {
+  const hasBody = options.body !== undefined
   const response = await fetch(buildUrl(path, options.params), {
     method: options.method ?? 'GET',
     headers: {
-      'Content-Type': 'application/json',
+      ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
       ...(csrfToken ? { 'x-olivia-csrf': csrfToken } : {}),
       ...options.headers,
     },
     credentials: 'include',
-    body: options.body ? JSON.stringify(options.body) : undefined,
+    body: hasBody ? JSON.stringify(options.body) : undefined,
   })
 
   if (!response.ok) {
