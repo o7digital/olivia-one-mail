@@ -7,7 +7,7 @@ import { Avatar } from '../common/Avatar'
 import { IconButton } from '../common/IconButton'
 import { getWorkspaceIdentity } from '../../utils/workspaceIdentity'
 
-export function TopBar({ aiOpen, onAiToggle, onLogout, onMenuToggle, query, searchRef, setQuery, user }) {
+export function TopBar({ aiOpen, onAiToggle, onAsk, onLogout, onMenuToggle, query, searchRef, setQuery, user }) {
   const navigate = useNavigate()
   const [profileOpen, setProfileOpen] = useState(false)
   const [logoutPending, setLogoutPending] = useState(false)
@@ -35,17 +35,17 @@ export function TopBar({ aiOpen, onAiToggle, onLogout, onMenuToggle, query, sear
         <IconButton className="menuButton" label="Open navigation" onClick={onMenuToggle}><Menu size={18} /></IconButton>
         <div className="brandmark">O1</div><span>Olivia One</span>
       </div>
-      <label className="searchbox">
+      <form className="searchbox" onSubmit={(event) => { event.preventDefault(); if (query.trim()) onAsk(query.trim()) }}>
         <Search size={17} />
         <input
           ref={searchRef}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search messages, people, or anything…"
+          placeholder="Search or ask Olivia…"
           aria-label="Search messages"
         />
-        {query ? <button type="button" onClick={() => setQuery('')} aria-label="Clear search">Clear</button> : <span className="shortcut"><Command size={12} />K</span>}
-      </label>
+        {query ? <><button type="submit" className="askSearch">Ask Olivia</button><button type="button" onClick={() => setQuery('')} aria-label="Clear search">Clear</button></> : <span className="shortcut"><Command size={12} />K</span>}
+      </form>
       <div className="topright">
         <button className={`aiTop ${aiOpen ? 'active' : ''}`} type="button" onClick={onAiToggle} aria-pressed={aiOpen}>
           <Sparkles size={16} />AI Workspace<span />

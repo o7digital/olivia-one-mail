@@ -26,7 +26,7 @@ await app.register(cookie, {
 
 await app.register(rateLimit, {
   global: true,
-  max: 100,
+  max: env.rateLimitMax,
   timeWindow: '1 minute',
 })
 

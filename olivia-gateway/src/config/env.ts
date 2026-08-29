@@ -30,5 +30,6 @@ export function getEnv() {
     host: process.env.HOST ?? '0.0.0.0',
     mailcowNetwork: process.env.MAILCOW_NETWORK ?? 'mailcowdockerized_mailcow-network',
     port: Number(process.env.PORT ?? 8787),
+    rateLimitMax: Number(process.env.RATE_LIMIT_MAX ?? 100),
   }
 }

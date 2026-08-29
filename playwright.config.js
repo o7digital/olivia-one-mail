@@ -11,7 +11,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: 'npm run gateway:dev',
+      command: 'RATE_LIMIT_MAX=2000 npm run gateway:dev',
       url: 'http://127.0.0.1:8787/health',
       reuseExistingServer: true,
     },
