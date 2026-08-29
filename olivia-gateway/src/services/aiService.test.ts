@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { analyzeMessage, composeDraft, rewriteDraft } from './aiService.js'
+import { analyzeMessage, composeDraft, normalizeContext, rewriteDraft } from './aiService.js'
 
 const provider = {
   async getMessage() {
@@ -136,4 +136,22 @@ test('Olivia calls fail closed when the internal token is missing', async () => 
   } finally {
     globalThis.fetch = originalFetch
   }
+})
+
+test('context normalization distinguishes commercial, meeting, invoice, support, bounce, and low-priority messages', () => {
+  const base = {
+    summary: [], urgency: 'Medium' as const, leadScore: 0, sentiment: { label: 'Neutral', confidence: 0.5 }, intent: 'unknown', buyingSignals: [], tasks: [],
+    opportunity: { detected: false, title: '', estimatedValue: null, currency: null, confidence: 0 }, contactInsights: { summary: '', engagement: '' }, suggestedReply: '', model: null, reasoningTier: null, toolsUsed: [],
+    messageType: 'normal_conversation' as const, recommendedActions: [], commitments: [], deliveryFailure: null, invoice: null, scheduling: null,
+  }
+  const message = (subject: string, body: string) => ({ id: subject, folder: 'Inbox', sender: 'Sender', initials: 'S', time: '', tone: 'cyan', email: 'sender@example.com', role: '', company: '', subject, preview: body, body: [body], attachments: [] })
+  assert.equal(normalizeContext(message('Quotation', 'Please send your pricing'), base).messageType, 'pricing_request')
+  assert.equal(normalizeContext(message('Meeting', 'Are you available Tuesday?'), base).messageType, 'meeting_scheduling')
+  assert.equal(normalizeContext(message('Invoice 42', 'Payment due Friday'), base).messageType, 'invoice_payment')
+  assert.equal(normalizeContext(message('Support', 'We found a production bug'), base).messageType, 'support_request')
+  const bounce = normalizeContext(message('Undelivered Mail Returned to Sender', 'Final-Recipient: rfc822; user@gmail.com\nStatus: 5.7.1\nDiagnostic-Code: smtp; 550 rejected'), base)
+  assert.equal(bounce.messageType, 'delivery_failure')
+  assert.equal(bounce.deliveryFailure?.recipient, 'user@gmail.com')
+  assert.equal(bounce.deliveryFailure?.enhancedStatusCode, '5.7.1')
+  assert.equal(normalizeContext(message('Weekly newsletter', 'Manage notification preferences or unsubscribe'), base).messageType, 'newsletter_low_priority')
 })

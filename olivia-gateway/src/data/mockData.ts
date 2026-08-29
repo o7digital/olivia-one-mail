@@ -171,6 +171,9 @@ export const calendarEvents: CalendarEvent[] = [
 
 export const aiByMessage: Record<string, AIAnalysis> = {
   default: {
+    messageType: 'normal_conversation',
+    recommendedActions: [{ type: 'reply', label: 'Reply', confidence: 0.88, requiresConfirmation: true }, { type: 'mark_waiting', label: 'Mark as waiting', confidence: 0.74, requiresConfirmation: true }],
+    commitments: [], deliveryFailure: null, invoice: null, scheduling: null,
     summary: ['Follow-up on an active conversation.', 'Olivia found clear next steps.', 'A response is recommended today.'],
     leadScore: 72,
     urgency: 'Medium',
@@ -193,6 +196,9 @@ export const aiByMessage: Record<string, AIAnalysis> = {
     toolsUsed: [],
   },
   'partnership-proposal': {
+    messageType: 'commercial_inquiry',
+    recommendedActions: [{ type: 'reply', label: 'Reply about the proposal', confidence: 0.93, requiresConfirmation: true }, { type: 'create_opportunity', label: 'Create in O7 Pulse', confidence: 0.91, requiresConfirmation: true }],
+    commitments: [], deliveryFailure: null, invoice: null, scheduling: null,
     summary: ['Follow-up on partnership proposal.', 'Includes pricing and deck.', 'Call suggested this week.'],
     leadScore: 87,
     urgency: 'Medium',

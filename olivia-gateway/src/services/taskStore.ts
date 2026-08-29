@@ -12,6 +12,7 @@ export interface WorkspaceTask {
   priority: TaskPriority
   completed: boolean
   createdAt: string
+  sourceMessageId: string | null
 }
 
 const defaultPath = process.env.TASK_DATA_PATH || '/tmp/olivia-one-tasks.json'
@@ -51,7 +52,7 @@ export async function listTasks(ownerEmail: string, path = defaultPath) {
     .sort((a, b) => Number(a.completed) - Number(b.completed) || (a.dueAt || '9999').localeCompare(b.dueAt || '9999') || b.createdAt.localeCompare(a.createdAt))
 }
 
-export function createTask(ownerEmail: string, input: { title: string; dueAt?: string | null; priority?: TaskPriority }, path = defaultPath) {
+export function createTask(ownerEmail: string, input: { title: string; dueAt?: string | null; priority?: TaskPriority; sourceMessageId?: string | null }, path = defaultPath) {
   return mutateTasks((tasks) => {
     const task: WorkspaceTask = {
       id: randomUUID(),
@@ -61,6 +62,7 @@ export function createTask(ownerEmail: string, input: { title: string; dueAt?: s
       priority: input.priority || 'normal',
       completed: false,
       createdAt: new Date().toISOString(),
+      sourceMessageId: input.sourceMessageId ?? null,
     }
     tasks.push(task)
     return task

@@ -6,6 +6,7 @@ const createSchema = z.object({
   title: z.string().trim().min(1).max(240),
   dueAt: z.string().date().nullable().optional(),
   priority: z.enum(['low', 'normal', 'high']).optional(),
+  sourceMessageId: z.string().min(1).nullable().optional(),
 })
 
 const updateSchema = z.object({ completed: z.boolean() })

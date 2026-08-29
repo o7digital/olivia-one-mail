@@ -219,3 +219,32 @@ test('calendar shows a navigable month grid and event agenda', async ({ page }) 
   await page.getByRole('button', { name: 'Today' }).click()
   await expect(page.getByRole('grid', { name: /August 2026/ })).toBeVisible()
 })
+
+test('Ask Olivia returns real mailbox sources and opens the matching object', async ({ page }) => {
+  await signIn(page)
+  await page.getByRole('textbox', { name: 'Search messages' }).fill('Noah newsletter')
+  await page.getByRole('button', { name: 'Ask Olivia' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Ask Olivia' })
+  await expect(dialog).toContainText('matching')
+  await expect(dialog).toContainText('Client Onboarding')
+  await dialog.getByRole('button', { name: /Client Onboarding/ }).click()
+  await expect(page.getByRole('button', { name: /Noah Williams/ })).toBeVisible()
+})
+
+test('Waiting state persists on the gateway and can be snoozed and dismissed', async ({ page }) => {
+  await signIn(page)
+  const subject = `Waiting E2E ${Date.now()}`
+  const created = await page.evaluate(async (subject) => {
+    const csrf = document.cookie.split('; ').find((value) => value.startsWith('olivia_csrf='))?.split('=')[1]
+    const response = await fetch('/api/follow-ups', { method: 'POST', headers: { 'content-type': 'application/json', 'x-olivia-csrf': decodeURIComponent(csrf) }, body: JSON.stringify({ messageId: 'partnership-proposal', threadId: null, contactName: 'Sophia Martinez', contactEmail: 'sophia@acmecorp.com', subject, note: 'Waiting for revised pricing', followUpAt: new Date(Date.now() + 86400000).toISOString() }) })
+    return { status: response.status, body: await response.json() }
+  }, subject)
+  expect(created.status).toBe(201)
+  await page.getByRole('button', { name: 'Waiting' }).click()
+  await expect(page.getByRole('heading', { name: 'Waiting' })).toBeVisible()
+  const row = page.getByRole('article').filter({ hasText: subject })
+  await expect(row).toBeVisible()
+  await row.getByRole('button', { name: 'Snooze', exact: true }).click()
+  await row.getByRole('button', { name: `Dismiss ${subject}` }).click()
+  await expect(row).toHaveCount(0)
+})

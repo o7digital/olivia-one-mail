@@ -2,7 +2,7 @@ import {
   Archive, CalendarDays, ChevronDown, Clock3, FileText, Inbox, PenLine, Send, ShieldCheck,
   Settings2, Sparkles, Trash2, X,
 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Avatar } from '../common/Avatar'
 import { getWorkspaceIdentity } from '../../utils/workspaceIdentity'
 
@@ -44,6 +44,7 @@ function LabelsSection({ activeLabel, labels = [], onLabelSelect = () => {} }) {
 
 export function Sidebar({ activeFolder, activeLabel, folders, knownLabels, mobileOpen, onClose, onCompose, onFolderChange, onLabelSelect, user }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const workspace = getWorkspaceIdentity(user)
 
   return (
@@ -64,6 +65,9 @@ export function Sidebar({ activeFolder, activeLabel, folders, knownLabels, mobil
             </button>
           )
         })}
+        <button type="button" className={`navitem ${location.pathname === '/waiting' ? 'active' : ''}`} onClick={() => { navigate('/waiting'); onClose() }}>
+          <span><Clock3 size={16} />Waiting</span>
+        </button>
       </nav>
       <SidebarSection title="Spaces" items={workspace.spaces} />
       <LabelsSection activeLabel={activeLabel} labels={knownLabels ?? []} onLabelSelect={onLabelSelect} />

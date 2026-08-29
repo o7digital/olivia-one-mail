@@ -401,3 +401,14 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+/* V3 intelligence additions reuse the existing cards, gradients and controls. */
+.askSearch{color:#8de6ff!important;font-weight:700!important}
+.askDialog{width:min(680px,calc(100vw - 32px));max-height:min(720px,calc(100vh - 48px));overflow:auto}
+.askDialog header,.waitingHeader{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.askDialog h2{display:flex;align-items:center;gap:9px;margin:4px 0 0}
+.askQuery,.askAnswer{margin:18px 0;padding:14px 16px;border:1px solid rgba(80,218,255,.18);border-radius:14px;background:rgba(8,25,48,.58)}
+.askQuery{display:flex;align-items:center;gap:10px;color:#c9d8ee}
+.askAnswer{font-size:15px;line-height:1.55}
+.askSources{display:grid;gap:8px}.askSources button{display:flex;align-items:center;gap:12px;width:100%;padding:12px;text-align:left;border:1px solid rgba(116,105,255,.18);border-radius:12px;background:rgba(20,29,65,.55);color:inherit}.askSources span{display:grid;gap:3px}.askSources small,.askCoverage{color:#8495ae}
+.waitingPage{padding:24px;overflow:auto}.waitingRow{grid-template-columns:auto 1fr auto}.waitingRow small{display:block;color:#8495ae;margin-top:5px}.waitingActions{display:flex;align-items:center;gap:7px}.waitingActions button,.recommendedActions button{display:flex;align-items:center;gap:7px;border:1px solid rgba(75,211,255,.18);background:rgba(20,40,71,.72);color:#dce9f8;border-radius:10px;padding:8px 10px}.recommendedActions{display:grid;gap:8px}.recommendedActions button small{margin-left:auto;color:#70dff7}.contextDetails{display:grid;gap:7px}.contextDetails span,.contextDetails small{color:#8fa3bd}
+@media(max-width:760px){.waitingHeader{align-items:flex-start;flex-direction:column}.waitingRow{grid-template-columns:auto 1fr}.waitingActions{grid-column:1/-1;flex-wrap:wrap}}

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { AuthenticateWithRedirectCallback } from '@clerk/react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { AIWorkspace } from './components/ai/AIWorkspace'
+import { AskOliviaDialog } from './components/ai/AskOliviaDialog'
 import { CalendarPage } from './components/calendar/CalendarPage'
 import { AppRail } from './components/layout/AppRail'
 import { FeaturePage } from './components/layout/FeaturePage'
@@ -10,12 +11,14 @@ import { TopBar } from './components/layout/TopBar'
 import { MailList } from './components/mail/MailList'
 import { MailReader } from './components/mail/MailReader'
 import { TasksPage } from './components/tasks/TasksPage'
+import { WaitingPage } from './components/followups/WaitingPage'
 import { OpportunityDialog } from './features/ai-workspace/OpportunityDialog'
 import { ComposeModal } from './features/composer/ComposeModal'
 import { PrivacyNotice, PRIVACY_VERSION } from './components/legal/PrivacyNotice'
 import { useAIWorkspace } from './hooks/useAIWorkspace'
 import { useSession } from './hooks/useSession'
 import { pulseService } from './services/pulseService'
+import { intelligenceService } from './services/intelligenceService'
 import { useInbox, useMailFolders } from './features/inbox/useInbox'
 
 function App() {
@@ -34,6 +37,7 @@ function App() {
   const [loginLoading, setLoginLoading] = useState(false)
   const [privacyOpen, setPrivacyOpen] = useState(false)
   const [privacyAccepted, setPrivacyAccepted] = useState(false)
+  const [askState, setAskState] = useState(null)
   const session = useSession()
   const isAuthenticated = session.isAuthenticated
   const folders = useMailFolders(isAuthenticated)
@@ -91,6 +95,16 @@ function App() {
   function updateQuery(value) {
     setQuery(value)
     if (value && location.pathname !== '/mail') navigate('/mail')
+  }
+
+  async function askOlivia(value) {
+    setAskState({ query: value, status: 'loading', result: null })
+    try {
+      const result = await intelligenceService.ask(value)
+      setAskState({ query: value, status: 'ready', result })
+    } catch (error) {
+      setAskState({ query: value, status: 'error', result: null })
+    }
   }
 
   async function confirmOpportunity() {
@@ -169,6 +183,7 @@ function App() {
       <div className="glow g1" /><div className="glow g2" />
       <TopBar
         aiOpen={aiOpen}
+        onAsk={askOlivia}
         onAiToggle={() => setAiOpen((current) => !current)}
         onLogout={async () => {
           try {
@@ -240,7 +255,7 @@ function App() {
               onSnooze={() => inbox.moveMessage(inbox.selected.id, 'Snoozed')}
               onToggleStar={() => inbox.toggleStarMessage(inbox.selected.id)}
             />
-            {aiOpen ? <AIWorkspace analysis={aiWorkspace.analysis} message={inbox.selected} onCreateOpportunity={() => setOpportunityOpen(true)} onNotify={notify} status={aiWorkspace.status} /> : null}
+            {aiOpen ? <AIWorkspace analysis={aiWorkspace.analysis} message={inbox.selected} onArchive={() => inbox.archiveMessage(inbox.selected.id)} onCreateOpportunity={() => setOpportunityOpen(true)} onNotify={notify} onReply={() => openCompose('reply', inbox.selected)} onReplyAll={() => openCompose('reply-all', inbox.selected)} status={aiWorkspace.status} /> : null}
             <AppRail />
           </main>
         )} />
@@ -255,6 +270,13 @@ function App() {
           <main className="grid pageGrid">
             <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} user={session.session?.user} />
             <CalendarPage />
+            <AppRail />
+          </main>
+        )} />
+        <Route path="/waiting" element={(
+          <main className="grid pageGrid">
+            <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} user={session.session?.user} />
+            <WaitingPage onNotify={notify} onOpenMessage={(item) => { setActiveFolder(item.folder || 'Inbox'); setQuery(item.subject); navigate('/mail') }} />
             <AppRail />
           </main>
         )} />
@@ -284,6 +306,7 @@ function App() {
         />
       ) : null}
       {opportunityOpen && inbox.selected && aiWorkspace.analysis ? <OpportunityDialog analysis={aiWorkspace.analysis} message={inbox.selected} onCancel={() => setOpportunityOpen(false)} onConfirm={confirmOpportunity} /> : null}
+      {askState ? <AskOliviaDialog {...askState} onClose={() => setAskState(null)} onOpenSource={(source) => { setAskState(null); if (source.type === 'email') { setActiveFolder(source.folder || 'Inbox'); inbox.setCategory(source.category || 'focused'); setQuery(source.title); navigate('/mail') } else if (source.type === 'task') navigate('/tasks') }} /> : null}
       {toast ? <div className="toast" role="status"><span />{toast}</div> : null}
     </div>
   )
