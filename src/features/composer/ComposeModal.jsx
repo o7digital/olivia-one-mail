@@ -12,7 +12,9 @@ const modeConfig = {
 }
 
 export function ComposeModal({ mode = 'new', messageId, initialTo = '', initialSubject = '', onClose, onSent }) {
-  const [draft, setDraft] = useState({ to: initialTo, subject: initialSubject, body: '' })
+  const [draft, setDraft] = useState({ to: initialTo, cc: '', bcc: '', subject: initialSubject, body: '' })
+  const [showCc, setShowCc] = useState(false)
+  const [showBcc, setShowBcc] = useState(false)
   const [sending, setSending] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState('')
@@ -37,7 +39,7 @@ export function ComposeModal({ mode = 'new', messageId, initialTo = '', initialS
     try {
       if (mode === 'reply') await mailService.replyToMessage(messageId, draft.body)
       else if (mode === 'reply-all') await mailService.replyAllMessage(messageId, draft.body)
-      else if (mode === 'forward') await mailService.forwardMessage(messageId, { to: draft.to, body: draft.body })
+      else if (mode === 'forward') await mailService.forwardMessage(messageId, { to: draft.to, cc: draft.cc, bcc: draft.bcc, body: draft.body })
       else await mailService.sendMessage(draft)
     } catch (sendError) {
       setError(sendError.message)
@@ -70,7 +72,15 @@ export function ComposeModal({ mode = 'new', messageId, initialTo = '', initialS
     <div className="overlay" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <form className="modal" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="compose-title">
         <div><b id="compose-title">{config.title}</b><IconButton label="Close composer" onClick={onClose}><X size={17} /></IconButton></div>
-        <input autoFocus name="to" value={draft.to} onChange={updateField} placeholder="To" aria-label="Recipient" disabled={config.toDisabled} />
+        <div className="composeRecipients">
+          <input autoFocus name="to" value={draft.to} onChange={updateField} placeholder="To" aria-label="Recipient" disabled={config.toDisabled} />
+          {!config.toDisabled ? <div className="composeRecipientToggles">
+            <button type="button" onClick={() => setShowCc(true)} aria-expanded={showCc}>CC</button>
+            <button type="button" onClick={() => setShowBcc(true)} aria-expanded={showBcc}>CCI</button>
+          </div> : null}
+        </div>
+        {showCc ? <input name="cc" value={draft.cc} onChange={updateField} placeholder="CC" aria-label="Carbon copy recipients" /> : null}
+        {showBcc ? <input name="bcc" value={draft.bcc} onChange={updateField} placeholder="CCI" aria-label="Blind carbon copy recipients" /> : null}
         <input name="subject" value={draft.subject} onChange={updateField} placeholder="Subject" aria-label="Subject" disabled={config.subjectDisabled} />
         <textarea name="body" value={draft.body} onChange={updateField} placeholder={mode === 'forward' ? 'Add a note (the original message is attached automatically)…' : 'Write something brilliant…'} aria-label="Message body" />
         {error ? <p className="formError" role="alert">{error}</p> : null}
