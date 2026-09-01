@@ -288,6 +288,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 .modal { width: min(720px, 92vw); min-height: 480px; border: 1px solid rgba(148, 185, 226, .22); border-radius: 16px; background: linear-gradient(180deg, #0d1c31, #091523); box-shadow: 0 30px 90px rgba(0, 0, 0, .5); padding: 14px; }
 .modal > div:first-child { display: flex; align-items: center; justify-content: space-between; }
 .modal input, .modal textarea { width: 100%; border: 0; border-bottom: 1px solid rgba(145, 181, 224, .12); background: transparent; color: white; padding: 11px 8px; outline: none; }
+.composeRecipients { position: relative; display: flex; align-items: center; border-bottom: 1px solid rgba(145, 181, 224, .12); }
+.composeRecipients input { border-bottom: 0; padding-right: 78px; }
+.composeRecipientToggles { position: absolute; right: 7px; display: flex; gap: 3px; }
+.composeRecipientToggles button { border: 0; border-radius: 5px; background: transparent; color: #7f93aa; padding: 4px; font-size: 8px; cursor: pointer; }
+.composeRecipientToggles button:hover, .composeRecipientToggles button[aria-expanded='true'] { color: #72dff2; background: rgba(57, 217, 255, .07); }
 .modal textarea { height: 290px; resize: none; border-bottom: 0; }
 .modal input::placeholder, .modal textarea::placeholder { color: #71849b; }
 .formError { color: #fda4af; font-size: 9px; margin: 0 8px 8px; }

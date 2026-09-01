@@ -5,11 +5,18 @@ import { createMailProvider } from '../services/providerRegistry.js'
 const folderQuery = z.object({ folder: z.string().default('Inbox') })
 const sendSchema = z.object({
   to: z.string().min(1),
+  cc: z.string().max(4000).optional().default(''),
+  bcc: z.string().max(4000).optional().default(''),
   subject: z.string().min(1),
   body: z.string().default(''),
 })
 const replySchema = z.object({ body: z.string().min(1) })
-const forwardSchema = z.object({ to: z.string().min(1), body: z.string().default('') })
+const forwardSchema = z.object({
+  to: z.string().min(1),
+  cc: z.string().max(4000).optional().default(''),
+  bcc: z.string().max(4000).optional().default(''),
+  body: z.string().default(''),
+})
 const moveSchema = z.object({ folder: z.string().min(1) })
 const labelsSchema = z.object({ labels: z.array(z.string().min(1).max(60)).max(20) })
 

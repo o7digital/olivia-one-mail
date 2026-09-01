@@ -10,7 +10,8 @@ import type { MailProvider } from './mailProvider.js'
 interface OutgoingMessage {
   from: string
   to: string | string[]
-  cc?: string[]
+  cc?: string | string[]
+  bcc?: string | string[]
   subject: string
   text: string
 }
@@ -255,10 +256,12 @@ export class MailcowImapProvider implements MailProvider {
     return null
   }
 
-  async sendMessage(input: { to: string; subject: string; body: string }) {
+  async sendMessage(input: { to: string; cc?: string; bcc?: string; subject: string; body: string }) {
     const info = await this.sendAndArchive({
       from: `"${this.config.fromName}" <${this.credentials.email}>`,
       to: input.to,
+      cc: input.cc?.trim() || undefined,
+      bcc: input.bcc?.trim() || undefined,
       subject: input.subject,
       text: input.body,
     })
@@ -296,12 +299,14 @@ export class MailcowImapProvider implements MailProvider {
     return { id: info.messageId, status: 'sent' }
   }
 
-  async forward(id: string, input: { to: string; body: string }) {
+  async forward(id: string, input: { to: string; cc?: string; bcc?: string; body: string }) {
     const original = await this.getMessage(id)
     if (!original) throw new Error('Message not found')
     const info = await this.sendAndArchive({
       from: `"${this.config.fromName}" <${this.credentials.email}>`,
       to: input.to,
+      cc: input.cc?.trim() || undefined,
+      bcc: input.bcc?.trim() || undefined,
       subject: original.subject.startsWith('Fwd:') ? original.subject : `Fwd: ${original.subject}`,
       text: `${input.body}\n\n---- Forwarded message ----\n${original.body.join('\n')}`,
     })
