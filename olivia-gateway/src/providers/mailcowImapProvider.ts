@@ -7,6 +7,14 @@ import { computeReplyAllRecipients } from '../services/mailRecipients.js'
 import type { Folder, MailAttachment, MailMessage } from '../types/domain.js'
 import type { MailProvider } from './mailProvider.js'
 
+interface OutgoingMessage {
+  from: string
+  to: string | string[]
+  cc?: string[]
+  subject: string
+  text: string
+}
+
 function mapFolderLabel(folder: string) {
   const lower = folder.toLowerCase()
   if (lower === 'inbox') return 'INBOX'
@@ -103,6 +111,44 @@ export class MailcowImapProvider implements MailProvider {
         pass: this.credentials.password,
       },
     })
+  }
+
+  private async appendToSent(rawMessage: Buffer) {
+    const client = this.createImapClient()
+    await client.connect()
+    try {
+      const mailboxes = await client.list()
+      const sentMailbox = mailboxes.find((mailbox: { specialUse?: string }) => mailbox.specialUse === '\\Sent')
+        ?? mailboxes.find((mailbox: { path: string }) => mailbox.path.toLowerCase() === 'sent')
+      const sentPath = sentMailbox?.path ?? 'Sent'
+
+      if (!sentMailbox) await client.mailboxCreate(sentPath)
+      await client.append(sentPath, rawMessage, ['\\Seen'], new Date())
+    } finally {
+      await client.logout().catch(() => {})
+    }
+  }
+
+  private async sendAndArchive(message: OutgoingMessage) {
+    // Build the MIME message once so the SMTP delivery and the IMAP copy have
+    // the same Message-ID and contents.
+    const compiler = nodemailer.createTransport({
+      streamTransport: true,
+      buffer: true,
+      newline: 'unix',
+    })
+    const compiled = await compiler.sendMail(message)
+    const rawMessage = Buffer.isBuffer(compiled.message)
+      ? compiled.message
+      : Buffer.from(compiled.message)
+
+    const transport = this.createTransport()
+    const info = await transport.sendMail({
+      envelope: compiled.envelope,
+      raw: rawMessage,
+    })
+    await this.appendToSent(rawMessage)
+    return info
   }
 
   async listFolders(): Promise<Folder[]> {
@@ -210,8 +256,7 @@ export class MailcowImapProvider implements MailProvider {
   }
 
   async sendMessage(input: { to: string; subject: string; body: string }) {
-    const transport = this.createTransport()
-    const info = await transport.sendMail({
+    const info = await this.sendAndArchive({
       from: `"${this.config.fromName}" <${this.credentials.email}>`,
       to: input.to,
       subject: input.subject,
@@ -223,8 +268,7 @@ export class MailcowImapProvider implements MailProvider {
   async reply(id: string, input: { body: string }) {
     const original = await this.getMessage(id)
     if (!original) throw new Error('Message not found')
-    const transport = this.createTransport()
-    const info = await transport.sendMail({
+    const info = await this.sendAndArchive({
       from: `"${this.config.fromName}" <${this.credentials.email}>`,
       to: original.email,
       subject: original.subject.startsWith('Re:') ? original.subject : `Re: ${original.subject}`,
@@ -242,8 +286,7 @@ export class MailcowImapProvider implements MailProvider {
       to: original.to,
       cc: original.cc,
     })
-    const transport = this.createTransport()
-    const info = await transport.sendMail({
+    const info = await this.sendAndArchive({
       from: `"${this.config.fromName}" <${this.credentials.email}>`,
       to: recipients.to,
       cc: recipients.cc.length ? recipients.cc : undefined,
@@ -256,8 +299,7 @@ export class MailcowImapProvider implements MailProvider {
   async forward(id: string, input: { to: string; body: string }) {
     const original = await this.getMessage(id)
     if (!original) throw new Error('Message not found')
-    const transport = this.createTransport()
-    const info = await transport.sendMail({
+    const info = await this.sendAndArchive({
       from: `"${this.config.fromName}" <${this.credentials.email}>`,
       to: input.to,
       subject: original.subject.startsWith('Fwd:') ? original.subject : `Fwd: ${original.subject}`,
