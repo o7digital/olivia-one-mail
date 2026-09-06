@@ -2,13 +2,13 @@ import { ImapFlow } from 'imapflow'
 import { simpleParser } from 'mailparser'
 import nodemailer from 'nodemailer'
 import { folders as mockFolders } from '../data/mockData.js'
-import { getMailcowConnectionConfig, type MailboxCredentials, type MailcowConnectionConfig } from '../services/mailcowAuth.js'
+import { getMailcowConnectionConfig, resolveFromName, type MailboxCredentials, type MailcowConnectionConfig } from '../services/mailcowAuth.js'
 import { computeReplyAllRecipients } from '../services/mailRecipients.js'
 import type { Folder, MailAttachment, MailMessage } from '../types/domain.js'
 import type { MailProvider } from './mailProvider.js'
 
 interface OutgoingMessage {
-  from: string
+  from: string | { name: string; address: string }
   to: string | string[]
   cc?: string | string[]
   bcc?: string | string[]
@@ -114,6 +114,13 @@ export class MailcowImapProvider implements MailProvider {
     })
   }
 
+  private get fromAddress() {
+    return {
+      name: resolveFromName(this.credentials.email, this.config),
+      address: this.credentials.email,
+    }
+  }
+
   private async appendToSent(rawMessage: Buffer) {
     const client = this.createImapClient()
     await client.connect()
@@ -197,8 +204,11 @@ export class MailcowImapProvider implements MailProvider {
       })) {
         const parsed = message.source ? await simpleParser(message.source) : null
         const from = message.envelope?.from?.[0]
-        const name = from?.name || from?.address || this.credentials.email
         const email = from?.address || this.credentials.email
+        const isAuthenticatedMailbox = email.toLowerCase() === this.credentials.email.toLowerCase()
+        const name = isAuthenticatedMailbox
+          ? this.fromAddress.name
+          : (from?.name || email)
         const date = message.internalDate ?? new Date()
         const bodyText = decodeText(parsed?.text).trim()
         const preview = bodyText.split('\n').find(Boolean)?.slice(0, 160) ?? 'No preview available.'
@@ -258,7 +268,7 @@ export class MailcowImapProvider implements MailProvider {
 
   async sendMessage(input: { to: string; cc?: string; bcc?: string; subject: string; body: string }) {
     const info = await this.sendAndArchive({
-      from: `"${this.config.fromName}" <${this.credentials.email}>`,
+      from: this.fromAddress,
       to: input.to,
       cc: input.cc?.trim() || undefined,
       bcc: input.bcc?.trim() || undefined,
@@ -272,7 +282,7 @@ export class MailcowImapProvider implements MailProvider {
     const original = await this.getMessage(id)
     if (!original) throw new Error('Message not found')
     const info = await this.sendAndArchive({
-      from: `"${this.config.fromName}" <${this.credentials.email}>`,
+      from: this.fromAddress,
       to: original.email,
       subject: original.subject.startsWith('Re:') ? original.subject : `Re: ${original.subject}`,
       text: input.body,
@@ -290,7 +300,7 @@ export class MailcowImapProvider implements MailProvider {
       cc: original.cc,
     })
     const info = await this.sendAndArchive({
-      from: `"${this.config.fromName}" <${this.credentials.email}>`,
+      from: this.fromAddress,
       to: recipients.to,
       cc: recipients.cc.length ? recipients.cc : undefined,
       subject: original.subject.startsWith('Re:') ? original.subject : `Re: ${original.subject}`,
@@ -303,7 +313,7 @@ export class MailcowImapProvider implements MailProvider {
     const original = await this.getMessage(id)
     if (!original) throw new Error('Message not found')
     const info = await this.sendAndArchive({
-      from: `"${this.config.fromName}" <${this.credentials.email}>`,
+      from: this.fromAddress,
       to: input.to,
       cc: input.cc?.trim() || undefined,
       bcc: input.bcc?.trim() || undefined,

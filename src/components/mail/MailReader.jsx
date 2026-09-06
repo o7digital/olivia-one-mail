@@ -169,7 +169,7 @@ export function MailReader({
           <div><h1>{message.subject}</h1><span className="important">Important</span><Star size={16} className={message.starred ? 'starred' : ''} /></div>
           <div><IconButton label="Reply" onClick={onReply}><Reply size={16} /></IconButton><IconButton label="Reply all" onClick={onReplyAll}><ReplyAll size={16} /></IconButton><IconButton label="Forward" onClick={onForward}><Forward size={16} /></IconButton></div>
         </div>
-        <div className="sender"><Avatar initials={message.initials} tone={message.tone} /><div><b>{message.sender}</b><small>{message.email}</small><small>To: Olivier Steineur</small></div><time>Today, {message.time}</time></div>
+        <div className="sender"><Avatar initials={message.initials} tone={message.tone} /><div><b>{message.sender}</b><small>{message.email}</small>{message.to?.length ? <small>To: {message.to.join(', ')}</small> : null}</div><time>Today, {message.time}</time></div>
         <LabelsEditor knownLabels={knownLabels ?? []} labels={message.labels} onChange={handleLabelsChange} />
         <div className="summary"><label><Sparkles size={14} />AI Summary</label><p>{aiStatus === 'error' ? 'Olivia AI temporarily unavailable' : (analysis?.summary?.[0] ?? 'Olivia is analyzing this email.')}</p></div>
         <div className="body">{message.body.map((paragraph, index) => <p key={`${message.id}-${index}`}>{paragraph}</p>)}</div>

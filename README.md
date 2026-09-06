@@ -35,9 +35,13 @@ OLIVIA_INTERNAL_TOKEN=<matching Railway DEV internal token>
 AI_DEFAULT_CLIENT_CODE=default
 AI_MAILBOX_CLIENT_MAP={}
 AI_DOMAIN_CLIENT_MAP={"zevicapital.com":"zevicapital"}
+MAIL_FROM_NAME=Olivia One
+MAIL_FROM_NAME_MAP={"contact@conchadepalacio.com":"FIRST LAST","karen@kallistacafe.com":"FIRST LAST","contact@nodelifestyle.com":"FIRST LAST"}
 ```
 
 Preserve any existing mailbox and domain mappings when editing this file. Restrict it to the deployment user with mode `600`. Docker Compose requires both `AI_API_URL` and `OLIVIA_INTERNAL_TOKEN` and refuses to render the production stack when either is missing. Do not pass the token on a command line, commit it to Git, or expose it to the browser.
+
+`MAIL_FROM_NAME_MAP` controls the SMTP display name independently for each Mailcow mailbox. Replace each `FIRST LAST` placeholder with the mailbox owner's name as entered in Mailcow. Mailboxes absent from the map use `MAIL_FROM_NAME`.
 
 ## Phase 2 scope
 
