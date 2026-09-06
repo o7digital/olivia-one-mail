@@ -69,7 +69,7 @@ export function ComposeModal({ mode = 'new', messageId, initialTo = '', initialS
   }
 
   return (
-    <div className="overlay" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+    <div className="overlay">
       <form className="modal" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="compose-title">
         <div><b id="compose-title">{config.title}</b><IconButton label="Close composer" onClick={onClose}><X size={17} /></IconButton></div>
         <div className="composeRecipients">
