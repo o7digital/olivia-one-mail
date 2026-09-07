@@ -135,8 +135,11 @@ export function useInbox(folder, query, enabled = true) {
     setMessages((current) => current.map((message) => (
       message.id === id ? { ...message, unread: false } : message
     )))
-    mailService.markRead(id)
-  }, [])
+    mailService.markRead(id).catch(() => {
+      // A sandbox mailbox is read-only; restore the server state on refusal.
+      load(true)
+    })
+  }, [load])
 
   const runOptimisticMove = useCallback(async (id, action) => {
     let previousMessages = []

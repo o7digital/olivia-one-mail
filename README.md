@@ -22,7 +22,7 @@ AI_PROVIDER=python-olivia
 AI_API_URL=https://olivia-v2-python-dev-production.up.railway.app
 ```
 
-The browser calls only `/api/ai/analyze`, `/api/ai/rewrite`, and `/api/ai/compose` on the Olivia gateway. The gateway adds `X-Olivia-Internal-Token` and resolves `clientCode` from `AI_MAILBOX_CLIENT_MAP`, then `AI_DOMAIN_CLIENT_MAP`, then `AI_DEFAULT_CLIENT_CODE`. Browser-provided tenant codes are not accepted. Keep the token server-side and configure mailbox/domain maps in the development environment secret store.
+The browser calls only `/api/ai/analyze`, `/api/ai/rewrite`, and `/api/ai/compose` on the Olivia gateway. The gateway adds `X-Olivia-Internal-Token` and resolves `clientCode` from `AI_MAILBOX_CLIENT_MAP`, then `AI_DOMAIN_CLIENT_MAP`; unmapped mailboxes are refused with HTTP 403. Browser-provided tenant codes are not accepted. Keep the token server-side and configure mailbox/domain maps in the development environment secret store.
 
 ### VPS gateway configuration
 
@@ -32,7 +32,6 @@ The public frontend proxies `/api` to the gateway on `one.o7digitalgroup.com`. C
 AI_PROVIDER=python-olivia
 AI_API_URL=https://olivia-v2-python-dev-production.up.railway.app
 OLIVIA_INTERNAL_TOKEN=<matching Railway DEV internal token>
-AI_DEFAULT_CLIENT_CODE=default
 AI_MAILBOX_CLIENT_MAP={}
 AI_DOMAIN_CLIENT_MAP={"zevicapital.com":"zevicapital"}
 MAIL_FROM_NAME=Olivia One
@@ -61,3 +60,7 @@ Mailcow, SOGo, provider credentials, and upstream infrastructure still remain un
 - `src/features/` owns client interaction state
 - `src/services/` is now an HTTP client boundary for the Olivia Gateway
 - `olivia-gateway/` contains the Phase 2 Fastify + TypeScript backend with mock provider implementations
+
+### Olivia V3.5 sandbox
+
+The gateway supports one explicitly mapped test mailbox with asynchronous V3 jobs. V2 remains the default engine. See [sandbox configuration, contracts and acceptance limits](docs/olivia-v3-sandbox.md). V3 secrets remain server-side; no production activation is included.

@@ -55,7 +55,6 @@ test('analyzeMessage uses mailbox/domain tenant mapping and does not send mailbo
       oliviaInternalToken: 'secret-token',
       aiMailboxClientMap: { 'sales@brand.com': 'brand-a' },
       aiDomainClientMap: { 'brand.com': 'brand-domain' },
-      aiDefaultClientCode: 'default',
     }
     const analysis = await analyzeMessage(provider as never, 'sales@brand.com', '42', env)
     assert.equal(analysis.intent, 'lead')
@@ -92,7 +91,6 @@ test('rewriteDraft and composeDraft call internal Olivia endpoints', async () =>
       oliviaInternalToken: 'secret-token',
       aiMailboxClientMap: {},
       aiDomainClientMap: { 'brand.com': 'brand-domain' },
-      aiDefaultClientCode: 'default',
     }
     const rewrite = await rewriteDraft(env, {
       mailboxEmail: 'ops@brand.com',
@@ -126,7 +124,6 @@ test('Olivia calls fail closed when the internal token is missing', async () => 
       oliviaInternalToken: '',
       aiMailboxClientMap: {},
       aiDomainClientMap: { 'brand.com': 'brand-domain' },
-      aiDefaultClientCode: 'default',
     }
     await assert.rejects(
       rewriteDraft(env, { mailboxEmail: 'ops@brand.com', action: 'formal', draft: 'hey' }),

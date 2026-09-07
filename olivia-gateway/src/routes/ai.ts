@@ -1,3 +1,4 @@
+import { AIError } from '../services/aiRouting.js'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { analyzeMessage, composeDraft, rewriteDraft } from '../services/aiService.js'
@@ -26,7 +27,8 @@ export async function registerAIRoutes(app: FastifyInstance) {
     try {
       return await analyzeMessage(provider, request.session!.email, body.messageId, app.env)
     } catch (error) {
-      request.log.error(error)
+      if (error instanceof AIError) return reply.code(error.statusCode).send({ code: error.code, message: error.message })
+      request.log.error({ code: 'AI_UNAVAILABLE' }, 'AI request failed')
       return reply.code(503).send({ message: 'Olivia AI temporarily unavailable' })
     }
   })
@@ -42,7 +44,8 @@ export async function registerAIRoutes(app: FastifyInstance) {
         subject: body.subject,
       })
     } catch (error) {
-      request.log.error(error)
+      if (error instanceof AIError) return reply.code(error.statusCode).send({ code: error.code, message: error.message })
+      request.log.error({ code: 'AI_UNAVAILABLE' }, 'AI request failed')
       return reply.code(503).send({ message: 'Olivia AI temporarily unavailable' })
     }
   })
@@ -58,7 +61,8 @@ export async function registerAIRoutes(app: FastifyInstance) {
         currentDraft: body.currentDraft,
       })
     } catch (error) {
-      request.log.error(error)
+      if (error instanceof AIError) return reply.code(error.statusCode).send({ code: error.code, message: error.message })
+      request.log.error({ code: 'AI_UNAVAILABLE' }, 'AI request failed')
       return reply.code(503).send({ message: 'Olivia AI temporarily unavailable' })
     }
   })

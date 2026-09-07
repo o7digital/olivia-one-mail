@@ -1,3 +1,6 @@
+import { createHash } from 'node:crypto'
+import { resolveAIRoute, type AIConfig } from './aiRouting.js'
+import { callV3 } from './aiV3.js'
 import { z } from 'zod'
 import type { MailProvider } from '../providers/mailProvider.js'
 import type { MailMessage } from '../types/domain.js'
@@ -66,10 +69,6 @@ type RewriteAction = 'shorter' | 'longer' | 'formal' | 'friendly' | 'translate-f
 
 const cache = new Map<string, { expiresAt: number; value: Analysis }>()
 
-function getMailboxKey(mailboxEmail: string, message: MailMessage) {
-  return `${mailboxEmail.toLowerCase()}:${message.folder}:${message.id}`
-}
-
 function sanitizeText(value: string) {
   return value.replace(/[<>]/g, '').trim()
 }
@@ -105,18 +104,7 @@ export function normalizeContext(message: MailMessage, analysis: Analysis): Anal
   return { ...analysis, messageType, deliveryFailure, recommendedActions: analysis.recommendedActions.length ? analysis.recommendedActions : (defaults[messageType] ?? [{ type: 'reply', label: 'Reply', confidence: 0.7, requiresConfirmation: true }, { type: 'mark_waiting', label: 'Mark as waiting', confidence: 0.62, requiresConfirmation: true }]) }
 }
 
-function resolveClientCode(mailboxEmail: string, env: { aiMailboxClientMap: Record<string, string>; aiDomainClientMap: Record<string, string>; aiDefaultClientCode: string }) {
-  const mailbox = mailboxEmail.trim().toLowerCase()
-  if (env.aiMailboxClientMap[mailbox]) return env.aiMailboxClientMap[mailbox]
-  const domain = mailbox.split('@')[1] ?? ''
-  if (domain && env.aiDomainClientMap[domain]) return env.aiDomainClientMap[domain]
-  return env.aiDefaultClientCode
-}
-
-async function callPythonOlivia<T>(appEnv: {
-  aiApiUrl: string
-  oliviaInternalToken: string
-}, path: string, body: unknown): Promise<T> {
+async function callPythonOlivia<T>(appEnv: AIConfig, path: string, body: unknown): Promise<T> {
   if (!appEnv.aiApiUrl || !appEnv.oliviaInternalToken) throw new Error('Olivia AI temporarily unavailable')
   const response = await fetch(appEnv.aiApiUrl.replace(/\/$/, '') + path, {
     method: 'POST',
@@ -130,12 +118,8 @@ async function callPythonOlivia<T>(appEnv: {
   return response.json() as Promise<T>
 }
 
-async function buildAnalyzePayload(provider: MailProvider, mailboxEmail: string, message: MailMessage, appEnv: {
-  aiMailboxClientMap: Record<string, string>
-  aiDomainClientMap: Record<string, string>
-  aiDefaultClientCode: string
-}) {
-  const clientCode = resolveClientCode(mailboxEmail, appEnv)
+async function buildAnalyzePayload(provider: MailProvider, mailboxEmail: string, message: MailMessage, appEnv: AIConfig) {
+  const clientCode = resolveAIRoute(mailboxEmail, appEnv).tenant
   return {
     clientCode,
     mailbox: mailboxEmail,
@@ -150,18 +134,13 @@ async function buildAnalyzePayload(provider: MailProvider, mailboxEmail: string,
   }
 }
 
-export async function analyzeMessage(provider: MailProvider, mailboxEmail: string, messageId: string, appEnv: {
-  aiProvider: string
-  aiApiUrl: string
-  oliviaInternalToken: string
-  aiMailboxClientMap: Record<string, string>
-  aiDomainClientMap: Record<string, string>
-  aiDefaultClientCode: string
-}): Promise<Analysis> {
+export async function analyzeMessage(provider: MailProvider, mailboxEmail: string, messageId: string, appEnv: AIConfig) {
+  const route = resolveAIRoute(mailboxEmail, appEnv)
   const message = await provider.getMessage(messageId)
   if (!message) throw new Error('Message not found')
 
-  const cacheKey = getMailboxKey(mailboxEmail, message)
+  if (route.engine === 'v3') return analyzeV3(appEnv, mailboxEmail, message)
+  const cacheKey = createHash('sha256').update(JSON.stringify([route, appEnv.aiApiUrl, appEnv.aiProvider, appEnv.oliviaInternalToken, message])).digest('hex')
   const cached = cache.get(cacheKey)
   if (cached && cached.expiresAt > Date.now()) return cached.value
 
@@ -172,20 +151,19 @@ export async function analyzeMessage(provider: MailProvider, mailboxEmail: strin
   return value
 }
 
-export async function rewriteDraft(appEnv: {
-  aiApiUrl: string
-  oliviaInternalToken: string
-  aiMailboxClientMap: Record<string, string>
-  aiDomainClientMap: Record<string, string>
-  aiDefaultClientCode: string
-}, input: {
+export async function rewriteDraft(appEnv: AIConfig, input: {
   mailboxEmail: string
   action: RewriteAction
   draft: string
   recipient?: string
   subject?: string
 }) {
-  const clientCode = resolveClientCode(input.mailboxEmail, appEnv)
+  const route = resolveAIRoute(input.mailboxEmail, appEnv)
+  if (route.engine === 'v3') {
+    const result = await callV3(appEnv, input.mailboxEmail, 'rewrite', { text: input.draft, tone: input.action, language: input.action.startsWith('translate-') ? input.action.slice(-2) : 'auto' })
+    return { draft: result.text, model: null, reasoningTier: null, toolsUsed: [], sandbox: true, engine: 'v3' }
+  }
+  const clientCode = route.tenant
   return draftResponseSchema.parse(await callPythonOlivia(appEnv, '/email/rewrite', {
     clientCode,
     mailbox: input.mailboxEmail,
@@ -197,20 +175,19 @@ export async function rewriteDraft(appEnv: {
   }))
 }
 
-export async function composeDraft(appEnv: {
-  aiApiUrl: string
-  oliviaInternalToken: string
-  aiMailboxClientMap: Record<string, string>
-  aiDomainClientMap: Record<string, string>
-  aiDefaultClientCode: string
-}, input: {
+export async function composeDraft(appEnv: AIConfig, input: {
   mailboxEmail: string
   prompt: string
   recipient?: string
   subject?: string
   currentDraft?: string
 }) {
-  const clientCode = resolveClientCode(input.mailboxEmail, appEnv)
+  const route = resolveAIRoute(input.mailboxEmail, appEnv)
+  if (route.engine === 'v3') {
+    const result = await callV3(appEnv, input.mailboxEmail, 'compose', { instruction: input.prompt, context: [input.recipient, input.subject, input.currentDraft].filter(Boolean).join('\n'), tone: 'professional', language: 'auto' })
+    return { draft: result.body, model: null, reasoningTier: null, toolsUsed: [], sandbox: true, engine: 'v3' }
+  }
+  const clientCode = route.tenant
   return draftResponseSchema.parse(await callPythonOlivia(appEnv, '/email/compose', {
     clientCode,
     mailbox: input.mailboxEmail,
@@ -220,4 +197,22 @@ export async function composeDraft(appEnv: {
     currentDraft: input.currentDraft,
     language: 'auto',
   }))
+}
+
+async function analyzeV3(env: AIConfig, mailbox: string, message: MailMessage) {
+  const payload = { subject: message.subject, sender: message.email, body: message.body.join('\n') }
+  const [summary, classification, reply, actions] = await Promise.all([
+    callV3(env, mailbox, 'summary', payload), callV3(env, mailbox, 'classification', payload),
+    callV3(env, mailbox, 'suggestedReply', payload), callV3(env, mailbox, 'actions', payload),
+  ])
+  return {
+    engine: 'v3', sandbox: true, summary: [summary.summary], classification,
+    urgency: null, unavailableFunctions: ['urgency', 'leadScore', 'sentiment', 'opportunity', 'contactInsights'],
+    leadScore: null, sentiment: { label: 'Unavailable in sandbox', confidence: null },
+    intent: classification.category, buyingSignals: [], tasks: [], extractedActions: actions.actions,
+    opportunity: { detected: false, title: '', estimatedValue: null, currency: null, confidence: 0 },
+    contactInsights: { summary: '', engagement: '' }, suggestedReply: reply.reply,
+    model: null, reasoningTier: null, toolsUsed: [], messageType: 'normal_conversation',
+    recommendedActions: [], commitments: [], deliveryFailure: null, invoice: null, scheduling: null,
+  }
 }

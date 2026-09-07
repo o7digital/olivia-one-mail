@@ -17,7 +17,6 @@ test('AI route returns a generic 503 without exposing credentials or browser cli
     oliviaInternalToken: 'server-only-token',
     aiMailboxClientMap: {},
     aiDomainClientMap: { 'brand.com': 'brand-tenant' },
-    aiDefaultClientCode: 'default',
   })
   app.addHook('preHandler', async (request) => {
     request.session = {
