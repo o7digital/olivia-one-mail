@@ -31,6 +31,13 @@ services:
       AI_API_URL: ${AI_API_URL:?Set AI_API_URL in .env.production}
       AI_MAILBOX_CLIENT_MAP: ${AI_MAILBOX_CLIENT_MAP:-{}}
       AI_DOMAIN_CLIENT_MAP: ${AI_DOMAIN_CLIENT_MAP:-{}}
+      AI_V3_TEST_MAILBOX: ${AI_V3_TEST_MAILBOX:-}
+      AI_V3_TEST_TENANT: ${AI_V3_TEST_TENANT:-}
+      AI_V3_API_URL: ${AI_V3_API_URL:-}
+      AI_V3_SERVICE_EMAIL: ${AI_V3_SERVICE_EMAIL:-}
+      AI_V3_SERVICE_PASSWORD: ${AI_V3_SERVICE_PASSWORD:-}
+      AI_V3_TIMEOUT_MS: ${AI_V3_TIMEOUT_MS:-90000}
+      AI_V3_POLL_MS: ${AI_V3_POLL_MS:-250}
       OLIVIA_INTERNAL_TOKEN: ${OLIVIA_INTERNAL_TOKEN:?Set OLIVIA_INTERNAL_TOKEN in .env.production}
       PULSE_CRM_API_URL: ${PULSE_CRM_API_URL:-}
       PULSE_CRM_INTEGRATION_SECRET: ${PULSE_CRM_INTEGRATION_SECRET:-CHANGE_ME}
@@ -49,6 +56,7 @@ services:
       olivia-ai-network:
         aliases:
           - olivia-gateway
+      olivia-v3-internal:
 
   olivia-ai-python:
     restart: unless-stopped
@@ -81,6 +89,9 @@ networks:
     name: ${MAILCOW_NETWORK:-mailcowdockerized_mailcow-network}
   olivia-ai-network:
     name: olivia-ai-network
+  olivia-v3-internal:
+    external: true
+    name: olivia-v3_olivia-v3-internal
 
 volumes:
   olivia-task-data:
