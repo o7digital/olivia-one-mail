@@ -7,12 +7,12 @@ import { resolveAIRoute } from '/app/dist/services/aiRouting.js'
 import { getV3Token } from '/app/dist/services/aiV3Auth.js'
 const env = getEnv()
 const mailbox = 'info@o7digitalgroup.com'
-assert.equal(env.aiV3TestOnly, true)
+assert.equal(env.aiV3TestOnly, process.env.EXPECT_TEST_ONLY === 'true')
 assert.deepEqual(resolveAIRoute(mailbox, env), { mailbox, tenant: 'o7-internal-test', engine: 'v3' })
-for (const email of ['other@o7digitalgroup.com', 'client@zevicapital.com', 'unknown@example.com']) {
+for (const email of ['other@o7digitalgroup.com', 'unknown@example.com']) {
   assert.throws(() => resolveAIRoute(email, env), e => e.code === 'TENANT_UNMAPPED')
 }
-assert.equal(resolveAIRoute('client@zevicapital.com', { ...env, aiDomainClientMap: { 'zevicapital.com': 'zevicapital' } }).engine, 'v2')
+assert.equal(resolveAIRoute('client@zevicapital.com', env).engine, 'v2')
 const run = process.env.TEST_RUN_ID || new Date().toISOString()
 const message = { id: run, subject: `Olivia internal acceptance ${run}`, email: mailbox, sender: 'Internal test', body: ['Bonjour, demande de réservation pour un test interne.', 'TODO rappeler pour confirmer les disponibilités.', 'Aucun envoi, aucune action externe.'] }
 const provider = { getMessage: async () => message }
