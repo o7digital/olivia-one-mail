@@ -78,6 +78,7 @@ export async function authenticateMailbox(
   config = getMailcowConnectionConfig(),
 ) {
   const client = new ImapFlow({
+    logger: false,
     host: config.imapHost,
     port: config.imapPort,
     secure: config.imapSecure,

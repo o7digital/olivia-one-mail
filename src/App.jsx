@@ -43,6 +43,7 @@ function App() {
   const folders = useMailFolders(isAuthenticated)
   const inbox = useInbox(activeFolder, query, isAuthenticated)
   const aiWorkspace = useAIWorkspace(inbox.selected?.id, isAuthenticated)
+  const v3Pilot = Boolean(session.session?.user?.v3Pilot)
 
   const notify = useCallback((message) => {
     window.clearTimeout(toastTimer.current)
@@ -240,10 +241,13 @@ function App() {
             <MailReader
               aiOpen={aiOpen}
               aiStatus={aiWorkspace.status}
+              aiError={aiWorkspace.error}
               analysis={aiWorkspace.analysis}
+              sandbox={v3Pilot}
               knownLabels={inbox.knownLabels}
               message={inbox.selected}
               onAiToggle={() => setAiOpen((current) => !current)}
+              onAiRetry={aiWorkspace.retry}
               onArchive={() => inbox.archiveMessage(inbox.selected.id)}
               onDelete={() => inbox.deleteMessage(inbox.selected.id)}
               onForward={() => openCompose('forward', inbox.selected)}
@@ -255,7 +259,7 @@ function App() {
               onSnooze={() => inbox.moveMessage(inbox.selected.id, 'Snoozed')}
               onToggleStar={() => inbox.toggleStarMessage(inbox.selected.id)}
             />
-            {aiOpen ? <AIWorkspace analysis={aiWorkspace.analysis} message={inbox.selected} onArchive={() => inbox.archiveMessage(inbox.selected.id)} onCreateOpportunity={() => setOpportunityOpen(true)} onNotify={notify} onReply={() => openCompose('reply', inbox.selected)} onReplyAll={() => openCompose('reply-all', inbox.selected)} status={aiWorkspace.status} /> : null}
+            {aiOpen ? <AIWorkspace analysis={aiWorkspace.analysis} error={aiWorkspace.error} message={inbox.selected} onArchive={() => inbox.archiveMessage(inbox.selected.id)} onCreateOpportunity={() => setOpportunityOpen(true)} onNotify={notify} onReply={() => openCompose('reply', inbox.selected)} onReplyAll={() => openCompose('reply-all', inbox.selected)} onRetry={aiWorkspace.retry} status={aiWorkspace.status} /> : null}
             <AppRail />
           </main>
         )} />
@@ -294,6 +298,7 @@ function App() {
 
       {composeState ? (
         <ComposeModal
+          sandbox={v3Pilot}
           initialSubject={composeState.initialSubject}
           initialTo={composeState.initialTo}
           messageId={composeState.messageId}

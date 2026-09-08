@@ -5,6 +5,7 @@ export function useAIWorkspace(messageId, enabled = true) {
   const [analysis, setAnalysis] = useState(null)
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState(null)
+  const [requestVersion, setRequestVersion] = useState(0)
 
   useEffect(() => {
     if (!enabled || !messageId) {
@@ -34,7 +35,7 @@ export function useAIWorkspace(messageId, enabled = true) {
     return () => {
       active = false
     }
-  }, [enabled, messageId])
+  }, [enabled, messageId, requestVersion])
 
-  return { analysis, error, status }
+  return { analysis, error, status, retry: () => setRequestVersion((version) => version + 1) }
 }

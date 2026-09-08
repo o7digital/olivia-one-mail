@@ -1,9 +1,10 @@
 import { createHash, randomBytes } from 'node:crypto'
 import type { FastifyReply, FastifyRequest, preHandlerHookHandler } from 'fastify'
 
-const SECURE_SESSION_COOKIE = '__Host-olivia_session'
-const LOCAL_SESSION_COOKIE = 'olivia_session'
-const CSRF_COOKIE = 'olivia_csrf'
+const suffix = process.env.AI_V3_TEST_ONLY === 'true' ? '_v3_test' : ''
+const SECURE_SESSION_COOKIE = `__Host-olivia_session${suffix}`
+const LOCAL_SESSION_COOKIE = `olivia_session${suffix}`
+export const CSRF_COOKIE = `olivia_csrf${suffix}`
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000
 
 export interface SessionRecord {

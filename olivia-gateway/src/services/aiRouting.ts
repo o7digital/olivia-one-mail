@@ -12,6 +12,9 @@ export interface AIConfig {
   aiV3TestTenant?: string
   aiV3ApiUrl?: string
   aiV3Token?: string
+  aiV3ServiceEmail?: string
+  aiV3ServicePassword?: string
+  aiV3TestOnly?: boolean
   aiV3TimeoutMs?: number
   aiV3PollMs?: number
 }

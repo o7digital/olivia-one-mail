@@ -49,9 +49,9 @@ test('AI routes reject unmapped authenticated mailbox and ignore browser routing
     assert.equal(denied.json().code, 'TENANT_UNMAPPED')
     assert.equal(calls, 0)
     const accepted = await sandbox.inject({ method: 'POST', url: '/api/ai/rewrite', payload: { draft: 'hello', action: 'formal', engine: 'v2', mailboxEmail: 'live@example.com', tenant: 'live', aiV3ApiUrl: 'https://attacker.invalid' } })
-    assert.equal(accepted.statusCode, 200)
-    assert.equal(accepted.json().sandbox, true)
+    assert.equal(accepted.statusCode, 501)
+    assert.equal(accepted.json().code, 'V3_UNSUPPORTED')
     assert.equal(accepted.body.includes('private'), false)
-    assert.equal(calls, 2)
+    assert.equal(calls, 0)
   } finally { globalThis.fetch = original; await unmapped.close(); await sandbox.close() }
 })

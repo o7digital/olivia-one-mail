@@ -7,12 +7,12 @@ import { taskService } from '../../services/taskService'
 
 const tabs = ['Overview', 'Insights', 'Context']
 
-export function AIWorkspace({ analysis, message, onArchive, onCreateOpportunity, onReply, onReplyAll, onNotify, status }) {
+export function AIWorkspace({ analysis, error, message, onArchive, onCreateOpportunity, onReply, onReplyAll, onNotify, onRetry, status }) {
   const [activeTab, setActiveTab] = useState('Overview')
   const [pendingAction, setPendingAction] = useState('')
 
   if (!message) return null
-  if (status === 'error') return <aside className="ai card" aria-label="AI Workspace"><div className="aihead"><b><BrainCircuit size={18} />AI Workspace</b><Settings2 size={15} /></div><div className="aiTabContent"><BrainCircuit size={24} /><b>Olivia AI temporarily unavailable</b><p>The gateway could not reach the internal Olivia AI service.</p></div></aside>
+  if (status === 'error') return <aside className="ai card" aria-label="AI Workspace"><div className="aihead"><b><BrainCircuit size={18} />AI Workspace</b><Settings2 size={15} /></div><div className="aiTabContent"><BrainCircuit size={24} /><b>Olivia V3.5 could not analyze this email</b><p>{error?.message || 'The request failed safely. You can retry without duplicating the jobs.'}</p><button className="textbtn" type="button" onClick={onRetry}>Retry analysis</button></div></aside>
   if (!analysis && status !== 'loading') return null
 
   async function runAction(action) {
@@ -47,7 +47,7 @@ export function AIWorkspace({ analysis, message, onArchive, onCreateOpportunity,
 
       {activeTab === 'Overview' && analysis ? (
         <>
-          {analysis.sandbox ? <InsightCard title="V3 Sandbox"><p>Test mode · drafts require review. External actions are disabled.</p><p>Urgency and business scoring are unavailable.</p></InsightCard> : null}
+          {analysis.sandbox ? <InsightCard title="V3 Sandbox"><p>Test mode · drafts require review. External actions are disabled.</p><p>Urgency, rewrite, compose and business scoring are unavailable.</p></InsightCard> : null}
           <InsightCard title="Email Summary">{analysis.summary.map((line) => <p key={line}>{line}</p>)}</InsightCard>
           {analysis.messageType === 'delivery_failure' && analysis.deliveryFailure ? <InsightCard title="Delivery Failure"><div className="contextDetails"><b>{analysis.deliveryFailure.recipient || 'Recipient unavailable'}</b><span>{[analysis.deliveryFailure.smtpStatus, analysis.deliveryFailure.enhancedStatusCode].filter(Boolean).join(' · ') || 'SMTP status unavailable'}</span><p>{analysis.deliveryFailure.reason || analysis.deliveryFailure.likelyCause || 'No delivery reason was returned.'}</p><small>{analysis.deliveryFailure.remoteServer || 'Remote server unavailable'} · {analysis.deliveryFailure.responsibility}</small></div></InsightCard> : null}
           {analysis.messageType === 'invoice_payment' && analysis.invoice ? <InsightCard title="Invoice Details"><div className="contextDetails"><b>{analysis.invoice.amount != null && analysis.invoice.currency ? new Intl.NumberFormat(undefined, { style: 'currency', currency: analysis.invoice.currency }).format(analysis.invoice.amount) : 'Amount unavailable'}</b><span>{analysis.invoice.invoiceNumber || 'Invoice number unavailable'}</span><p>{analysis.invoice.dueDate ? `Due ${analysis.invoice.dueDate}` : 'Due date unavailable'}</p></div></InsightCard> : null}

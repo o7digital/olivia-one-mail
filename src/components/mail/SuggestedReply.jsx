@@ -1,9 +1,9 @@
-import { Forward, RefreshCw, Reply, ReplyAll, Send, Sparkles } from 'lucide-react'
+import { Clipboard, Forward, RefreshCw, Reply, ReplyAll, Send, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { aiService } from '../../services/aiService'
 import { mailService } from '../../services/mailService'
 
-export function SuggestedReply({ aiStatus, message, onSent, suggestedReply }) {
+export function SuggestedReply({ aiStatus, message, onSent, sandbox, suggestedReply }) {
   const [activeMode, setActiveMode] = useState('AI Suggested Reply')
   const [activeTone, setActiveTone] = useState('formal')
   const [activeLanguage, setActiveLanguage] = useState('auto')
@@ -54,6 +54,16 @@ export function SuggestedReply({ aiStatus, message, onSent, suggestedReply }) {
     }
   }
 
+  async function copyReply() {
+    if (!draft.trim()) return
+    try {
+      await navigator.clipboard.writeText(draft)
+      onSent('Suggested reply copied')
+    } catch {
+      setError('The suggested reply could not be copied.')
+    }
+  }
+
   return (
     <div className="replybox">
       <div className="replytabs" role="tablist">
@@ -73,7 +83,7 @@ export function SuggestedReply({ aiStatus, message, onSent, suggestedReply }) {
               ['friendly', 'Friendly'],
               ['improve', 'Clearer'],
             ].map(([action, label]) => (
-              <button key={action} className={activeTone === action ? 'active' : ''} type="button" onClick={() => { setActiveTone(action); rewrite(action) }} disabled={rewriting || !draft.trim()}>{label}</button>
+              <button key={action} className={activeTone === action ? 'active' : ''} type="button" onClick={() => { setActiveTone(action); rewrite(action) }} disabled={rewriting || !draft.trim() || sandbox || import.meta.env.VITE_V3_TEST === 'true'}>{label}</button>
             ))}
           </div>
         </div>
@@ -86,7 +96,7 @@ export function SuggestedReply({ aiStatus, message, onSent, suggestedReply }) {
               ['translate-es', 'ES'],
               ['translate-en', 'EN'],
             ].map(([action, label]) => (
-              <button key={action} className={activeLanguage === action ? 'active' : ''} type="button" onClick={() => { setActiveLanguage(action); rewrite(action) }} disabled={rewriting || !draft.trim()}>{label}</button>
+              <button key={action} className={activeLanguage === action ? 'active' : ''} type="button" onClick={() => { setActiveLanguage(action); rewrite(action) }} disabled={rewriting || !draft.trim() || sandbox || import.meta.env.VITE_V3_TEST === 'true'}>{label}</button>
             ))}
           </div>
         </div>
@@ -94,8 +104,9 @@ export function SuggestedReply({ aiStatus, message, onSent, suggestedReply }) {
       <textarea className="draft" aria-label="Reply draft" placeholder={aiStatus === 'error' ? 'Olivia AI is temporarily unavailable.' : 'Olivia is preparing a suggested reply…'} value={draft} onChange={(event) => setDraft(event.target.value)} />
       {error ? <p className="formError" role="alert">{error}</p> : null}
       <div className="replyFooter">
-        <button className="regenerateReply" type="button" onClick={() => rewrite('improve')} disabled={rewriting || !draft.trim()}><RefreshCw size={14} />{rewriting ? 'Rewriting…' : 'Regenerate'}</button>
-        <button className="sendAi" type="button" onClick={sendReply} disabled={sending || rewriting || !draft.trim() || activeMode === 'Forward'}>
+        <button className="regenerateReply" type="button" onClick={copyReply} disabled={!draft.trim()}><Clipboard size={14} />Copy reply</button>
+        <button className="regenerateReply" type="button" onClick={() => rewrite('improve')} disabled={rewriting || !draft.trim() || sandbox || import.meta.env.VITE_V3_TEST === 'true'}><RefreshCw size={14} />{rewriting ? 'Rewriting…' : 'Regenerate'}</button>
+        <button className="sendAi" type="button" onClick={sendReply} disabled={sending || rewriting || !draft.trim() || activeMode === 'Forward' || sandbox || import.meta.env.VITE_V3_TEST === 'true'}>
           <Send size={15} />{activeMode === 'Forward' ? 'Use Forward above' : sending ? 'Sending…' : 'Send reply'}
         </button>
       </div>

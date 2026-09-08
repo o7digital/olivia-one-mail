@@ -59,7 +59,7 @@ export const apiClient = {
     if (!response.ok) throw new Error('Unable to restore session')
 
     const payload = await response.json()
-    csrfToken = csrfToken || getCookieValue('olivia_csrf')
+    csrfToken = csrfToken || getCookieValue(import.meta.env.VITE_CSRF_COOKIE_NAME || 'olivia_csrf')
     return payload
   },
   async login(credentials) {

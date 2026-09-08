@@ -1,0 +1,36 @@
+# Separate test stack; never use the production compose file for activation.
+services:
+  gateway:
+    image: olivia-one-v3-test-gateway:local
+    build: ./olivia-gateway
+    container_name: olivia-one-v3-test-gateway
+    restart: unless-stopped
+    env_file: .env.v3-test
+    networks: [mail, v3]
+    volumes:
+      - test-data:/data
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:8787/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+  frontend:
+    image: nginx:alpine
+    container_name: olivia-one-v3-test-front
+    restart: unless-stopped
+    networks: [mail]
+    volumes:
+      - ./dist-v3-test:/usr/share/nginx/html/v3-test:ro
+      - ./docker/v3-test/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      gateway:
+        condition: service_healthy
+networks:
+  mail:
+    external: true
+    name: mailcowdockerized_mailcow-network
+  v3:
+    external: true
+    name: olivia-v3_olivia-v3-internal
+volumes:
+  test-data:

@@ -92,6 +92,7 @@ export class MailcowImapProvider implements MailProvider {
 
   private createImapClient() {
     return new ImapFlow({
+    logger: false,
       host: this.config.imapHost,
       port: this.config.imapPort,
       secure: this.config.imapSecure,

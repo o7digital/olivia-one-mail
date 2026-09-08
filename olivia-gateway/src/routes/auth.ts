@@ -1,3 +1,4 @@
+import { isV3TestMailbox } from '../services/aiRouting.js'
 import type { FastifyInstance } from 'fastify'
 import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
@@ -12,12 +13,14 @@ const loginSchema = z.object({
 })
 
 export async function registerAuthRoutes(app: FastifyInstance) {
+  const sessionUser = (email: string) => ({ ...buildSessionUser(email), v3Pilot: isV3TestMailbox(email, app.env) })
   app.post('/api/auth/login', async (request, reply) => {
     const parsed = loginSchema.safeParse(request.body)
     if (!parsed.success) {
       return reply.code(400).send({ message: 'Please view and accept the privacy and data-sharing notice before signing in.' })
     }
     const body = parsed.data
+    if (app.env.aiV3TestOnly && !isV3TestMailbox(body.email, app.env)) return reply.code(403).send({ message: 'This test instance is restricted to the internal test mailbox' })
     try {
       await app.authenticateMailbox({
         email: body.email,
@@ -41,7 +44,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     })
 
     return {
-      user: buildSessionUser(body.email),
+      user: sessionUser(body.email),
       csrfToken,
       privacy: { accepted: true, version: body.privacyVersion },
     }
@@ -56,7 +59,7 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   app.get('/api/me', { preHandler: app.requireSession }, async (request) => {
     return {
       authenticated: true,
-      user: buildSessionUser(request.session!.email),
+      user: sessionUser(request.session!.email),
     }
   })
 }

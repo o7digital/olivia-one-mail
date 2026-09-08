@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { resolveAIRoute, type AIConfig } from './aiRouting.js'
+import { AIError, resolveAIRoute, type AIConfig } from './aiRouting.js'
 import { callV3 } from './aiV3.js'
 import { z } from 'zod'
 import type { MailProvider } from '../providers/mailProvider.js'
@@ -160,8 +160,7 @@ export async function rewriteDraft(appEnv: AIConfig, input: {
 }) {
   const route = resolveAIRoute(input.mailboxEmail, appEnv)
   if (route.engine === 'v3') {
-    const result = await callV3(appEnv, input.mailboxEmail, 'rewrite', { text: input.draft, tone: input.action, language: input.action.startsWith('translate-') ? input.action.slice(-2) : 'auto' })
-    return { draft: result.text, model: null, reasoningTier: null, toolsUsed: [], sandbox: true, engine: 'v3' }
+    throw new AIError('V3_UNSUPPORTED', 501, 'Rewrite is disabled: V3.5 sandbox does not transform text')
   }
   const clientCode = route.tenant
   return draftResponseSchema.parse(await callPythonOlivia(appEnv, '/email/rewrite', {
@@ -184,8 +183,7 @@ export async function composeDraft(appEnv: AIConfig, input: {
 }) {
   const route = resolveAIRoute(input.mailboxEmail, appEnv)
   if (route.engine === 'v3') {
-    const result = await callV3(appEnv, input.mailboxEmail, 'compose', { instruction: input.prompt, context: [input.recipient, input.subject, input.currentDraft].filter(Boolean).join('\n'), tone: 'professional', language: 'auto' })
-    return { draft: result.body, model: null, reasoningTier: null, toolsUsed: [], sandbox: true, engine: 'v3' }
+    throw new AIError('V3_UNSUPPORTED', 501, 'Compose is disabled: V3.5 sandbox does not generate drafts')
   }
   const clientCode = route.tenant
   return draftResponseSchema.parse(await callPythonOlivia(appEnv, '/email/compose', {
@@ -207,12 +205,15 @@ async function analyzeV3(env: AIConfig, mailbox: string, message: MailMessage) {
   ])
   return {
     engine: 'v3', sandbox: true, summary: [summary.summary], classification,
-    urgency: null, unavailableFunctions: ['urgency', 'leadScore', 'sentiment', 'opportunity', 'contactInsights'],
+    urgency: null, unavailableFunctions: ['rewrite', 'compose', 'urgency', 'leadScore', 'sentiment', 'opportunity', 'contactInsights'],
     leadScore: null, sentiment: { label: 'Unavailable in sandbox', confidence: null },
     intent: classification.category, buyingSignals: [], tasks: [], extractedActions: actions.actions,
     opportunity: { detected: false, title: '', estimatedValue: null, currency: null, confidence: 0 },
     contactInsights: { summary: '', engagement: '' }, suggestedReply: reply.reply,
-    model: null, reasoningTier: null, toolsUsed: [], messageType: 'normal_conversation',
+    model: summary.model ?? classification.model ?? reply.model ?? actions.model ?? null,
+    reasoningTier: 'balanced', toolsUsed: [], messageType: 'normal_conversation',
+    provider: summary.provider ?? classification.provider ?? reply.provider ?? actions.provider ?? null,
+    ragHits: Math.max(summary.rag_hits ?? 0, classification.rag_hits ?? 0, reply.rag_hits ?? 0, actions.rag_hits ?? 0),
     recommendedActions: [], commitments: [], deliveryFailure: null, invoice: null, scheduling: null,
   }
 }

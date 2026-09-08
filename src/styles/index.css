@@ -197,6 +197,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 .labelAddPanel button[type='submit']:disabled { opacity: .4; cursor: not-allowed; }
 .summary { border: 1px solid rgba(36, 207, 227, .52); border-radius: 8px; padding: 9px 11px; margin-top: 12px; background: linear-gradient(90deg, rgba(50, 35, 139, .15), rgba(3, 99, 120, .10)); }
 .summary label { display: flex; align-items: center; gap: 6px; text-transform: uppercase; color: #6bd9ff; font-size: 7.5px; font-weight: 800; letter-spacing: .08em; }
+.summary label button { margin-left: auto; border: 1px solid rgba(107, 217, 255, .35); border-radius: 6px; background: rgba(107, 217, 255, .08); color: #9ce8ff; padding: 4px 7px; font-size: 7px; cursor: pointer; }
+.summary label button:disabled { opacity: .55; cursor: progress; }
 .summary p { font-size: 8.7px; line-height: 1.45; color: #aabbd0; margin: 6px 0 0; }
 .body { padding: 12px 0 2px; }
 .body p { font-size: 9.5px; line-height: 1.55; color: #d5dfeb; margin: 0 0 7px; }

@@ -6,7 +6,7 @@ import { getEnv } from './config/env.js'
 import { registerAuthRoutes } from './routes/auth.js'
 import { registerProtectedRoutes } from './routes/protected.js'
 import { createMailboxAuthenticator } from './services/providerRegistry.js'
-import { requireSession } from './services/session.js'
+import { CSRF_COOKIE, requireSession } from './services/session.js'
 
 const env = getEnv()
 const app = Fastify({ logger: true })
@@ -34,7 +34,7 @@ app.addHook('onRequest', async (request, reply) => {
   if (request.method === 'GET') return
   if (request.url.startsWith('/api/auth/login')) return
 
-  const csrfCookie = request.cookies.olivia_csrf
+  const csrfCookie = request.cookies[CSRF_COOKIE]
   const csrfHeader = request.headers['x-olivia-csrf']
 
   if (csrfCookie && csrfHeader === csrfCookie) return

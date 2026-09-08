@@ -27,7 +27,7 @@ test('mapping fails closed, exact mailbox overrides domain, only one mailbox rou
   assert.throws(() => resolveAIRoute('test@example.com', { ...env, aiMailboxClientMap: { 'test@example.com': 'default' } }), /explicit/)
 })
 
-test('six async operations adapt to the UI, keep tokens server-side and never call V2', async () => {
+test('four async operations adapt to the UI; unsupported generation never submits jobs', async () => {
   const original = globalThis.fetch
   const jobs = new Map<string, unknown>()
   const payloads: any[] = []
@@ -56,9 +56,9 @@ test('six async operations adapt to the UI, keep tokens server-side and never ca
     assert.deepEqual(result.tasks, []) // Review extraction must not create actionable tasks.
     assert.deepEqual(result.recommendedActions, [])
     assert.equal((result as any).extractedActions.length, 1)
-    assert.equal((await rewriteDraft(env, { mailboxEmail: 'test@example.com', action: 'formal', draft: 'Hello' })).draft, 'Hello')
-    assert.equal((await composeDraft(env, { mailboxEmail: 'test@example.com', prompt: 'Hello' })).draft, 'Hello')
-    assert.equal(jobs.size, 6)
+    await assert.rejects(rewriteDraft(env, { mailboxEmail: 'test@example.com', action: 'formal', draft: 'Hello' }), (e: any) => e.code === 'V3_UNSUPPORTED' && e.statusCode === 501)
+    await assert.rejects(composeDraft(env, { mailboxEmail: 'test@example.com', prompt: 'Hello' }), (e: any) => e.code === 'V3_UNSUPPORTED' && e.statusCode === 501)
+    assert.equal(jobs.size, 4)
     assert.equal(JSON.stringify(result).includes(env.aiV3Token!), false)
     assert.equal(JSON.stringify(payloads).includes('password'), false)
   } finally { globalThis.fetch = original }

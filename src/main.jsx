@@ -10,7 +10,7 @@ const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ClerkProvider publishableKey={clerkPublishableKey} afterSignOutUrl="/">
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
         <App />
       </BrowserRouter>
     </ClerkProvider>
