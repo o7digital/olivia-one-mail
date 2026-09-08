@@ -44,22 +44,29 @@ export function callV3<K extends keyof typeof paths>(env: AIConfig, mailbox: str
     const signal = AbortSignal.timeout(timeout)
     let jobId: string | undefined
     let token: string
-    const request = async (path: string, body?: unknown) => {
+    const request = async (path: string, body?: unknown, retryTransient = false) => {
       const response = await fetch(base + '/v1/olivia-one' + path, {
         method: body ? 'POST' : 'GET', redirect: 'error', signal,
         headers: { authorization: `Bearer ${token}`, 'x-tenant-id': route.tenant, 'content-type': 'application/json' },
         ...(body ? { body: JSON.stringify(body) } : {}),
       })
+      if (retryTransient && [429, 502, 503, 504].includes(response.status)) return null
       if (!response.ok) throw new AIError('V3_UPSTREAM_ERROR', 503, 'Olivia V3 sandbox temporarily unavailable')
       return envelope.parse(await response.json())
     }
     try {
       token = await getV3Token(env, route.tenant, signal)
       let job = await request(paths[operation], { ...payload, idempotency_key: key })
+      if (!job) throw new AIError('V3_UPSTREAM_ERROR', 503, 'Olivia V3 sandbox temporarily unavailable')
       jobId = job.job_id
       // The submission envelope has no result, even for an idempotent succeeded replay.
       while (true) {
-        job = await request('/jobs/' + jobId)
+        const polled = await request('/jobs/' + jobId, undefined, true)
+        if (!polled) {
+          await waitForPoll(signal, env.aiV3PollMs)
+          continue
+        }
+        job = polled
         if (job.job_id !== jobId) throw new Error('Job mismatch')
         if (job.status === 'failed') throw new AIError('V3_JOB_FAILED', 503, 'Olivia V3 sandbox job failed')
         if (job.status === 'succeeded') {
@@ -67,12 +74,7 @@ export function callV3<K extends keyof typeof paths>(env: AIConfig, mailbox: str
           console.info(JSON.stringify({ event: 'olivia_one.v3.completed', operation, job_id: jobId, tenant: route.tenant, duration_ms: Date.now() - started, provider: result.provider, model: result.model, provider_duration_ms: result.provider_duration_ms, rag_hits: result.rag_hits, sandbox: true }))
           return result as z.infer<(typeof results)[K]>
         }
-        await new Promise<void>((resolve, reject) => {
-          if (signal.aborted) return reject(signal.reason)
-          const onAbort = () => { clearTimeout(timer); reject(signal.reason) }
-          const timer = setTimeout(() => { signal.removeEventListener('abort', onAbort); resolve() }, Math.min(5000, Math.max(1, env.aiV3PollMs ?? 250)))
-          signal.addEventListener('abort', onAbort, { once: true })
-        })
+        await waitForPoll(signal, env.aiV3PollMs)
       }
     } catch (error) {
       const safe = signal.aborted ? new AIError('V3_TIMEOUT', 504, 'Olivia V3 sandbox timed out; retry safely') : error instanceof AIError ? error : new AIError('V3_INVALID_RESPONSE', 503, 'Olivia V3 sandbox temporarily unavailable')
@@ -83,4 +85,13 @@ export function callV3<K extends keyof typeof paths>(env: AIConfig, mailbox: str
   inflight.set(flightKey, task)
   void task.finally(() => inflight.delete(flightKey)).catch(() => {})
   return task
+}
+
+function waitForPoll(signal: AbortSignal, pollMs = 1000) {
+  return new Promise<void>((resolve, reject) => {
+    if (signal.aborted) return reject(signal.reason)
+    const onAbort = () => { clearTimeout(timer); reject(signal.reason) }
+    const timer = setTimeout(() => { signal.removeEventListener('abort', onAbort); resolve() }, Math.min(5000, Math.max(1, pollMs)))
+    signal.addEventListener('abort', onAbort, { once: true })
+  })
 }

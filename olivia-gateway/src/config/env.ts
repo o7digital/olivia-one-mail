@@ -27,7 +27,7 @@ export function getEnv() {
     aiV3ServicePassword: process.env.AI_V3_SERVICE_PASSWORD ?? '',
     aiV3TestOnly: process.env.AI_V3_TEST_ONLY === 'true',
     aiV3TimeoutMs: Number(process.env.AI_V3_TIMEOUT_MS ?? 30000),
-    aiV3PollMs: Number(process.env.AI_V3_POLL_MS ?? 250),
+    aiV3PollMs: Number(process.env.AI_V3_POLL_MS ?? 1000),
     aiMailboxClientMap: parseJsonMap(process.env.AI_MAILBOX_CLIENT_MAP, {}),
     aiDomainClientMap: parseJsonMap(process.env.AI_DOMAIN_CLIENT_MAP, {}),
     oliviaInternalToken: process.env.OLIVIA_INTERNAL_TOKEN ?? '',

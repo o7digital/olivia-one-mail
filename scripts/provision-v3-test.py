@@ -40,7 +40,7 @@ config.update({
  'AI_DOMAIN_CLIENT_MAP':'{}','AI_V3_TEST_ONLY':'true',
  'AI_V3_TEST_MAILBOX':'info@o7digitalgroup.com','AI_V3_TEST_TENANT':'o7-internal-test',
  'AI_V3_API_URL':'http://olivia-v3:8093','AI_V3_SERVICE_EMAIL':credentials['service'],
- 'AI_V3_SERVICE_PASSWORD':credentials['password'],'AI_V3_TIMEOUT_MS':'90000','AI_V3_POLL_MS':'250',
+ 'AI_V3_SERVICE_PASSWORD':credentials['password'],'AI_V3_TIMEOUT_MS':'90000','AI_V3_POLL_MS':'1000',
  'MAIL_PROVIDER':'mailcow-imap','APP_ORIGIN':'https://one.o7digitalgroup.com',
  'COOKIE_SECRET':secrets.token_hex(32),'PORT':'8787','HOST':'0.0.0.0',
  'TASK_DATA_PATH':'/data/tasks.json','INTELLIGENCE_DATA_PATH':'/data/intelligence.json',
