@@ -144,7 +144,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 .rowlabels { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
 .rowlabels em { font-style: normal; font-size: 7px; padding: 2px 6px; border-radius: 999px; background: rgba(57, 217, 255, .12); border: 1px solid rgba(57, 217, 255, .22); color: #6bd9ff; }
 .mailrow > i { width: 6px; height: 6px; border-radius: 50%; background: #35d7e8; margin-top: 5px; box-shadow: 0 0 10px #35d7e8; }
-.listfoot { height: 40px; border-top: 1px solid rgba(145, 181, 224, .08); display: flex; align-items: center; padding: 0 12px; color: #7188a0; font-size: 8px; }
+.listfoot { height: 40px; border-top: 1px solid rgba(145, 181, 224, .08); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; color: #7188a0; font-size: 8px; }
+.listfoot > div { display: flex; align-items: center; gap: 7px; }
+.listfoot button { width: 25px; height: 25px; display: grid; place-items: center; border: 1px solid rgba(145, 181, 224, .12); border-radius: 7px; color: #9fb3ca; background: rgba(16, 32, 56, .55); }
+.listfoot button:disabled { opacity: .35; cursor: default; }
+.messageHtml { width: 100%; min-height: 320px; margin: 18px 0; border: 0; border-radius: 8px; background: #fff; }
 
 .skeletonList { padding: 0 2px; }
 .skeletonRow { display: grid; grid-template-columns: 29px 1fr; gap: 9px; padding: 11px 8px; }

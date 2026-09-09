@@ -2,7 +2,11 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { createMailProvider } from '../services/providerRegistry.js'
 
-const folderQuery = z.object({ folder: z.string().default('Inbox') })
+const folderQuery = z.object({
+  folder: z.string().default('Inbox'),
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(100).optional(),
+})
 const sendSchema = z.object({
   to: z.string().min(1),
   cc: z.string().max(4000).optional().default(''),
@@ -24,8 +28,10 @@ export async function registerMailRoutes(app: FastifyInstance) {
   app.get('/api/mail/folders', async (request) => createMailProvider(process.env.MAIL_PROVIDER, request.session).listFolders())
 
   app.get('/api/mail/messages', async (request) => {
-    const { folder } = folderQuery.parse(request.query)
-    return createMailProvider(process.env.MAIL_PROVIDER, request.session).listMessages(folder)
+    const { folder, page, pageSize } = folderQuery.parse(request.query)
+    const provider = createMailProvider(process.env.MAIL_PROVIDER, request.session)
+    if (page && provider.listMessagePage) return provider.listMessagePage(folder, page, pageSize ?? 25)
+    return provider.listMessages(folder)
   })
 
   app.get('/api/mail/messages/:id', async (request, reply) => {

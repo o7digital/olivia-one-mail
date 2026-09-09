@@ -11,6 +11,9 @@ const paths = {
 const providerMetadata = {
   provider: z.string().optional(), model: z.string().optional(), provider_response_id: z.string().nullable().optional(),
   provider_duration_ms: z.number().nonnegative().optional(), rag_hits: z.number().int().nonnegative().optional(),
+  sources: z.array(z.object({
+    kind: z.enum(['document', 'memory']), source: z.string(), document_id: z.number().int().nullable(), score: z.number(),
+  })).optional(),
 }
 const results = {
   summary: z.object({ summary: z.string(), ...providerMetadata }),
@@ -23,9 +26,10 @@ const results = {
 const envelope = z.object({ job_id: z.string().regex(/^[a-zA-Z0-9-]{1,128}$/), sandbox: z.literal(true), status: z.enum(['queued', 'running', 'succeeded', 'failed']), result: z.unknown().optional() })
 const inflight = new Map<string, Promise<unknown>>()
 
-export function callV3<K extends keyof typeof paths>(env: AIConfig, mailbox: string, operation: K, payload: Record<string, string>): Promise<z.infer<(typeof results)[K]>> {
+export function callV3<K extends keyof typeof paths>(env: AIConfig, mailbox: string, operation: K, payload: Record<string, unknown>): Promise<z.infer<(typeof results)[K]>> {
   const route = resolveAIRoute(mailbox, env)
-  if (route.engine !== 'v3' || !env.aiV3ApiUrl || (!env.aiV3Token && !env.aiV3ServicePassword)) throw new AIError('V3_UNAVAILABLE', 503, 'Olivia V3 sandbox temporarily unavailable')
+  const hasTenantCredentials = Boolean(env.aiV3ServiceCredentialsMap?.[route.tenant]?.password)
+  if (route.engine !== 'v3' || !env.aiV3ApiUrl || (!env.aiV3Token && !env.aiV3ServicePassword && !hasTenantCredentials)) throw new AIError('V3_UNAVAILABLE', 503, 'Olivia V3.5 is unavailable')
   const base = env.aiV3ApiUrl.replace(/\/$/, '')
   let url: URL
   try { url = new URL(base) } catch { throw new AIError('V3_CONFIG_INVALID', 503, 'Olivia V3 sandbox configuration invalid') }
@@ -35,7 +39,8 @@ export function callV3<K extends keyof typeof paths>(env: AIConfig, mailbox: str
   // Tenant, mailbox, operation and full content scope retries, including after a gateway restart.
   const key = createHash('sha256').update(JSON.stringify([base, route.tenant, route.mailbox, operation, Object.entries(payload).sort(([a], [b]) => a.localeCompare(b))])).digest('hex')
   // Credential rotation must not reuse a pending request authenticated by the old token.
-  const flightKey = createHash('sha256').update(key + (env.aiV3Token || '') + (env.aiV3ServiceEmail || '') + (env.aiV3ServicePassword || '')).digest('hex')
+  const tenantCredentials = env.aiV3ServiceCredentialsMap?.[route.tenant]
+  const flightKey = createHash('sha256').update(key + (env.aiV3Token || '') + (tenantCredentials?.email || env.aiV3ServiceEmail || '') + (tenantCredentials?.password || env.aiV3ServicePassword || '')).digest('hex')
   const previous = inflight.get(flightKey)
   if (previous) return previous as Promise<z.infer<(typeof results)[K]>>
   const task = (async () => {
@@ -51,13 +56,13 @@ export function callV3<K extends keyof typeof paths>(env: AIConfig, mailbox: str
         ...(body ? { body: JSON.stringify(body) } : {}),
       })
       if (retryTransient && [429, 502, 503, 504].includes(response.status)) return null
-      if (!response.ok) throw new AIError('V3_UPSTREAM_ERROR', 503, 'Olivia V3 sandbox temporarily unavailable')
+      if (!response.ok) throw new AIError('V3_UPSTREAM_ERROR', 503, 'Olivia V3.5 is unavailable')
       return envelope.parse(await response.json())
     }
     try {
       token = await getV3Token(env, route.tenant, signal)
       let job = await request(paths[operation], { ...payload, idempotency_key: key })
-      if (!job) throw new AIError('V3_UPSTREAM_ERROR', 503, 'Olivia V3 sandbox temporarily unavailable')
+      if (!job) throw new AIError('V3_UPSTREAM_ERROR', 503, 'Olivia V3.5 is unavailable')
       jobId = job.job_id
       // The submission envelope has no result, even for an idempotent succeeded replay.
       while (true) {
@@ -68,7 +73,7 @@ export function callV3<K extends keyof typeof paths>(env: AIConfig, mailbox: str
         }
         job = polled
         if (job.job_id !== jobId) throw new Error('Job mismatch')
-        if (job.status === 'failed') throw new AIError('V3_JOB_FAILED', 503, 'Olivia V3 sandbox job failed')
+        if (job.status === 'failed') throw new AIError('V3_JOB_FAILED', 503, 'Olivia V3.5 job failed')
         if (job.status === 'succeeded') {
           const result = results[operation].parse(job.result)
           console.info(JSON.stringify({ event: 'olivia_one.v3.completed', operation, job_id: jobId, tenant: route.tenant, duration_ms: Date.now() - started, provider: result.provider, model: result.model, provider_duration_ms: result.provider_duration_ms, rag_hits: result.rag_hits, sandbox: true }))
@@ -77,7 +82,7 @@ export function callV3<K extends keyof typeof paths>(env: AIConfig, mailbox: str
         await waitForPoll(signal, env.aiV3PollMs)
       }
     } catch (error) {
-      const safe = signal.aborted ? new AIError('V3_TIMEOUT', 504, 'Olivia V3 sandbox timed out; retry safely') : error instanceof AIError ? error : new AIError('V3_INVALID_RESPONSE', 503, 'Olivia V3 sandbox temporarily unavailable')
+      const safe = signal.aborted ? new AIError('V3_TIMEOUT', 504, 'Olivia V3.5 timed out; retry safely') : error instanceof AIError ? error : new AIError('V3_INVALID_RESPONSE', 503, 'Olivia V3.5 returned an invalid response')
       console.warn(JSON.stringify({ event: 'olivia_one.v3.failed', operation, job_id: jobId, tenant: route.tenant, duration_ms: Date.now() - started, code: safe.code }))
       throw safe
     }

@@ -40,6 +40,8 @@ export function useInbox(folder, query, enabled = true) {
   const [labelFilter, setLabelFilter] = useState(null)
   const [category, setCategory] = useState('focused')
   const [sortBy, setSortBy] = useState('date-desc')
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 25, total: 0, totalPages: 0 })
 
   const loadLabels = useCallback(async () => {
     if (!enabled) {
@@ -66,20 +68,28 @@ export function useInbox(folder, query, enabled = true) {
     setError(null)
     try {
       await mailService.ensureSession()
-      const nextMessages = await mailService.listMessages(folder)
+      const response = await mailService.listMessages(folder, page)
+      const nextMessages = Array.isArray(response) ? response : response.messages
       setMessages(nextMessages)
+      setPagination(Array.isArray(response)
+        ? { page: 1, pageSize: nextMessages.length || 25, total: nextMessages.length, totalPages: nextMessages.length ? 1 : 0 }
+        : response.pagination)
       setSelectedId((current) => nextMessages.some(({ id }) => id === current) ? current : nextMessages[0]?.id ?? null)
       setStatus('ready')
     } catch (loadError) {
       setError(loadError)
       setStatus('error')
     }
-  }, [enabled, folder])
+  }, [enabled, folder, page])
 
   useEffect(() => {
     load()
     setLabelFilter(null)
   }, [load])
+
+  useEffect(() => {
+    setPage(1)
+  }, [folder])
 
   useEffect(() => {
     loadLabels()
@@ -194,12 +204,15 @@ export function useInbox(folder, query, enabled = true) {
     labelFilter,
     messages,
     moveMessage,
+    page,
+    pagination,
     reload: () => load(),
     selected: messages.find(({ id }) => id === selectedId) ?? null,
     selectedId,
     selectMessage,
     setCategory,
     setLabelFilter,
+    setPage,
     setSortBy,
     sortBy,
     status,

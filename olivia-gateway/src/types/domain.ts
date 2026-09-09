@@ -21,17 +21,29 @@ export interface MailMessage {
   subject: string
   preview: string
   body: string[]
+  bodyHtml?: string
   attachments: MailAttachment[]
   to?: string[]
   cc?: string[]
   labels?: string[]
   receivedAt?: string
   category?: 'focused' | 'other'
+  threadContext?: string
 }
 
 export interface Folder {
   label: string
   count?: number
+}
+
+export interface MailPage {
+  messages: MailMessage[]
+  pagination: {
+    page: number
+    pageSize: number
+    total: number
+    totalPages: number
+  }
 }
 
 export interface Contact {

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, ChevronDown, SlidersHorizontal, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal, X } from 'lucide-react'
 import { Avatar } from '../common/Avatar'
 import { IconButton } from '../common/IconButton'
 import { EmptyState, ErrorState, MailListSkeleton } from '../common/ViewState'
@@ -12,7 +12,7 @@ const SORT_OPTIONS = [
 
 export function MailList({
   activeFolder, category, error, labelFilter, messages, onCategoryChange, onClearLabelFilter, onRetry, onSelect,
-  onSortChange, query, selectedId, sortBy, status,
+  onPageChange, onSortChange, pagination, query, selectedId, sortBy, status,
 }) {
   const [sortMenuOpen, setSortMenuOpen] = useState(false)
   const activeSortLabel = SORT_OPTIONS.find(({ value }) => value === sortBy)?.label ?? 'Sort messages'
@@ -87,7 +87,14 @@ export function MailList({
           </button>
         ))}
       </div>
-      <div className="listfoot">Updated just now</div>
+      <div className="listfoot">
+        <span>{pagination?.total ?? messages.length} messages</span>
+        <div>
+          <button type="button" aria-label="Previous page" disabled={!pagination || pagination.page <= 1} onClick={() => onPageChange(pagination.page - 1)}><ChevronLeft size={14} /></button>
+          <small>{pagination?.totalPages ? `${pagination.page} / ${pagination.totalPages}` : '0 / 0'}</small>
+          <button type="button" aria-label="Next page" disabled={!pagination || pagination.page >= pagination.totalPages} onClick={() => onPageChange(pagination.page + 1)}><ChevronRight size={14} /></button>
+        </div>
+      </div>
     </section>
   )
 }

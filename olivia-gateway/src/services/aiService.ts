@@ -65,7 +65,7 @@ const draftResponseSchema = z.object({
 })
 
 type Analysis = z.infer<typeof analysisSchema>
-type RewriteAction = 'shorter' | 'longer' | 'formal' | 'friendly' | 'translate-fr' | 'translate-es' | 'translate-en' | 'improve'
+type RewriteAction = 'professional' | 'concise' | 'shorter' | 'longer' | 'formal' | 'friendly' | 'translate-fr' | 'translate-es' | 'translate-en' | 'improve'
 
 const cache = new Map<string, { expiresAt: number; value: Analysis }>()
 
@@ -105,7 +105,7 @@ export function normalizeContext(message: MailMessage, analysis: Analysis): Anal
 }
 
 async function callPythonOlivia<T>(appEnv: AIConfig, path: string, body: unknown): Promise<T> {
-  if (!appEnv.aiApiUrl || !appEnv.oliviaInternalToken) throw new Error('Olivia AI temporarily unavailable')
+  if (!appEnv.aiApiUrl || !appEnv.oliviaInternalToken) throw new Error('Olivia service is unavailable')
   const response = await fetch(appEnv.aiApiUrl.replace(/\/$/, '') + path, {
     method: 'POST',
     headers: {
@@ -114,7 +114,7 @@ async function callPythonOlivia<T>(appEnv: AIConfig, path: string, body: unknown
     },
     body: JSON.stringify(body),
   })
-  if (!response.ok) throw new Error('Olivia AI temporarily unavailable')
+  if (!response.ok) throw new Error('Olivia service is unavailable')
   return response.json() as Promise<T>
 }
 
@@ -144,7 +144,7 @@ export async function analyzeMessage(provider: MailProvider, mailboxEmail: strin
   const cached = cache.get(cacheKey)
   if (cached && cached.expiresAt > Date.now()) return cached.value
 
-  if (appEnv.aiProvider !== 'python-olivia') throw new Error('Olivia AI temporarily unavailable')
+  if (appEnv.aiProvider !== 'python-olivia') throw new Error('Olivia service is unavailable')
   const payload = await buildAnalyzePayload(provider, mailboxEmail, message, appEnv)
   const value = normalizeContext(message, analysisSchema.parse(await callPythonOlivia(appEnv, '/email/analyze', payload)))
   cache.set(cacheKey, { value, expiresAt: Date.now() + TTL_MS })
@@ -160,7 +160,28 @@ export async function rewriteDraft(appEnv: AIConfig, input: {
 }) {
   const route = resolveAIRoute(input.mailboxEmail, appEnv)
   if (route.engine === 'v3') {
-    throw new AIError('V3_UNSUPPORTED', 501, 'Rewrite is disabled: V3.5 sandbox does not transform text')
+    const language = input.action.startsWith('translate-') ? input.action.slice('translate-'.length) : 'auto'
+    const tone = input.action === 'shorter' || input.action === 'concise'
+      ? 'concise'
+      : input.action === 'longer'
+        ? 'detailed'
+        : input.action.startsWith('translate-') || input.action === 'improve'
+          ? 'professional'
+          : input.action
+    const result = await callV3(appEnv, input.mailboxEmail, 'rewrite', {
+      text: input.draft,
+      tone,
+      language,
+    })
+    return {
+      draft: result.text,
+      model: result.model ?? null,
+      provider: result.provider ?? null,
+      reasoningTier: 'balanced' as const,
+      toolsUsed: [],
+      ragHits: result.rag_hits ?? 0,
+      sources: result.sources ?? [],
+    }
   }
   const clientCode = route.tenant
   return draftResponseSchema.parse(await callPythonOlivia(appEnv, '/email/rewrite', {
@@ -180,10 +201,28 @@ export async function composeDraft(appEnv: AIConfig, input: {
   recipient?: string
   subject?: string
   currentDraft?: string
+  tone?: string
+  language?: string
 }) {
   const route = resolveAIRoute(input.mailboxEmail, appEnv)
   if (route.engine === 'v3') {
-    throw new AIError('V3_UNSUPPORTED', 501, 'Compose is disabled: V3.5 sandbox does not generate drafts')
+    const result = await callV3(appEnv, input.mailboxEmail, 'compose', {
+      instruction: input.prompt,
+      context: [input.recipient ? `Destinataires: ${input.recipient}` : '', input.subject ? `Objet actuel: ${input.subject}` : '', input.currentDraft ? `Brouillon actuel:\n${input.currentDraft}` : ''].filter(Boolean).join('\n'),
+      tone: input.tone ?? 'professional',
+      language: input.language ?? 'auto',
+    })
+    return {
+      draft: result.body,
+      subject: result.subject,
+      requiresReview: true,
+      model: result.model ?? null,
+      provider: result.provider ?? null,
+      reasoningTier: 'balanced' as const,
+      toolsUsed: [],
+      ragHits: result.rag_hits ?? 0,
+      sources: result.sources ?? [],
+    }
   }
   const clientCode = route.tenant
   return draftResponseSchema.parse(await callPythonOlivia(appEnv, '/email/compose', {
@@ -198,7 +237,7 @@ export async function composeDraft(appEnv: AIConfig, input: {
 }
 
 async function analyzeV3(env: AIConfig, mailbox: string, message: MailMessage) {
-  const payload = { subject: message.subject, sender: message.email, body: message.body.join('\n') }
+  const payload = buildV3EmailPayload(mailbox, message)
   const [summary, classification, reply, actions] = await Promise.all([
     callV3(env, mailbox, 'summary', payload), callV3(env, mailbox, 'classification', payload),
     callV3(env, mailbox, 'suggestedReply', payload), callV3(env, mailbox, 'actions', payload),
@@ -214,6 +253,45 @@ async function analyzeV3(env: AIConfig, mailbox: string, message: MailMessage) {
     reasoningTier: 'balanced', toolsUsed: [], messageType: 'normal_conversation',
     provider: summary.provider ?? classification.provider ?? reply.provider ?? actions.provider ?? null,
     ragHits: Math.max(summary.rag_hits ?? 0, classification.rag_hits ?? 0, reply.rag_hits ?? 0, actions.rag_hits ?? 0),
+    sources: uniqueSources([...(summary.sources ?? []), ...(classification.sources ?? []), ...(reply.sources ?? []), ...(actions.sources ?? [])]),
     recommendedActions: [], commitments: [], deliveryFailure: null, invoice: null, scheduling: null,
   }
+}
+
+export async function suggestReply(appEnv: AIConfig, provider: MailProvider, mailboxEmail: string, messageId: string, regenerationContext = '') {
+  const route = resolveAIRoute(mailboxEmail, appEnv)
+  const message = await provider.getMessage(messageId)
+  if (!message) throw new Error('Message not found')
+  if (route.engine !== 'v3') {
+    const analysis = await analyzeMessage(provider, mailboxEmail, messageId, appEnv)
+    return { draft: analysis.suggestedReply, model: analysis.model, provider: 'python-olivia', ragHits: 0, sources: [] }
+  }
+  const result = await callV3(appEnv, mailboxEmail, 'suggestedReply', buildV3EmailPayload(mailboxEmail, message, regenerationContext))
+  return {
+    draft: result.reply,
+    requiresReview: true,
+    model: result.model ?? null,
+    provider: result.provider ?? null,
+    ragHits: result.rag_hits ?? 0,
+    sources: result.sources ?? [],
+  }
+}
+
+function buildV3EmailPayload(mailbox: string, message: MailMessage, regenerationContext = ''): Record<string, unknown> {
+  return {
+    subject: message.subject,
+    sender: message.email,
+    sender_name: message.sender,
+    recipients: message.to?.length ? message.to : [mailbox],
+    cc: message.cc ?? [],
+    date: message.receivedAt ?? '',
+    mailbox,
+    body: message.body.join('\n'),
+    thread_context: message.threadContext ?? '',
+    regeneration_context: regenerationContext,
+  }
+}
+
+function uniqueSources(sources: Array<{ kind: 'document' | 'memory'; source: string; document_id: number | null; score: number }>) {
+  return Array.from(new Map(sources.map((source) => [`${source.kind}:${source.source}:${source.document_id ?? ''}`, source])).values())
 }

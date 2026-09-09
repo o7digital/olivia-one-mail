@@ -43,7 +43,6 @@ function App() {
   const folders = useMailFolders(isAuthenticated)
   const inbox = useInbox(activeFolder, query, isAuthenticated)
   const aiWorkspace = useAIWorkspace(inbox.selected?.id, isAuthenticated)
-  const v3Pilot = Boolean(session.session?.user?.v3Pilot)
 
   const notify = useCallback((message) => {
     window.clearTimeout(toastTimer.current)
@@ -74,10 +73,10 @@ function App() {
     return () => window.removeEventListener('keydown', handleShortcut)
   }, [navigate])
 
-  function openCompose(mode, message) {
+  function openCompose(mode, message, initialBody = '') {
     if (mode === 'reply' || mode === 'reply-all') {
       const subject = message.subject.startsWith('Re:') ? message.subject : `Re: ${message.subject}`
-      setComposeState({ mode, messageId: message.id, initialTo: message.email, initialSubject: subject })
+      setComposeState({ mode, messageId: message.id, initialTo: message.email, initialSubject: subject, initialBody })
     } else if (mode === 'forward') {
       const subject = message.subject.startsWith('Fwd:') ? message.subject : `Fwd: ${message.subject}`
       setComposeState({ mode, messageId: message.id, initialTo: '', initialSubject: subject })
@@ -231,8 +230,10 @@ function App() {
               onClearLabelFilter={() => inbox.setLabelFilter(null)}
               onCategoryChange={inbox.setCategory}
               onRetry={inbox.reload}
+              onPageChange={inbox.setPage}
               onSelect={inbox.selectMessage}
               onSortChange={inbox.setSortBy}
+              pagination={inbox.pagination}
               query={query}
               selectedId={inbox.selectedId}
               sortBy={inbox.sortBy}
@@ -243,7 +244,6 @@ function App() {
               aiStatus={aiWorkspace.status}
               aiError={aiWorkspace.error}
               analysis={aiWorkspace.analysis}
-              sandbox={v3Pilot}
               knownLabels={inbox.knownLabels}
               message={inbox.selected}
               onAiToggle={() => setAiOpen((current) => !current)}
@@ -252,6 +252,7 @@ function App() {
               onDelete={() => inbox.deleteMessage(inbox.selected.id)}
               onForward={() => openCompose('forward', inbox.selected)}
               onLabelsChange={inbox.updateMessageLabels}
+              onInsertReply={(draft) => openCompose('reply', inbox.selected, draft)}
               onMoveToSpam={() => inbox.moveMessage(inbox.selected.id, 'Spam')}
               onNotify={notify}
               onReply={() => openCompose('reply', inbox.selected)}
@@ -298,7 +299,7 @@ function App() {
 
       {composeState ? (
         <ComposeModal
-          sandbox={v3Pilot}
+          initialBody={composeState.initialBody}
           initialSubject={composeState.initialSubject}
           initialTo={composeState.initialTo}
           messageId={composeState.messageId}

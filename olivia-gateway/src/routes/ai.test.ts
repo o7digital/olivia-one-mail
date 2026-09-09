@@ -41,7 +41,7 @@ test('AI route returns a generic 503 without exposing credentials or browser cli
     })
 
     assert.equal(response.statusCode, 503)
-    assert.deepEqual(response.json(), { message: 'Olivia AI temporarily unavailable' })
+    assert.deepEqual(response.json(), { message: 'Olivia could not rewrite this text' })
     assert.equal(upstreamPayload.clientCode, 'brand-tenant')
     assert.equal(JSON.stringify(upstreamPayload).includes('mailbox-password'), false)
     assert.equal(response.body.includes('server-only-token'), false)

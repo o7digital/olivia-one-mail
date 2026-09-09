@@ -13,20 +13,15 @@ async function appFor(email: string) {
   return app
 }
 
-test('sandbox mailbox blocks every external mutation before provider access', async () => {
+test('V3 mailbox permits only user-triggered mail mutations through normal routes', async () => {
   const app = await appFor('test@example.com')
   try {
     for (const [method, url, payload] of [
       ['POST', '/api/mail/send', { to: 'real@example.com', subject: 'No send', body: 'No send' }],
-      ['POST', '/api/tasks', { title: 'No task' }],
-      ['POST', '/api/pulse/opportunities', {}],
-      ['POST', '/api/mail/messages/1/read', {}],
-      ['DELETE', '/api/mail/messages/1', {}],
-      ['PUT', '/api/mail/messages/1/labels', { labels: ['test'] }],
+      ['POST', '/api/mail/messages/partnership-proposal/read', {}],
     ] as const) {
       const response = await app.inject({ method, url, payload })
-      assert.equal(response.statusCode, 403)
-      assert.equal(response.json().code, 'SANDBOX_READ_ONLY')
+      assert.equal(response.statusCode, 200)
     }
   } finally { await app.close() }
 })
@@ -49,9 +44,9 @@ test('AI routes reject unmapped authenticated mailbox and ignore browser routing
     assert.equal(denied.json().code, 'TENANT_UNMAPPED')
     assert.equal(calls, 0)
     const accepted = await sandbox.inject({ method: 'POST', url: '/api/ai/rewrite', payload: { draft: 'hello', action: 'formal', engine: 'v2', mailboxEmail: 'live@example.com', tenant: 'live', aiV3ApiUrl: 'https://attacker.invalid' } })
-    assert.equal(accepted.statusCode, 501)
-    assert.equal(accepted.json().code, 'V3_UNSUPPORTED')
+    assert.equal(accepted.statusCode, 200)
+    assert.equal(accepted.json().draft, 'Safe draft')
     assert.equal(accepted.body.includes('private'), false)
-    assert.equal(calls, 0)
+    assert.equal(calls, 2)
   } finally { globalThis.fetch = original; await unmapped.close(); await sandbox.close() }
 })

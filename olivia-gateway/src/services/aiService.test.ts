@@ -127,7 +127,7 @@ test('Olivia calls fail closed when the internal token is missing', async () => 
     }
     await assert.rejects(
       rewriteDraft(env, { mailboxEmail: 'ops@brand.com', action: 'formal', draft: 'hey' }),
-      /temporarily unavailable/,
+      /service is unavailable/,
     )
     assert.equal(fetchCalled, false)
   } finally {

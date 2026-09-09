@@ -1,10 +1,9 @@
 import { ImapFlow } from 'imapflow'
 import { simpleParser } from 'mailparser'
 import nodemailer from 'nodemailer'
-import { folders as mockFolders } from '../data/mockData.js'
 import { getMailcowConnectionConfig, resolveFromName, type MailboxCredentials, type MailcowConnectionConfig } from '../services/mailcowAuth.js'
 import { computeReplyAllRecipients } from '../services/mailRecipients.js'
-import type { Folder, MailAttachment, MailMessage } from '../types/domain.js'
+import type { Folder, MailAttachment, MailMessage, MailPage } from '../types/domain.js'
 import type { MailProvider } from './mailProvider.js'
 
 interface OutgoingMessage {
@@ -16,20 +15,35 @@ interface OutgoingMessage {
   text: string
 }
 
-function mapFolderLabel(folder: string) {
-  const lower = folder.toLowerCase()
-  if (lower === 'inbox') return 'INBOX'
-  if (lower === 'sent') return 'Sent'
-  if (lower === 'drafts') return 'Drafts'
-  if (lower === 'trash') return 'Trash'
-  if (lower === 'archive') return 'Archive'
-  if (lower === 'spam') return 'Junk'
-  return folder
+const SPECIAL_USE_LABELS: Record<string, string> = {
+  '\\Inbox': 'Inbox', '\\Sent': 'Sent', '\\Drafts': 'Drafts', '\\Trash': 'Trash',
+  '\\Archive': 'Archive', '\\Junk': 'Spam',
+}
+
+function folderLabel(mailbox: { path: string; specialUse?: string }) {
+  if (mailbox.path.toUpperCase() === 'INBOX') return 'Inbox'
+  return (mailbox.specialUse && SPECIAL_USE_LABELS[mailbox.specialUse]) || mailbox.path
+}
+
+function encodeMessageId(mailbox: string, uid: number) {
+  return `m_${Buffer.from(mailbox, 'utf8').toString('base64url')}_${uid}`
+}
+
+function decodeMessageId(id: string) {
+  const match = /^m_([A-Za-z0-9_-]+)_(\d+)$/.exec(id)
+  if (!match) return { mailbox: 'INBOX', uid: id }
+  return { mailbox: Buffer.from(match[1], 'base64url').toString('utf8'), uid: match[2] }
 }
 
 function decodeText(value: unknown) {
   if (typeof value === 'string') return value
   return ''
+}
+
+function sandboxHtml(value: unknown) {
+  if (typeof value !== 'string' || !value.trim()) return undefined
+  const policy = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: cid:; style-src 'unsafe-inline'; font-src data:">`
+  return `${policy}${value}`
 }
 
 function formatAttachmentMeta(size: number | undefined, contentType: string | undefined) {
@@ -108,6 +122,7 @@ export class MailcowImapProvider implements MailProvider {
       host: this.config.smtpHost,
       port: this.config.smtpPort,
       secure: this.config.smtpSecure,
+      requireTLS: !this.config.smtpSecure,
       auth: {
         user: this.credentials.email,
         pass: this.credentials.password,
@@ -175,28 +190,42 @@ export class MailcowImapProvider implements MailProvider {
         }
       }
 
-      return mockFolders.map((folder) => ({
-        label: folder.label,
-        count: counts.get(mapFolderLabel(folder.label)) ?? folder.count,
-      }))
+      const order = ['Inbox', 'Sent', 'Drafts', 'Trash', 'Archive', 'Spam']
+      return mailboxes
+        .filter((mailbox: { flags?: Set<string> }) => !mailbox.flags?.has('\\Noselect'))
+        .map((mailbox: { path: string; specialUse?: string }) => ({ label: folderLabel(mailbox), count: counts.get(mailbox.path) ?? 0 }))
+        .sort((a: Folder, b: Folder) => {
+          const ai = order.indexOf(a.label); const bi = order.indexOf(b.label)
+          if (ai >= 0 || bi >= 0) return (ai < 0 ? order.length : ai) - (bi < 0 ? order.length : bi)
+          return a.label.localeCompare(b.label)
+        })
     } finally {
       await client.logout().catch(() => {})
     }
   }
 
   async listMessages(folder: string): Promise<MailMessage[]> {
+    return (await this.listMessagePage(folder, 1, 25)).messages
+  }
+
+  async listMessagePage(folder: string, page: number, pageSize: number): Promise<MailPage> {
     const client = this.createImapClient()
     await client.connect()
     try {
-      const mailbox = mapFolderLabel(folder)
+      const mailboxes = await client.list()
+      const selected = mailboxes.find((mailbox: { path: string; specialUse?: string }) => folderLabel(mailbox).toLowerCase() === folder.toLowerCase() || mailbox.path.toLowerCase() === folder.toLowerCase())
+      if (!selected) return { messages: [], pagination: { page, pageSize, total: 0, totalPages: 0 } }
+      const mailbox = selected.path
       await client.mailboxOpen(mailbox)
       const total = client.mailbox.exists || 0
-      if (!total) return []
+      if (!total) return { messages: [], pagination: { page, pageSize, total, totalPages: 0 } }
 
-      const start = Math.max(total - 24, 1)
+      const end = Math.max(total - (page - 1) * pageSize, 0)
+      if (!end) return { messages: [], pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) } }
+      const start = Math.max(end - pageSize + 1, 1)
       const rows: MailMessage[] = []
 
-      for await (const message of client.fetch(`${start}:${total}`, {
+      for await (const message of client.fetch(`${start}:${end}`, {
         uid: true,
         envelope: true,
         flags: true,
@@ -229,7 +258,7 @@ export class MailcowImapProvider implements MailProvider {
         })
 
         rows.push({
-          id: String(message.uid),
+          id: encodeMessageId(mailbox, message.uid),
           folder,
           sender: name,
           initials: name.split(/\s+/).slice(0, 2).map((part: string) => part[0] ?? '').join('').toUpperCase() || 'OO',
@@ -244,6 +273,7 @@ export class MailcowImapProvider implements MailProvider {
           subject: message.envelope?.subject || '(No subject)',
           preview,
           body: bodyText ? bodyText.split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 24) : ['No body preview available.'],
+          bodyHtml: sandboxHtml(parsed?.html),
           attachments,
           to: mapAddressList(message.envelope?.to),
           cc: mapAddressList(message.envelope?.cc),
@@ -251,20 +281,47 @@ export class MailcowImapProvider implements MailProvider {
         })
       }
 
-      return rows.reverse()
+      return { messages: rows.reverse(), pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) } }
     } finally {
       await client.logout().catch(() => {})
     }
   }
 
   async getMessage(id: string): Promise<MailMessage | null> {
-    const foldersToSearch = ['Inbox', 'Priority', 'Sent', 'Drafts', 'Archive', 'Trash', 'Spam']
-    for (const folder of foldersToSearch) {
-      const messages = await this.listMessages(folder)
-      const found = messages.find((message) => message.id === id)
-      if (found) return found
+    const { mailbox, uid } = decodeMessageId(id)
+    const client = this.createImapClient()
+    await client.connect()
+    try {
+      const mailboxes = await client.list()
+      const selected = mailboxes.find((entry: { path: string }) => entry.path === mailbox)
+      if (!selected) return null
+      const label = folderLabel(selected)
+      await client.mailboxOpen(mailbox)
+      const message = await client.fetchOne(uid, { uid: true, envelope: true, flags: true, internalDate: true, source: { maxLength: 1024 * 1024 * 3 } }, { uid: true })
+      if (!message) return null
+      const parsed = message.source ? await simpleParser(message.source) : null
+      const from = message.envelope?.from?.[0]
+      const email = from?.address || this.credentials.email
+      const isAuthenticatedMailbox = email.toLowerCase() === this.credentials.email.toLowerCase()
+      const name = isAuthenticatedMailbox ? this.fromAddress.name : (from?.name || email)
+      const date = message.internalDate ?? new Date()
+      const bodyText = decodeText(parsed?.text).trim()
+      const attachments = (parsed?.attachments ?? []).map((attachment: { contentType?: string; filename?: string; size?: number }) => {
+        const mapped = mapAttachment(attachment.contentType)
+        return { type: mapped.type, tone: mapped.tone, title: attachment.filename || 'Attachment', sub: attachment.contentType || 'application/octet-stream', meta: formatAttachmentMeta(attachment.size, attachment.contentType) }
+      })
+      return {
+        id: encodeMessageId(mailbox, message.uid), folder: label, sender: name,
+        initials: name.split(/\s+/).slice(0, 2).map((part: string) => part[0] ?? '').join('').toUpperCase() || 'OO',
+        time: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }), receivedAt: date.toISOString(),
+        unread: !message.flags?.has('\\Seen'), starred: Boolean(message.flags?.has('\\Flagged')), tone: 'cyan', email, role: '', company: email.split('@')[1] ?? '',
+        subject: message.envelope?.subject || '(No subject)', preview: bodyText.split('\n').find(Boolean)?.slice(0, 160) ?? 'No preview available.',
+        body: bodyText ? bodyText.split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 200) : ['No body preview available.'], bodyHtml: sandboxHtml(parsed?.html), attachments,
+        to: mapAddressList(message.envelope?.to), cc: mapAddressList(message.envelope?.cc), labels: decodeLabelsFromFlags(message.flags),
+      }
+    } finally {
+      await client.logout().catch(() => {})
     }
-    return null
   }
 
   async sendMessage(input: { to: string; cc?: string; bcc?: string; subject: string; body: string }) {
@@ -325,11 +382,12 @@ export class MailcowImapProvider implements MailProvider {
   }
 
   async markRead(id: string) {
+    const { mailbox, uid } = decodeMessageId(id)
     const client = this.createImapClient()
     await client.connect()
     try {
-      await client.mailboxOpen('INBOX')
-      await client.messageFlagsAdd(id, ['\\Seen'], { uid: true })
+      await client.mailboxOpen(mailbox)
+      await client.messageFlagsAdd(uid, ['\\Seen'], { uid: true })
       return { id, unread: false }
     } finally {
       await client.logout().catch(() => {})
@@ -337,14 +395,15 @@ export class MailcowImapProvider implements MailProvider {
   }
 
   async toggleStar(id: string) {
+    const { mailbox, uid } = decodeMessageId(id)
     const client = this.createImapClient()
     await client.connect()
     try {
-      await client.mailboxOpen('INBOX')
-      const message = await client.fetchOne(id, { flags: true }, { uid: true })
+      await client.mailboxOpen(mailbox)
+      const message = await client.fetchOne(uid, { flags: true }, { uid: true })
       const starred = !message?.flags?.has('\\Flagged')
-      if (starred) await client.messageFlagsAdd(id, ['\\Flagged'], { uid: true })
-      else await client.messageFlagsRemove(id, ['\\Flagged'], { uid: true })
+      if (starred) await client.messageFlagsAdd(uid, ['\\Flagged'], { uid: true })
+      else await client.messageFlagsRemove(uid, ['\\Flagged'], { uid: true })
       return { id, starred }
     } finally {
       await client.logout().catch(() => {})
@@ -352,16 +411,16 @@ export class MailcowImapProvider implements MailProvider {
   }
 
   async move(id: string, folder: string) {
+    const { mailbox, uid } = decodeMessageId(id)
     const client = this.createImapClient()
     await client.connect()
     try {
-      const targetMailbox = mapFolderLabel(folder)
       const mailboxes = await client.list()
-      if (!mailboxes.some((mailbox: { path: string }) => mailbox.path.toLowerCase() === targetMailbox.toLowerCase())) {
-        await client.mailboxCreate(targetMailbox)
-      }
-      await client.mailboxOpen('INBOX')
-      await client.messageMove(id, targetMailbox, { uid: true })
+      const target = mailboxes.find((entry: { path: string; specialUse?: string }) => folderLabel(entry).toLowerCase() === folder.toLowerCase() || entry.path.toLowerCase() === folder.toLowerCase())
+      const targetMailbox = target?.path ?? folder
+      if (!target) await client.mailboxCreate(targetMailbox)
+      await client.mailboxOpen(mailbox)
+      await client.messageMove(uid, targetMailbox, { uid: true })
       return { id, folder }
     } finally {
       await client.logout().catch(() => {})
@@ -382,12 +441,13 @@ export class MailcowImapProvider implements MailProvider {
   }
 
   async setMessageLabels(id: string, labels: string[]) {
+    const { mailbox, uid } = decodeMessageId(id)
     const unique = Array.from(new Set(labels.map((label) => label.trim()).filter(Boolean)))
     const client = this.createImapClient()
     await client.connect()
     try {
-      await client.mailboxOpen('INBOX')
-      const message = await client.fetchOne(id, { flags: true }, { uid: true })
+      await client.mailboxOpen(mailbox)
+      const message = await client.fetchOne(uid, { flags: true }, { uid: true })
       const currentLabelFlags = new Set(
         Array.from(message?.flags ?? []).filter(
           (flag): flag is string => typeof flag === 'string' && flag.startsWith(LABEL_FLAG_PREFIX),
@@ -398,8 +458,8 @@ export class MailcowImapProvider implements MailProvider {
       const toRemove = Array.from(currentLabelFlags).filter((flag) => !nextFlags.has(flag))
       const toAdd = Array.from(nextFlags).filter((flag) => !currentLabelFlags.has(flag))
 
-      if (toRemove.length) await client.messageFlagsRemove(id, toRemove, { uid: true })
-      if (toAdd.length) await client.messageFlagsAdd(id, toAdd, { uid: true })
+      if (toRemove.length) await client.messageFlagsRemove(uid, toRemove, { uid: true })
+      if (toAdd.length) await client.messageFlagsAdd(uid, toAdd, { uid: true })
 
       return { id, labels: unique }
     } finally {

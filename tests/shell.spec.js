@@ -53,14 +53,14 @@ test('mail shell interactions and desktop screenshots', async ({ page }) => {
 
   await page.screenshot({ path: 'artifacts/olivia-one-mail-desktop.png', fullPage: true })
 
-  await page.getByRole('button', { name: 'Compose' }).click()
+  await page.getByRole('button', { name: 'Compose', exact: true }).click()
   await expect(page.getByRole('dialog', { name: 'New Message' })).toBeVisible()
   await page.getByRole('textbox', { name: 'Recipient' }).fill('sophia@acmecorp.com')
   await page.getByRole('textbox', { name: 'Subject' }).fill('Partnership next steps')
   await page.screenshot({ path: 'artifacts/olivia-one-compose.png', fullPage: true })
   await page.getByRole('button', { name: 'Close composer' }).click()
 
-  await expect(page.getByLabel('AI Workspace', { exact: true })).toContainText('Olivia AI temporarily unavailable')
+  await expect(page.getByLabel('AI Workspace', { exact: true })).toContainText('Olivia V3.5 could not analyze this email')
 })
 
 test('labels can be created, filtered, and cleared; sort reorders the list', async ({ page }) => {
@@ -209,6 +209,7 @@ test('calendar shows a navigable month grid and event agenda', async ({ page }) 
   await signIn(page)
   await page.getByRole('button', { name: 'Calendar' }).click()
 
+  await page.getByRole('button', { name: 'Previous month' }).click()
   await expect(page.getByRole('grid', { name: /August 2026/ })).toBeVisible()
   await page.getByRole('gridcell', { name: /Sunday, August 16, 2 events/ }).click()
   await expect(page.getByLabel('Selected day agenda')).toContainText('Acme partnership review')
@@ -217,7 +218,7 @@ test('calendar shows a navigable month grid and event agenda', async ({ page }) 
   await page.getByRole('button', { name: 'Next month' }).click()
   await expect(page.getByRole('grid', { name: /September 2026/ })).toBeVisible()
   await page.getByRole('button', { name: 'Today' }).click()
-  await expect(page.getByRole('grid', { name: /August 2026/ })).toBeVisible()
+  await expect(page.getByRole('grid', { name: /September 2026/ })).toBeVisible()
 })
 
 test('Ask Olivia returns real mailbox sources and opens the matching object', async ({ page }) => {

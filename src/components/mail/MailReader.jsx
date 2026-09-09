@@ -71,7 +71,7 @@ function LabelsEditor({ knownLabels, labels, onChange }) {
 
 export function MailReader({
   aiOpen, aiError, analysis, knownLabels, message, onAiRetry, onAiToggle, onArchive, onDelete, onForward, onLabelsChange,
-  onMoveToSpam, onNotify, onReply, onReplyAll, onSnooze, onToggleStar, aiStatus, sandbox,
+  onInsertReply, onMoveToSpam, onNotify, onReply, onReplyAll, onSnooze, onToggleStar, aiStatus,
 }) {
   const [moreOpen, setMoreOpen] = useState(false)
   const [pendingAction, setPendingAction] = useState('')
@@ -172,13 +172,15 @@ export function MailReader({
         <div className="sender"><Avatar initials={message.initials} tone={message.tone} /><div><b>{message.sender}</b><small>{message.email}</small>{message.to?.length ? <small>To: {message.to.join(', ')}</small> : null}</div><time>Today, {message.time}</time></div>
         <LabelsEditor knownLabels={knownLabels ?? []} labels={message.labels} onChange={handleLabelsChange} />
         <div className="summary"><label><Sparkles size={14} />AI Summary <button type="button" onClick={onAiRetry} disabled={aiStatus === 'loading'}>{aiStatus === 'loading' ? 'Analyzing…' : 'Summarize'}</button></label><p>{aiStatus === 'error' ? (aiError?.message || 'Olivia V3.5 could not analyze this email.') : (analysis?.summary?.[0] ?? 'Olivia is analyzing this email.')}</p></div>
-        <div className="body">{message.body.map((paragraph, index) => <p key={`${message.id}-${index}`}>{paragraph}</p>)}</div>
+        {message.bodyHtml
+          ? <iframe className="messageHtml" sandbox="" referrerPolicy="no-referrer" srcDoc={message.bodyHtml} title={`Email content: ${message.subject}`} />
+          : <div className="body">{message.body.map((paragraph, index) => <p key={`${message.id}-${index}`}>{paragraph}</p>)}</div>}
 
         {message.attachments.length ? (
           <><div className="attachTitle"><Paperclip size={15} />{message.attachments.length} Attachments</div><div className="attachments">{message.attachments.map((attachment) => <AttachmentCard key={attachment.title} attachment={attachment} />)}</div></>
         ) : null}
 
-        <SuggestedReply key={message.id} aiStatus={aiStatus} message={message} onSent={onNotify} sandbox={sandbox} suggestedReply={analysis?.suggestedReply ?? ''} />
+        <SuggestedReply key={message.id} aiStatus={aiStatus} message={message} onInsert={onInsertReply} onSent={onNotify} suggestedReply={analysis?.suggestedReply ?? ''} />
       </article>
     </section>
   )

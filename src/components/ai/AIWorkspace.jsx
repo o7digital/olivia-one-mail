@@ -47,8 +47,9 @@ export function AIWorkspace({ analysis, error, message, onArchive, onCreateOppor
 
       {activeTab === 'Overview' && analysis ? (
         <>
-          {analysis.sandbox ? <InsightCard title="V3 Sandbox"><p>Test mode · drafts require review. External actions are disabled.</p><p>Urgency, rewrite, compose and business scoring are unavailable.</p></InsightCard> : null}
+          {analysis.engine === 'v3' ? <InsightCard title="Olivia V3.5"><p>Live intelligence · generated drafts require your review and an explicit Send action.</p><small>{[analysis.provider, analysis.model].filter(Boolean).join(' · ')}</small></InsightCard> : null}
           <InsightCard title="Email Summary">{analysis.summary.map((line) => <p key={line}>{line}</p>)}</InsightCard>
+          {analysis.classification ? <InsightCard title="Analysis / Classification"><p>{analysis.classification.category}</p><small>{Math.round(analysis.classification.confidence * 100)}% confidence</small></InsightCard> : null}
           {analysis.messageType === 'delivery_failure' && analysis.deliveryFailure ? <InsightCard title="Delivery Failure"><div className="contextDetails"><b>{analysis.deliveryFailure.recipient || 'Recipient unavailable'}</b><span>{[analysis.deliveryFailure.smtpStatus, analysis.deliveryFailure.enhancedStatusCode].filter(Boolean).join(' · ') || 'SMTP status unavailable'}</span><p>{analysis.deliveryFailure.reason || analysis.deliveryFailure.likelyCause || 'No delivery reason was returned.'}</p><small>{analysis.deliveryFailure.remoteServer || 'Remote server unavailable'} · {analysis.deliveryFailure.responsibility}</small></div></InsightCard> : null}
           {analysis.messageType === 'invoice_payment' && analysis.invoice ? <InsightCard title="Invoice Details"><div className="contextDetails"><b>{analysis.invoice.amount != null && analysis.invoice.currency ? new Intl.NumberFormat(undefined, { style: 'currency', currency: analysis.invoice.currency }).format(analysis.invoice.amount) : 'Amount unavailable'}</b><span>{analysis.invoice.invoiceNumber || 'Invoice number unavailable'}</span><p>{analysis.invoice.dueDate ? `Due ${analysis.invoice.dueDate}` : 'Due date unavailable'}</p></div></InsightCard> : null}
           {analysis.messageType === 'meeting_scheduling' && analysis.scheduling ? <InsightCard title="Scheduling"><div className="contextDetails"><b>{analysis.scheduling.proposedPeriods.join(' · ') || 'No exact period extracted'}</b><span>{analysis.scheduling.timezone || 'Timezone unavailable'}</span>{analysis.scheduling.availableSlots.map((slot) => <button className="textbtn" type="button" key={slot.startAt}>{new Date(slot.startAt).toLocaleString()}</button>)}</div></InsightCard> : null}
@@ -57,7 +58,7 @@ export function AIWorkspace({ analysis, error, message, onArchive, onCreateOppor
             <InsightCard title="Urgency"><div className="urgency">{analysis.urgency ?? 'Unavailable in V3 sandbox'}</div><small>{analysis.intent}</small></InsightCard>
           </div> : null}
           <InsightCard title="Recommended Actions"><div className="recommendedActions">{analysis.recommendedActions.length ? analysis.recommendedActions.map((action) => <button type="button" disabled={Boolean(pendingAction)} key={`${action.type}:${action.label}`} onClick={() => runAction(action)}>{action.type === 'create_task' ? <CheckSquare2 size={14} /> : action.type.includes('waiting') || action.type.includes('follow') ? <CalendarClock size={14} /> : <Mail size={14} />}{pendingAction === action.type ? 'Working…' : action.label}<small>{Math.round(action.confidence * 100)}%</small></button>) : <p>No reliable action was returned for this message.</p>}</div></InsightCard>
-          {analysis.sandbox ? <InsightCard title="Extracted Actions (review only)">{analysis.extractedActions.map((action, index) => <p key={index}>{action.description}</p>)}</InsightCard> : null}
+          {analysis.extractedActions ? <InsightCard title="Extracted Actions (review only)">{analysis.extractedActions.length ? analysis.extractedActions.map((action, index) => <p key={index}>{action.description}</p>) : <p>No explicit action found.</p>}</InsightCard> : null}
           <InsightCard title="Extracted Tasks">
             {analysis.tasks.map((task) => <button className="task" type="button" key={task.title} onClick={() => runAction({ type: 'create_task', label: task.title })}><span /><b>{task.title}</b><small>{task.dueAt || 'No due date'}</small></button>)}
           </InsightCard>
@@ -79,7 +80,7 @@ export function AIWorkspace({ analysis, error, message, onArchive, onCreateOppor
       ) : null}
 
       {activeTab === 'Context' ? (
-        <div className="aiTabContent"><UsersRound size={24} /><b>Relationship context</b><p>{analysis?.contactInsights.summary || 'No verified relationship context is available.'}</p>{message.company ? <div className="contextChip">{message.company}</div> : null}<div className="contextChip">{analysis?.contactInsights.engagement || 'Engagement unavailable'}</div></div>
+        <div className="aiTabContent"><UsersRound size={24} /><b>Relationship context</b><p>{analysis?.contactInsights.summary || 'No verified relationship context is available.'}</p>{message.company ? <div className="contextChip">{message.company}</div> : null}<div className="contextChip">{analysis?.contactInsights.engagement || 'Engagement unavailable'}</div>{analysis?.sources?.length ? <><b>Sources / memory used</b>{analysis.sources.map((source) => <div className="contextChip" key={`${source.kind}:${source.source}:${source.document_id ?? ''}`}>{source.kind === 'memory' ? 'Memory' : 'Source'} · {source.source}</div>)}</> : <small>No tenant memory source was used for this result.</small>}</div>
       ) : null}
     </aside>
   )

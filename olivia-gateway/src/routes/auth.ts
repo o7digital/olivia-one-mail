@@ -7,7 +7,7 @@ import { buildSessionUser, clearSessionCookies, createServerSession, deleteServe
 
 const loginSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
+  password: z.string().min(1).max(1024),
   privacyAccepted: z.literal(true),
   privacyVersion: z.string().min(1).max(40),
 })

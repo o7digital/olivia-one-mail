@@ -18,8 +18,9 @@ const resultByPath: Record<string, unknown> = {
   '/actions/extract': { actions: [{ type: 'review', description: email.body }] },
 }
 
-test('mapping fails closed, exact mailbox overrides domain, only one mailbox routes V3', () => {
+test('mapping fails closed, exact mailbox overrides domain, explicitly migrated mailboxes route V3', () => {
   assert.deepEqual(resolveAIRoute(' TEST@EXAMPLE.COM ', env), { mailbox: 'test@example.com', tenant: 'test-tenant', engine: 'v3' })
+  assert.deepEqual(resolveAIRoute('kabin@example.com', { ...env, aiMailboxClientMap: { ...env.aiMailboxClientMap, 'kabin@example.com': 'kabin' }, aiV3MailboxTenantMap: { 'kabin@example.com': 'kabin' } }), { mailbox: 'kabin@example.com', tenant: 'kabin', engine: 'v3' })
   assert.equal(resolveAIRoute('live@example.com', env).engine, 'v2')
   assert.equal(resolveAIRoute('test@example.com', { ...env, aiV3TestMailbox: '' }).engine, 'v2')
   for (const mailbox of ['none@unknown.com', 'default', 'a@b@c', 'a@constructor']) assert.throws(() => resolveAIRoute(mailbox, env), AIError)
@@ -27,7 +28,7 @@ test('mapping fails closed, exact mailbox overrides domain, only one mailbox rou
   assert.throws(() => resolveAIRoute('test@example.com', { ...env, aiMailboxClientMap: { 'test@example.com': 'default' } }), /explicit/)
 })
 
-test('four async operations adapt to the UI; unsupported generation never submits jobs', async () => {
+test('all six async operations adapt to the UI and never expose credentials', async () => {
   const original = globalThis.fetch
   const jobs = new Map<string, unknown>()
   const payloads: any[] = []
@@ -56,9 +57,9 @@ test('four async operations adapt to the UI; unsupported generation never submit
     assert.deepEqual(result.tasks, []) // Review extraction must not create actionable tasks.
     assert.deepEqual(result.recommendedActions, [])
     assert.equal((result as any).extractedActions.length, 1)
-    await assert.rejects(rewriteDraft(env, { mailboxEmail: 'test@example.com', action: 'formal', draft: 'Hello' }), (e: any) => e.code === 'V3_UNSUPPORTED' && e.statusCode === 501)
-    await assert.rejects(composeDraft(env, { mailboxEmail: 'test@example.com', prompt: 'Hello' }), (e: any) => e.code === 'V3_UNSUPPORTED' && e.statusCode === 501)
-    assert.equal(jobs.size, 4)
+    assert.equal((await rewriteDraft(env, { mailboxEmail: 'test@example.com', action: 'formal', draft: 'Hello' })).draft, 'Hello')
+    assert.equal((await composeDraft(env, { mailboxEmail: 'test@example.com', prompt: 'Hello' })).draft, 'Hello')
+    assert.equal(jobs.size, 6)
     assert.equal(JSON.stringify(result).includes(env.aiV3Token!), false)
     assert.equal(JSON.stringify(payloads).includes('password'), false)
   } finally { globalThis.fetch = original }

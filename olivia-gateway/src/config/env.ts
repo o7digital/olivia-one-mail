@@ -13,6 +13,22 @@ function parseJsonMap(value: string | undefined, fallback: Record<string, string
   }
 }
 
+function parseCredentialMap(value: string | undefined) {
+  if (!value) return {} as Record<string, { email: string; password: string }>
+  try {
+    const parsed = JSON.parse(value)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+    return Object.fromEntries(Object.entries(parsed).flatMap(([tenant, credentials]) => {
+      if (!credentials || typeof credentials !== 'object' || Array.isArray(credentials)) return []
+      const email = 'email' in credentials && typeof credentials.email === 'string' ? credentials.email.trim() : ''
+      const password = 'password' in credentials && typeof credentials.password === 'string' ? credentials.password : ''
+      return tenant.trim() && email && password ? [[tenant.trim(), { email, password }]] : []
+    }))
+  } catch {
+    return {} as Record<string, { email: string; password: string }>
+  }
+}
+
 export function getEnv() {
   return {
     aiApiKey: process.env.AI_API_KEY ?? '',
@@ -21,10 +37,12 @@ export function getEnv() {
     aiProvider: process.env.AI_PROVIDER ?? 'mock',
     aiV3TestMailbox: process.env.AI_V3_TEST_MAILBOX?.trim().toLowerCase() ?? '',
     aiV3TestTenant: process.env.AI_V3_TEST_TENANT?.trim() ?? '',
+    aiV3MailboxTenantMap: parseJsonMap(process.env.AI_V3_MAILBOX_TENANT_MAP, {}),
     aiV3ApiUrl: process.env.AI_V3_API_URL ?? '',
     aiV3Token: process.env.AI_V3_TOKEN ?? '',
     aiV3ServiceEmail: process.env.AI_V3_SERVICE_EMAIL ?? '',
     aiV3ServicePassword: process.env.AI_V3_SERVICE_PASSWORD ?? '',
+    aiV3ServiceCredentialsMap: parseCredentialMap(process.env.AI_V3_SERVICE_CREDENTIALS_MAP),
     aiV3TestOnly: process.env.AI_V3_TEST_ONLY === 'true',
     aiV3TimeoutMs: Number(process.env.AI_V3_TIMEOUT_MS ?? 30000),
     aiV3PollMs: Number(process.env.AI_V3_POLL_MS ?? 1000),

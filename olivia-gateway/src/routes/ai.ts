@@ -1,7 +1,7 @@
 import { AIError } from '../services/aiRouting.js'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { analyzeMessage, composeDraft, rewriteDraft } from '../services/aiService.js'
+import { analyzeMessage, composeDraft, rewriteDraft, suggestReply } from '../services/aiService.js'
 import { createMailProvider } from '../services/providerRegistry.js'
 
 const messageSchema = z.object({
@@ -9,7 +9,7 @@ const messageSchema = z.object({
 })
 const rewriteSchema = z.object({
   draft: z.string().min(1),
-  action: z.enum(['shorter', 'longer', 'formal', 'friendly', 'translate-fr', 'translate-es', 'translate-en', 'improve']),
+  action: z.enum(['professional', 'concise', 'shorter', 'longer', 'formal', 'friendly', 'translate-fr', 'translate-es', 'translate-en', 'improve']),
   recipient: z.string().optional(),
   subject: z.string().optional(),
 })
@@ -18,6 +18,12 @@ const composeSchema = z.object({
   recipient: z.string().optional(),
   subject: z.string().optional(),
   currentDraft: z.string().optional(),
+  tone: z.string().max(40).optional(),
+  language: z.string().max(20).optional(),
+})
+const suggestedReplySchema = z.object({
+  messageId: z.string().min(1),
+  regenerationContext: z.string().max(128).optional(),
 })
 
 export async function registerAIRoutes(app: FastifyInstance) {
@@ -29,7 +35,7 @@ export async function registerAIRoutes(app: FastifyInstance) {
     } catch (error) {
       if (error instanceof AIError) return reply.code(error.statusCode).send({ code: error.code, message: error.message })
       request.log.error({ code: 'AI_UNAVAILABLE' }, 'AI request failed')
-      return reply.code(503).send({ message: 'Olivia AI temporarily unavailable' })
+      return reply.code(503).send({ message: 'Olivia could not analyze this email' })
     }
   })
 
@@ -46,7 +52,19 @@ export async function registerAIRoutes(app: FastifyInstance) {
     } catch (error) {
       if (error instanceof AIError) return reply.code(error.statusCode).send({ code: error.code, message: error.message })
       request.log.error({ code: 'AI_UNAVAILABLE' }, 'AI request failed')
-      return reply.code(503).send({ message: 'Olivia AI temporarily unavailable' })
+      return reply.code(503).send({ message: 'Olivia could not rewrite this text' })
+    }
+  })
+
+  app.post('/api/ai/suggested-reply', async (request, reply) => {
+    const body = suggestedReplySchema.parse(request.body)
+    const provider = createMailProvider(process.env.MAIL_PROVIDER, request.session)
+    try {
+      return await suggestReply(app.env, provider, request.session!.email, body.messageId, body.regenerationContext)
+    } catch (error) {
+      if (error instanceof AIError) return reply.code(error.statusCode).send({ code: error.code, message: error.message })
+      request.log.error({ code: 'AI_UNAVAILABLE' }, 'AI request failed')
+      return reply.code(503).send({ message: 'Olivia V3.5 could not generate a reply' })
     }
   })
 
@@ -59,11 +77,13 @@ export async function registerAIRoutes(app: FastifyInstance) {
         recipient: body.recipient,
         subject: body.subject,
         currentDraft: body.currentDraft,
+        tone: body.tone,
+        language: body.language,
       })
     } catch (error) {
       if (error instanceof AIError) return reply.code(error.statusCode).send({ code: error.code, message: error.message })
       request.log.error({ code: 'AI_UNAVAILABLE' }, 'AI request failed')
-      return reply.code(503).send({ message: 'Olivia AI temporarily unavailable' })
+      return reply.code(503).send({ message: 'Olivia could not compose this email' })
     }
   })
 }

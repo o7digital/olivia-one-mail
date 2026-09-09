@@ -3,7 +3,7 @@ import { apiClient } from './apiClient'
 export const mailService = {
   ensureSession: () => apiClient.ensureSession(),
   listFolders: () => apiClient.get('/api/mail/folders'),
-  listMessages: (folder = 'Inbox') => apiClient.get('/api/mail/messages', { folder }),
+  listMessages: (folder = 'Inbox', page = 1, pageSize = 25) => apiClient.get('/api/mail/messages', { folder, page, pageSize }),
   getMessage: (id) => apiClient.get(`/api/mail/messages/${id}`),
   markRead: (id) => apiClient.post(`/api/mail/messages/${id}/read`, {}),
   toggleStar: (id) => apiClient.post(`/api/mail/messages/${id}/star`, {}),

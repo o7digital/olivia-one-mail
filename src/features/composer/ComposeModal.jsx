@@ -11,8 +11,8 @@ const modeConfig = {
   forward: { title: 'Forward', sentMessage: 'Message forwarded', toDisabled: false, subjectDisabled: true },
 }
 
-export function ComposeModal({ mode = 'new', messageId, initialTo = '', initialSubject = '', onClose, onSent, sandbox = false }) {
-  const [draft, setDraft] = useState({ to: initialTo, cc: '', bcc: '', subject: initialSubject, body: '' })
+export function ComposeModal({ mode = 'new', messageId, initialTo = '', initialSubject = '', initialBody = '', onClose, onSent }) {
+  const [draft, setDraft] = useState({ to: initialTo, cc: '', bcc: '', subject: initialSubject, body: initialBody })
   const [showCc, setShowCc] = useState(false)
   const [showBcc, setShowBcc] = useState(false)
   const [sending, setSending] = useState(false)
@@ -60,7 +60,7 @@ export function ComposeModal({ mode = 'new', messageId, initialTo = '', initialS
         subject: draft.subject,
         currentDraft: draft.body,
       })
-      setDraft((current) => ({ ...current, body: response.draft }))
+      setDraft((current) => ({ ...current, body: response.draft, subject: response.subject || current.subject }))
     } catch (composeError) {
       setError(composeError.message)
     } finally {
@@ -85,9 +85,9 @@ export function ComposeModal({ mode = 'new', messageId, initialTo = '', initialS
         <textarea name="body" value={draft.body} onChange={updateField} placeholder={mode === 'forward' ? 'Add a note (the original message is attached automatically)…' : 'Write something brilliant…'} aria-label="Message body" />
         {error ? <p className="formError" role="alert">{error}</p> : null}
         <div className="composeActions">
-          <button className="sendAi" type="submit" disabled={sending || sandbox || import.meta.env.VITE_V3_TEST === 'true'}><Send size={15} />{sending ? 'Sending…' : 'Send'}</button>
+          <button className="sendAi" type="submit" disabled={sending}><Send size={15} />{sending ? 'Sending…' : 'Send'}</button>
           <button className="icon" type="button" aria-label="Attach file"><Paperclip size={16} /></button>
-          <button className="aiCompose" type="button" onClick={writeWithOlivia} disabled={generating || sandbox || import.meta.env.VITE_V3_TEST === 'true'} title={sandbox || import.meta.env.VITE_V3_TEST === 'true' ? 'Compose is unavailable in V3.5 sandbox' : undefined}><Sparkles size={14} />{generating ? 'Writing…' : 'Write with Olivia'}</button>
+          <button className="aiCompose" type="button" onClick={writeWithOlivia} disabled={generating}><Sparkles size={14} />{generating ? 'Writing…' : 'Write with Olivia'}</button>
         </div>
       </form>
     </div>

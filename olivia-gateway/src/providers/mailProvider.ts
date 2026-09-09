@@ -1,8 +1,9 @@
-import type { Folder, MailMessage } from '../types/domain.js'
+import type { Folder, MailMessage, MailPage } from '../types/domain.js'
 
 export interface MailProvider {
   listFolders(): Promise<Folder[]>
   listMessages(folder: string): Promise<MailMessage[]>
+  listMessagePage?(folder: string, page: number, pageSize: number): Promise<MailPage>
   getMessage(id: string): Promise<MailMessage | null>
   sendMessage(input: { to: string; cc?: string; bcc?: string; subject: string; body: string }): Promise<{ id: string; status: string }>
   reply(id: string, input: { body: string }): Promise<{ id: string; status: string }>

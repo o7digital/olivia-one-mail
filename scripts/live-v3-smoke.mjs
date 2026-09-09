@@ -28,9 +28,12 @@ console.log(JSON.stringify({ event: 'live.acceptance', run, mailbox, tenant: env
 const replayStart = Date.now()
 assert.deepEqual(await analyzeMessage(provider, mailbox, run, env), result)
 console.log(JSON.stringify({ event: 'live.replay', duration_ms: Date.now() - replayStart }))
-for (const task of [() => rewriteDraft(env, { mailboxEmail: mailbox, draft: 'Bonjour', action: 'formal' }), () => composeDraft(env, { mailboxEmail: mailbox, prompt: 'Bonjour' })]) {
-  await assert.rejects(task(), e => e.code === 'V3_UNSUPPORTED' && e.statusCode === 501)
-}
+const rewrite = await rewriteDraft(env, { mailboxEmail: mailbox, draft: 'salut, peux tu confirmer demain', action: 'professional' })
+assert.ok(rewrite.draft.length > 10)
+const compose = await composeDraft(env, { mailboxEmail: mailbox, prompt: 'Composer une confirmation de rendez-vous demain à 10h.', recipient: 'client@example.com' })
+assert.ok(compose.draft.length > 20)
+assert.ok(compose.subject)
+console.log(JSON.stringify({ event: 'live.generation', rewrite_length: rewrite.draft.length, compose_length: compose.draft.length, compose_subject: compose.subject, provider: compose.provider, model: compose.model }))
 const token = await getV3Token(env, env.aiV3TestTenant, AbortSignal.timeout(5000))
 const claims = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString())
 assert.equal(claims.tenant_id, env.aiV3TestTenant)
@@ -40,4 +43,4 @@ for (const tenant of [env.aiV3TestTenant, 'o7-cross-tenant-denied']) {
   assert.equal(response.status, tenant === env.aiV3TestTenant ? 200 : 403)
   console.log(JSON.stringify({ event: 'live.tenant_auth', tenant, status: response.status, role: claims.role }))
 }
-console.log(JSON.stringify({ event: 'live.safety', rewrite: 'disabled', compose: 'disabled', external_tools: 0, email_sent: 0, v2_called: 0 }))
+console.log(JSON.stringify({ event: 'live.safety', rewrite: 'review_required', compose: 'review_required', external_tools: 0, email_sent: 0, v2_called: 0 }))
