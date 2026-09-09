@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { AIError, resolveAIRoute, type AIConfig } from './aiRouting.js'
-import { callV3 } from './aiV3.js'
+import { callV3, callV3Enrichment } from './aiV3.js'
 import { z } from 'zod'
 import type { MailProvider } from '../providers/mailProvider.js'
 import type { MailMessage } from '../types/domain.js'
@@ -238,23 +238,32 @@ export async function composeDraft(appEnv: AIConfig, input: {
 
 async function analyzeV3(env: AIConfig, mailbox: string, message: MailMessage) {
   const payload = buildV3EmailPayload(mailbox, message)
-  const [summary, classification, reply, actions] = await Promise.all([
+  const [summary, classification, reply, actions, enrichment] = await Promise.all([
     callV3(env, mailbox, 'summary', payload), callV3(env, mailbox, 'classification', payload),
     callV3(env, mailbox, 'suggestedReply', payload), callV3(env, mailbox, 'actions', payload),
+    callV3Enrichment(env, mailbox, payload),
   ])
   return {
     engine: 'v3', sandbox: true, summary: [summary.summary], classification,
-    urgency: null, unavailableFunctions: ['urgency', 'leadScore', 'sentiment', 'opportunity', 'contactInsights'],
-    leadScore: null, sentiment: { label: 'Unavailable in sandbox', confidence: null },
-    intent: classification.category, buyingSignals: [], tasks: [], extractedActions: actions.actions,
+    urgency: enrichment.urgency, urgencyReason: enrichment.urgency_reason,
+    leadScore: enrichment.lead_score, leadScoreReason: enrichment.lead_score_reason,
+    sentiment: enrichment.sentiment, intent: classification.category,
+    buyingSignals: enrichment.buying_signals,
+    tasks: enrichment.tasks.map(task => ({ title: task.title, dueAt: task.due_at })),
+    extractedActions: actions.actions,
     opportunity: { detected: false, title: '', estimatedValue: null, currency: null, confidence: 0 },
     contactInsights: { summary: '', engagement: '' }, suggestedReply: reply.reply,
-    model: summary.model ?? classification.model ?? reply.model ?? actions.model ?? null,
+    model: enrichment.model,
+    mailModel: summary.model ?? classification.model ?? reply.model ?? actions.model ?? null,
     reasoningTier: 'balanced', toolsUsed: [], messageType: 'normal_conversation',
-    provider: summary.provider ?? classification.provider ?? reply.provider ?? actions.provider ?? null,
-    ragHits: Math.max(summary.rag_hits ?? 0, classification.rag_hits ?? 0, reply.rag_hits ?? 0, actions.rag_hits ?? 0),
-    sources: uniqueSources([...(summary.sources ?? []), ...(classification.sources ?? []), ...(reply.sources ?? []), ...(actions.sources ?? [])]),
-    recommendedActions: [], commitments: [], deliveryFailure: null, invoice: null, scheduling: null,
+    provider: enrichment.provider,
+    ragHits: Math.max(summary.rag_hits ?? 0, classification.rag_hits ?? 0, reply.rag_hits ?? 0, actions.rag_hits ?? 0, enrichment.rag_hits),
+    sources: uniqueSources([...(summary.sources ?? []), ...(classification.sources ?? []), ...(reply.sources ?? []), ...(actions.sources ?? []), ...enrichment.sources]),
+    recommendedActions: enrichment.recommended_actions.map(action => ({
+      type: 'review', label: action.label, reason: action.reason,
+      confidence: action.confidence, requiresConfirmation: true,
+    })),
+    commitments: [], deliveryFailure: null, invoice: null, scheduling: null,
   }
 }
 

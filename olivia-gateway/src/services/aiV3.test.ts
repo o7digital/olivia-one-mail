@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { AIError, resolveAIRoute, type AIConfig } from './aiRouting.js'
-import { callV3 } from './aiV3.js'
+import { callV3, callV3Enrichment } from './aiV3.js'
 import { analyzeMessage, composeDraft, rewriteDraft } from './aiService.js'
 
 const env: AIConfig = {
@@ -16,6 +16,13 @@ const resultByPath: Record<string, unknown> = {
   '/email/suggested-reply': { reply: 'Merci', requires_review: true }, '/text/rewrite': { text: 'Hello', tone: 'formal', language: 'auto' },
   '/email/compose': { subject: 'Brouillon Olivia', body: 'Hello', requires_review: true },
   '/actions/extract': { actions: [{ type: 'review', description: email.body }] },
+}
+const enrichment = {
+  commercial_context: true, lead_score: 72, lead_score_reason: 'Explicit reservation request.',
+  urgency: 'high', urgency_reason: 'The sender asks for a prompt confirmation.',
+  sentiment: { label: 'positive', confidence: .8 }, buying_signals: ['Reservation request'],
+  recommended_actions: [{ label: 'Confirm availability', reason: 'The sender requested a reservation.', confidence: .9 }],
+  tasks: [{ title: 'Call back about the reservation', due_at: null }],
 }
 
 test('mapping fails closed, exact mailbox overrides domain, explicitly migrated mailboxes route V3', () => {
@@ -33,11 +40,17 @@ test('all six async operations adapt to the UI and never expose credentials', as
   const jobs = new Map<string, unknown>()
   const payloads: any[] = []
   globalThis.fetch = async (url, init) => {
-    assert.ok(String(url).startsWith('https://v3.invalid/v1/olivia-one/'))
+    assert.ok(String(url).startsWith('https://v3.invalid/v1/'))
     const headers = new Headers(init?.headers)
     assert.equal(headers.get('authorization'), 'Bearer server-only-v3-secret')
     assert.equal(headers.get('x-tenant-id'), 'test-tenant')
     assert.equal(headers.get('x-olivia-internal-token'), null)
+    if (String(url).endsWith('/v1/chat')) {
+      const payload = JSON.parse(String(init?.body))
+      assert.equal(payload.routing, 'BALANCED')
+      assert.equal(payload.message.includes('private-mailbox-password'), false)
+      return Response.json({ answer: JSON.stringify(enrichment), engine: 'openai', model: 'gpt-5.6-terra', provider_response_id: 'resp-enrichment', duration_ms: 12, rag_hits: 0, sandbox: true, sources: [], memories: [] })
+    }
     if (init?.method === 'POST') {
       const payload = JSON.parse(String(init.body)); payloads.push(payload)
       assert.equal(payload.idempotency_key.length, 64)
@@ -51,18 +64,47 @@ test('all six async operations adapt to the UI and never expose credentials', as
   try {
     const provider = { getMessage: async () => ({ id: '42', folder: 'Inbox', subject: email.subject, email: email.sender, body: [email.body] }) }
     const result = await analyzeMessage(provider as never, 'test@example.com', '42', env)
-    assert.equal(result.urgency, null)
+    assert.equal(result.urgency, 'high')
+    assert.equal(result.urgencyReason, enrichment.urgency_reason)
+    assert.equal(result.leadScore, 72)
+    assert.equal(result.leadScoreReason, enrichment.lead_score_reason)
     assert.equal(result.intent, 'reservation')
     assert.equal(result.suggestedReply, 'Merci')
-    assert.deepEqual((result as any).unavailableFunctions, ['urgency', 'leadScore', 'sentiment', 'opportunity', 'contactInsights'])
-    assert.deepEqual(result.tasks, []) // Review extraction must not create actionable tasks.
-    assert.deepEqual(result.recommendedActions, [])
+    assert.deepEqual(result.tasks, [{ title: 'Call back about the reservation', dueAt: null }])
+    assert.deepEqual(result.recommendedActions, [{ type: 'review', label: 'Confirm availability', reason: 'The sender requested a reservation.', confidence: .9, requiresConfirmation: true }])
     assert.equal((result as any).extractedActions.length, 1)
+    assert.equal(result.provider, 'openai')
+    assert.equal(result.model, 'gpt-5.6-terra')
     assert.equal((await rewriteDraft(env, { mailboxEmail: 'test@example.com', action: 'formal', draft: 'Hello' })).draft, 'Hello')
     assert.equal((await composeDraft(env, { mailboxEmail: 'test@example.com', prompt: 'Hello' })).draft, 'Hello')
     assert.equal(jobs.size, 6)
     assert.equal(JSON.stringify(result).includes(env.aiV3Token!), false)
     assert.equal(JSON.stringify(payloads).includes('password'), false)
+  } finally { globalThis.fetch = original }
+})
+
+test('V3 enrichment returns a clean null lead score for non-commercial email', async () => {
+  const original = globalThis.fetch
+  globalThis.fetch = async (_url, init) => {
+    const headers = new Headers(init?.headers)
+    assert.equal(headers.get('x-tenant-id'), 'test-tenant')
+    return Response.json({
+      answer: JSON.stringify({
+        ...enrichment,
+        commercial_context: false,
+        lead_score: null,
+        lead_score_reason: 'No commercial intent is present.',
+        buying_signals: [],
+      }),
+      engine: 'openai', model: 'gpt-5.6-terra', provider_response_id: 'resp-non-commercial',
+      duration_ms: 10, rag_hits: 0, sandbox: true, sources: [], memories: [],
+    })
+  }
+  try {
+    const result = await callV3Enrichment(env, 'test@example.com', email)
+    assert.equal(result.lead_score, null)
+    assert.equal(result.commercial_context, false)
+    assert.equal(result.recommended_actions.every(action => action.confidence >= 0 && action.confidence <= 1), true)
   } finally { globalThis.fetch = original }
 })
 

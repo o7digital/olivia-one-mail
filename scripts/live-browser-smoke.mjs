@@ -10,8 +10,10 @@ const browser = await chromium.launch({ channel: process.env.PLAYWRIGHT_CHANNEL 
 const context = await browser.newContext({ viewport: { width: 1728, height: 1080 }, permissions: ['clipboard-read', 'clipboard-write'] })
 const page = await context.newPage()
 let sendRequests = 0
+let externalActionRequests = 0
 page.on('request', request => {
   if (/\/api\/mail\/(?:send|reply|reply-all|forward)/.test(new URL(request.url()).pathname)) sendRequests++
+  if (/\/api\/(?:tasks|follow-ups|pulse\/opportunities)/.test(new URL(request.url()).pathname) && request.method() !== 'GET') externalActionRequests++
 })
 
 async function login() {
@@ -55,6 +57,21 @@ try {
   assert.ok(Number.isFinite(analysis.classification?.confidence))
   assert.ok(analysis.suggestedReply?.length > 20)
   assert.ok(Array.isArray(analysis.extractedActions))
+  assert.ok(['low', 'medium', 'high', 'critical'].includes(analysis.urgency))
+  assert.ok(analysis.urgencyReason?.length > 0)
+  assert.ok(analysis.leadScore === null || (Number.isInteger(analysis.leadScore) && analysis.leadScore >= 0 && analysis.leadScore <= 100))
+  assert.ok(analysis.leadScoreReason?.length > 0)
+  assert.ok(Array.isArray(analysis.recommendedActions) && analysis.recommendedActions.length > 0)
+  assert.ok(analysis.recommendedActions.every(action => action.type === 'review' && action.requiresConfirmation === true))
+  assert.ok(Array.isArray(analysis.tasks))
+  assert.ok(analysis.tasks.every(task => task.title && (task.dueAt === null || !Number.isNaN(Date.parse(task.dueAt)))))
+  const workspaceText = await page.getByLabel('AI Workspace', { exact: true }).innerText()
+  assert.equal(workspaceText.includes('Unavailable in V3 sandbox'), false)
+  assert.equal(workspaceText.includes('Lead Score\nUnavailable'), false)
+  const reviewAction = page.locator('.recommendedActions button').first()
+  await reviewAction.click()
+  await page.locator('.toast').filter({ hasText: 'Sandbox: no action was executed' }).waitFor()
+  assert.equal(externalActionRequests, 0)
 
   const reply = page.getByRole('textbox', { name: 'Reply draft' })
   await reply.waitFor()
@@ -118,8 +135,10 @@ try {
     firstLoginStatus, reconnectStatus, mailbox: email, tenant: session.user.v3Pilot ? 'server-resolved-v3' : 'unexpected',
     folders: folderResult.body.map(item => item.label), inboxRows: await rows.count(),
     summarize: true, analyze: true, suggestedReply: true, actions: true, rewrite: true, compose: true,
-    provider: analysis.provider, model: analysis.model, ragHits: analysis.ragHits,
-    analyzeMs, rewriteMs, regenerateMs, composeMs, emailSent: 0, browserSecrets: false,
+    provider: analysis.provider, model: analysis.model, mailModel: analysis.mailModel, ragHits: analysis.ragHits,
+    leadScore: analysis.leadScore, urgency: analysis.urgency,
+    recommendedActions: analysis.recommendedActions.length, extractedTasks: analysis.tasks.length,
+    analyzeMs, rewriteMs, regenerateMs, composeMs, emailSent: 0, externalActions: externalActionRequests, browserSecrets: false,
   }))
 } finally {
   await browser.close()
