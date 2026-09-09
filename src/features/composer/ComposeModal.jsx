@@ -70,7 +70,7 @@ export function ComposeModal({ mode = 'new', messageId, initialTo = '', initialS
 
   return (
     <div className="overlay">
-      <form className="modal" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="compose-title">
+      <form className="modal composeModal" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="compose-title">
         <div><b id="compose-title">{config.title}</b><IconButton label="Close composer" onClick={onClose}><X size={17} /></IconButton></div>
         <div className="composeRecipients">
           <input autoFocus name="to" value={draft.to} onChange={updateField} placeholder="To" aria-label="Recipient" disabled={config.toDisabled} />

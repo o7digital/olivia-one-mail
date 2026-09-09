@@ -54,7 +54,10 @@ test('mail shell interactions and desktop screenshots', async ({ page }) => {
   await page.screenshot({ path: 'artifacts/olivia-one-mail-desktop.png', fullPage: true })
 
   await page.getByRole('button', { name: 'Compose', exact: true }).click()
-  await expect(page.getByRole('dialog', { name: 'New Message' })).toBeVisible()
+  const composer = page.getByRole('dialog', { name: 'New Message' })
+  await expect(composer).toBeVisible()
+  await expect(composer).toHaveCSS('width', '1100px')
+  await expect(composer).toHaveCSS('height', '820px')
   await page.getByRole('textbox', { name: 'Recipient' }).fill('sophia@acmecorp.com')
   await page.getByRole('textbox', { name: 'Subject' }).fill('Partnership next steps')
   await page.screenshot({ path: 'artifacts/olivia-one-compose.png', fullPage: true })
