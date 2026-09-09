@@ -54,6 +54,7 @@ test('all six async operations adapt to the UI and never expose credentials', as
     assert.equal(result.urgency, null)
     assert.equal(result.intent, 'reservation')
     assert.equal(result.suggestedReply, 'Merci')
+    assert.deepEqual((result as any).unavailableFunctions, ['urgency', 'leadScore', 'sentiment', 'opportunity', 'contactInsights'])
     assert.deepEqual(result.tasks, []) // Review extraction must not create actionable tasks.
     assert.deepEqual(result.recommendedActions, [])
     assert.equal((result as any).extractedActions.length, 1)

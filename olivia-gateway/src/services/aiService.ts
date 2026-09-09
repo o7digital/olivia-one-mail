@@ -244,7 +244,7 @@ async function analyzeV3(env: AIConfig, mailbox: string, message: MailMessage) {
   ])
   return {
     engine: 'v3', sandbox: true, summary: [summary.summary], classification,
-    urgency: null, unavailableFunctions: ['rewrite', 'compose', 'urgency', 'leadScore', 'sentiment', 'opportunity', 'contactInsights'],
+    urgency: null, unavailableFunctions: ['urgency', 'leadScore', 'sentiment', 'opportunity', 'contactInsights'],
     leadScore: null, sentiment: { label: 'Unavailable in sandbox', confidence: null },
     intent: classification.category, buyingSignals: [], tasks: [], extractedActions: actions.actions,
     opportunity: { detected: false, title: '', estimatedValue: null, currency: null, confidence: 0 },
