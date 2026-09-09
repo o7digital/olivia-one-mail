@@ -1,8 +1,9 @@
-import { Building2, CalendarDays, CheckSquare2, Cloud, ContactRound, ExternalLink, Mail, Settings2, ShieldCheck, Sparkles, X } from 'lucide-react'
+import { Building2, CalendarDays, Check, CheckSquare2, Cloud, ContactRound, ExternalLink, Mail, Palette, Settings2, ShieldCheck, Sparkles, X } from 'lucide-react'
 import { useClerk } from '@clerk/react'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { peopleService } from '../../services/peopleService'
+import { COLOR_THEMES } from '../../theme'
 
 const pageDetails = {
   calendar: { eyebrow: 'Schedule', title: 'Calendar', copy: 'Your connected calendar experience will arrive in Phase 2.', icon: CalendarDays, stats: ['3 meetings today', 'Next: 2:30 PM', 'Focus time protected'] },
@@ -12,7 +13,7 @@ const pageDetails = {
   settings: { eyebrow: 'Workspace', title: 'Settings', copy: 'Account, provider, intelligence, and security preferences.', icon: Settings2, stats: ['O7 Mail protected', 'AI assistance on', 'Mock provider active'] },
 }
 
-export function FeaturePage({ page }) {
+export function FeaturePage({ page, colorTheme = 'default', onColorThemeChange }) {
   const [dynamicStats, setDynamicStats] = useState(null)
   const detail = pageDetails[page]
   const Icon = detail.icon
@@ -47,9 +48,36 @@ export function FeaturePage({ page }) {
   return (
     <section className="featurePage card">
       <div className="featureHero"><span className="featureIcon"><Icon size={24} /></span><small>{detail.eyebrow}</small><h1>{detail.title}</h1><p>{detail.copy}</p></div>
+      {page === 'settings' ? <AppearanceSettings colorTheme={colorTheme} onColorThemeChange={onColorThemeChange} /> : null}
       {page === 'settings' ? <ConnectedAccounts /> : null}
       <div className="featureStats">{(dynamicStats ?? detail.stats).map((stat) => <div key={stat}><span /><b>{stat}</b></div>)}</div>
       <div className="phaseNote"><Sparkles size={17} /><div><b>Phase 2 gateway ready</b><p>This route now has a server-side boundary. Live provider adapters can replace the mock gateway without redesigning the UI.</p></div></div>
+    </section>
+  )
+}
+
+function AppearanceSettings({ colorTheme, onColorThemeChange }) {
+  const activeTheme = COLOR_THEMES.find((theme) => theme.id === colorTheme) ?? COLOR_THEMES[0]
+
+  return (
+    <section className="appearanceSettings" aria-labelledby="appearance-settings-title">
+      <div className="connectedHead">
+        <div><small>APPEARANCE</small><h2 id="appearance-settings-title">Color theme</h2><p>Choose the palette that feels most comfortable. Your choice is saved for this account.</p></div>
+        <span><Palette size={16} />Personalize</span>
+      </div>
+      <div className="themeGrid" role="radiogroup" aria-label="Color theme">
+        {COLOR_THEMES.map((theme) => {
+          const selected = theme.id === activeTheme.id
+          return (
+            <button className={`themeOption ${selected ? 'selected' : ''}`} type="button" role="radio" aria-checked={selected} key={theme.id} onClick={() => onColorThemeChange?.(theme.id)}>
+              <span className="themePreview" style={{ '--theme-preview-accent': theme.colors[0], '--theme-preview-surface': theme.colors[1], '--theme-preview-secondary': theme.colors[2] }} aria-hidden="true"><i /><i /><i /></span>
+              <span className="themeOptionCopy"><b>{theme.name}</b><small>{theme.description}</small></span>
+              <span className="themeCheck" aria-hidden="true">{selected ? <Check size={14} /> : null}</span>
+            </button>
+          )
+        })}
+      </div>
+      <p className="themeStatus" role="status">{activeTheme.name} theme active</p>
     </section>
   )
 }

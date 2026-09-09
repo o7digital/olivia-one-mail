@@ -143,6 +143,31 @@ test('account setup opens connected provider choices', async ({ page }) => {
   await expect(page.getByRole('textbox', { name: 'App-specific password' })).toBeVisible()
 })
 
+test('color themes can be changed in settings and persist for the account', async ({ page }) => {
+  await page.setViewportSize({ width: 1728, height: 1080 })
+  await signIn(page)
+  await page.goto('/settings')
+
+  for (const [name, id] of [['Olivia', 'default'], ['Green', 'green'], ['Graphite', 'gray'], ['Orange', 'orange'], ['Violet', 'violet']]) {
+    const option = page.getByRole('radio', { name: new RegExp(name) })
+    await expect(option).toBeVisible()
+    await option.click()
+    await expect(option).toHaveAttribute('aria-checked', 'true')
+    await expect(page.locator('.app')).toHaveAttribute('data-theme', id)
+  }
+
+  const greenTheme = page.getByRole('radio', { name: /Green/ })
+  await greenTheme.click()
+  await expect(greenTheme).toHaveAttribute('aria-checked', 'true')
+  await expect(page.locator('.app')).toHaveAttribute('data-theme', 'green')
+  await expect(page.getByRole('status')).toContainText('Green theme active')
+  await page.screenshot({ path: 'artifacts/olivia-one-settings-themes.png', fullPage: true })
+
+  await page.reload()
+  await expect(page.locator('.app')).toHaveAttribute('data-theme', 'green')
+  await expect(page.getByRole('radio', { name: /Green/ })).toHaveAttribute('aria-checked', 'true')
+})
+
 test('tablet layout and application routes', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 })
   await signIn(page)

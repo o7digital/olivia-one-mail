@@ -20,6 +20,7 @@ import { useSession } from './hooks/useSession'
 import { pulseService } from './services/pulseService'
 import { intelligenceService } from './services/intelligenceService'
 import { useInbox, useMailFolders } from './features/inbox/useInbox'
+import { loadColorTheme, saveColorTheme } from './theme'
 
 function App() {
   const location = useLocation()
@@ -38,6 +39,7 @@ function App() {
   const [privacyOpen, setPrivacyOpen] = useState(false)
   const [privacyAccepted, setPrivacyAccepted] = useState(false)
   const [askState, setAskState] = useState(null)
+  const [colorTheme, setColorTheme] = useState('default')
   const session = useSession()
   const isAuthenticated = session.isAuthenticated
   const folders = useMailFolders(isAuthenticated)
@@ -55,6 +57,11 @@ function App() {
   useEffect(() => {
     if (session.error) setLoginError(session.error)
   }, [session.error])
+
+  useEffect(() => {
+    const email = session.session?.user?.email
+    if (email) setColorTheme(loadColorTheme(email))
+  }, [session.session?.user?.email])
 
   useEffect(() => {
     function handleShortcut(event) {
@@ -125,6 +132,11 @@ function App() {
     notify(`Opportunity created in O7 Pulse (deal ${opportunity.dealId})`)
   }
 
+  function changeColorTheme(theme) {
+    const nextTheme = saveColorTheme(session.session?.user?.email, theme)
+    setColorTheme(nextTheme)
+  }
+
   async function handleLogin(event) {
     event.preventDefault()
     if (!privacyAccepted) {
@@ -179,7 +191,7 @@ function App() {
   }
 
   return (
-    <div className="app">
+    <div className="app" data-theme={colorTheme}>
       <div className="glow g1" /><div className="glow g2" />
       <TopBar
         aiOpen={aiOpen}
@@ -289,7 +301,7 @@ function App() {
           <Route key={page} path={`/${page}`} element={(
             <main className="grid pageGrid">
               <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} user={session.session?.user} />
-              <FeaturePage page={page} />
+              <FeaturePage page={page} colorTheme={colorTheme} onColorThemeChange={changeColorTheme} />
               <AppRail />
             </main>
           )} />
