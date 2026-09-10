@@ -22,7 +22,9 @@ export function useMailFolders(enabled = true) {
       setStatus('ready')
     }
 
-    load()
+    load().catch(() => {
+      if (active) setStatus('error')
+    })
     return () => {
       active = false
     }

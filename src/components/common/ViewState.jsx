@@ -23,12 +23,12 @@ export function EmptyState({ query }) {
   )
 }
 
-export function ErrorState({ onRetry }) {
+export function ErrorState({ onRetry, error }) {
   return (
     <div className="viewState errorState" role="alert">
       <AlertTriangle size={22} />
       <b>Messages could not be loaded</b>
-      <small>The mock mail service did not respond.</small>
+      <small>{error?.message || 'The mail service did not respond. Please try again.'}</small>
       <button type="button" onClick={onRetry}><RefreshCw size={13} />Try again</button>
     </div>
   )

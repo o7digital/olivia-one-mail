@@ -29,25 +29,38 @@ function buildUrl(path, params) {
 }
 
 async function request(path, options = {}) {
-  const hasBody = options.body !== undefined
-  const token = currentCsrfToken()
-  const response = await fetch(buildUrl(path, options.params), {
-    method: options.method ?? 'GET',
-    headers: {
-      ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
-      ...(token ? { 'x-olivia-csrf': token } : {}),
-      ...options.headers,
-    },
-    credentials: 'include',
-    body: hasBody ? JSON.stringify(options.body) : undefined,
-  })
-
-  if (!response.ok) {
-    const payload = await response.json().catch(() => ({}))
-    throw new Error(payload.message ?? 'Request failed')
+  const method = options.method ?? 'GET'
+  const attempts = method === 'GET' ? 2 : 1
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), path.startsWith('/api/ai/') ? 120000 : 20000)
+    try {
+      const token = currentCsrfToken()
+      const response = await fetch(buildUrl(path, options.params), {
+        method,
+        headers: {
+          ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+          ...(token ? { 'x-olivia-csrf': token } : {}),
+          ...options.headers,
+        },
+        credentials: 'include',
+        cache: 'no-store',
+        signal: controller.signal,
+        body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      })
+      if (response.status === 401 && options.allowUnauthenticated) return null
+      const payload = await response.json()
+      if (!response.ok) throw new Error(payload.message ?? 'Request failed')
+      return payload
+    } catch (error) {
+      const networkFailure = controller.signal.aborted || error instanceof TypeError
+      if (networkFailure && attempt + 1 < attempts) continue
+      if (networkFailure) throw new Error('Connection interrupted. Please try again.')
+      throw error
+    } finally {
+      clearTimeout(timeout)
+    }
   }
-
-  return response.json()
 }
 
 export const apiClient = {
@@ -57,15 +70,7 @@ export const apiClient = {
   patch: (path, body) => request(path, { method: 'PATCH', body }),
   delete: (path) => request(path, { method: 'DELETE' }),
   async getCurrentUser() {
-    const response = await fetch(buildUrl('/api/me'), {
-      credentials: 'include',
-      headers: csrfToken ? { 'x-olivia-csrf': csrfToken } : undefined,
-    })
-
-    if (response.status === 401) return null
-    if (!response.ok) throw new Error('Unable to restore session')
-
-    const payload = await response.json()
+    const payload = await request('/api/me', { allowUnauthenticated: true })
     csrfToken = currentCsrfToken()
     return payload
   },

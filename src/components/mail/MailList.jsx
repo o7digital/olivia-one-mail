@@ -68,7 +68,7 @@ export function MailList({
       <div className="day">Today</div>
       <div className="rows">
         {status === 'loading' ? <MailListSkeleton /> : null}
-        {status === 'error' ? <ErrorState onRetry={onRetry} /> : null}
+        {status === 'error' ? <ErrorState error={error} onRetry={onRetry} /> : null}
         {status === 'ready' && !messages.length ? <EmptyState query={query} /> : null}
         {status === 'ready' && messages.map((message) => (
           <button
