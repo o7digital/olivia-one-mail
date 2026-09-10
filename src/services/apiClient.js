@@ -3,12 +3,18 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? ''
 let csrfToken = ''
 
 function getCookieValue(name) {
-  return document.cookie
-    .split('; ')
+  const value = document.cookie
+    .split(';').map((entry) => entry.trim())
     .find((entry) => entry.startsWith(`${name}=`))
     ?.split('=')
     .slice(1)
     .join('=') ?? ''
+  try { return decodeURIComponent(value) } catch { return '' }
+}
+
+function currentCsrfToken() {
+  // Another tab can replace the session cookie after this tab has signed in.
+  return getCookieValue(import.meta.env.VITE_CSRF_COOKIE_NAME || 'olivia_csrf') || csrfToken
 }
 
 function buildUrl(path, params) {
@@ -24,11 +30,12 @@ function buildUrl(path, params) {
 
 async function request(path, options = {}) {
   const hasBody = options.body !== undefined
+  const token = currentCsrfToken()
   const response = await fetch(buildUrl(path, options.params), {
     method: options.method ?? 'GET',
     headers: {
       ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
-      ...(csrfToken ? { 'x-olivia-csrf': csrfToken } : {}),
+      ...(token ? { 'x-olivia-csrf': token } : {}),
       ...options.headers,
     },
     credentials: 'include',
@@ -59,7 +66,7 @@ export const apiClient = {
     if (!response.ok) throw new Error('Unable to restore session')
 
     const payload = await response.json()
-    csrfToken = csrfToken || getCookieValue(import.meta.env.VITE_CSRF_COOKIE_NAME || 'olivia_csrf')
+    csrfToken = currentCsrfToken()
     return payload
   },
   async login(credentials) {
