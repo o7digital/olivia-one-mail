@@ -242,6 +242,7 @@ function App() {
               onClearLabelFilter={() => inbox.setLabelFilter(null)}
               onCategoryChange={inbox.setCategory}
               onRetry={inbox.reload}
+              onCheckMail={inbox.checkMail}
               onPageChange={inbox.setPage}
               onSelect={inbox.selectMessage}
               onSortChange={inbox.setSortBy}

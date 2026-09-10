@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronLeft, ChevronRight, RefreshCw, SlidersHorizontal, X } from 'lucide-react'
 import { Avatar } from '../common/Avatar'
 import { IconButton } from '../common/IconButton'
 import { EmptyState, ErrorState, MailListSkeleton } from '../common/ViewState'
@@ -12,7 +12,7 @@ const SORT_OPTIONS = [
 
 export function MailList({
   activeFolder, category, error, labelFilter, messages, onCategoryChange, onClearLabelFilter, onRetry, onSelect,
-  onPageChange, onSortChange, pagination, query, selectedId, sortBy, status,
+  onCheckMail, onPageChange, onSortChange, pagination, query, selectedId, sortBy, status,
 }) {
   const [sortMenuOpen, setSortMenuOpen] = useState(false)
   const activeSortLabel = SORT_OPTIONS.find(({ value }) => value === sortBy)?.label ?? 'Sort messages'
@@ -49,6 +49,10 @@ export function MailList({
           </div>
         </div>
       </div>
+      <button className="checkMail" type="button" onClick={onCheckMail} disabled={status === 'loading'} aria-busy={status === 'loading'}>
+        <RefreshCw size={14} className={status === 'loading' ? 'checkMailSpinner' : ''} />
+        <span>{status === 'loading' ? 'Checking…' : 'Check Mail'}</span>
+      </button>
       {activeFolder === 'Inbox' ? (
         <div className="tabs" role="tablist" aria-label="Inbox category">
           <button className={category === 'focused' ? 'active' : ''} type="button" role="tab" aria-selected={category === 'focused'} onClick={() => onCategoryChange('focused')}>Focused</button>

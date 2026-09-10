@@ -197,6 +197,10 @@ export function useInbox(folder, query, enabled = true) {
   return {
     archiveMessage,
     category,
+    checkMail: () => {
+      if (page !== 1) setPage(1)
+      else load()
+    },
     deleteMessage,
     error,
     filteredMessages,
