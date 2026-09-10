@@ -7,6 +7,7 @@ import { Avatar } from '../common/Avatar'
 import { IconButton } from '../common/IconButton'
 import { AttachmentCard } from './AttachmentCard'
 import { SuggestedReply } from './SuggestedReply'
+import { EmailBody } from './EmailBody'
 
 function LabelsEditor({ knownLabels, labels, onChange }) {
   const [open, setOpen] = useState(false)
@@ -173,7 +174,7 @@ export function MailReader({
         <LabelsEditor knownLabels={knownLabels ?? []} labels={message.labels} onChange={handleLabelsChange} />
         <div className="summary"><label><Sparkles size={14} />AI Summary <button type="button" onClick={onAiRetry} disabled={aiStatus === 'loading'}>{aiStatus === 'loading' ? 'Analyzing…' : 'Summarize'}</button></label><p>{aiStatus === 'error' ? (aiError?.message || 'Olivia V3.5 could not analyze this email.') : (analysis?.summary?.[0] ?? 'Olivia is analyzing this email.')}</p></div>
         {message.bodyHtml
-          ? <iframe className="messageHtml" sandbox="" referrerPolicy="no-referrer" srcDoc={message.bodyHtml} title={`Email content: ${message.subject}`} />
+          ? <EmailBody html={message.bodyHtml} subject={message.subject} />
           : <div className="body">{message.body.map((paragraph, index) => <p key={`${message.id}-${index}`}>{paragraph}</p>)}</div>}
 
         {message.attachments.length ? (
