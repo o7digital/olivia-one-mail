@@ -6,6 +6,8 @@ import { computeReplyAllRecipients } from '../services/mailRecipients.js'
 import type { Folder, MailAttachment, MailMessage, MailPage } from '../types/domain.js'
 import type { MailProvider, OutgoingAttachment } from './mailProvider.js'
 
+const MAX_FORWARD_SOURCE_BYTES = 22 * 1024 * 1024
+
 interface OutgoingMessage {
   from: string | { name: string; address: string }
   to: string | string[]
@@ -14,12 +16,22 @@ interface OutgoingMessage {
   subject: string
   text: string
   html?: string
-  attachments?: Array<{ filename: string; contentType: string; content: Buffer }>
+  attachments?: Array<{ filename: string; contentType: string; content: Buffer; cid?: string }>
 }
 
 function escapeHtml(value: string) {
   const entities: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
   return value.replace(/[&<>"']/g, (character) => entities[character])
+}
+
+/** Keep the useful formatting from an inbound HTML part without relaying active content. */
+function sanitizeForwardHtml(value: string | undefined) {
+  if (!value?.trim()) return ''
+  return value
+    .replace(/<meta\b[^>]*>/gi, '')
+    .replace(/<(script|iframe|object|embed|form|style)\b[^>]*>[\s\S]*?<\/\1>/gi, '')
+    .replace(/\s+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/\b(?:href|src)\s*=\s*(["'])\s*javascript:[\s\S]*?\1/gi, ' ')
 }
 
 function forwardedHeaders(original: MailMessage) {
@@ -36,7 +48,8 @@ function forwardedHeaders(original: MailMessage) {
 
 export function buildForwardedText(original: MailMessage, note: string) {
   const prefix = note.trim() ? `${note.trimEnd()}\n\n` : ''
-  return `${prefix}---------- Forwarded message ---------\n${forwardedHeaders(original).join('\n')}\n\n${original.body.join('\n')}`
+  const body = original.bodyText || original.body.join('\n')
+  return `${prefix}---------- Forwarded message ---------\n${forwardedHeaders(original).join('\n')}\n\n${body}`
 }
 
 export function buildForwardedHtml(original: MailMessage, noteHtml: string | undefined, noteText: string) {
@@ -48,7 +61,7 @@ export function buildForwardedHtml(original: MailMessage, noteHtml: string | und
   const headerHtml = forwardedHeaders(original)
     .map((line) => `<div>${escapeHtml(line)}</div>`)
     .join('')
-  const bodyHtml = escapeHtml(original.body.join('\n')).replace(/\n/g, '<br>')
+  const bodyHtml = sanitizeForwardHtml(original.bodyHtml) || escapeHtml(original.bodyText || original.body.join('\n')).replace(/\n/g, '<br>')
   const separator = note ? '<br><br>' : ''
   return `${note}${separator}<div style="border-top:1px solid #cccccc;padding-top:12px"><strong>Forwarded message</strong>${headerHtml}<br><div>${bodyHtml}</div></div>`
 }
@@ -58,6 +71,15 @@ function prepareAttachments(attachments: OutgoingAttachment[] | undefined) {
     filename: attachment.filename.replace(/^.*[\\/]/, '') || 'attachment',
     contentType: attachment.contentType,
     content: Buffer.from(attachment.contentBase64, 'base64'),
+  }))
+}
+
+function prepareOriginalAttachments(attachments: Array<{ filename?: string | null; contentType?: string; content: Buffer; cid?: string | null }> | undefined) {
+  return attachments?.map((attachment) => ({
+    filename: (attachment.filename || 'attachment').replace(/^.*[\\/]/, '') || 'attachment',
+    contentType: attachment.contentType || 'application/octet-stream',
+    content: attachment.content,
+    ...(attachment.cid ? { cid: attachment.cid } : {}),
   }))
 }
 
@@ -297,8 +319,9 @@ export class MailcowImapProvider implements MailProvider {
           ? this.fromAddress.name
           : (from?.name || email)
         const date = message.internalDate ?? new Date()
-        const bodyText = decodeText(parsed?.text).trim()
-        const preview = bodyText.split('\n').find(Boolean)?.slice(0, 160) ?? 'No preview available.'
+        const bodyText = decodeText(parsed?.text)
+        const displayBody = bodyText.trim()
+        const preview = displayBody.split('\n').find(Boolean)?.slice(0, 160) ?? 'No preview available.'
         const attachments = (parsed?.attachments ?? []).map((attachment: {
           contentType?: string
           filename?: string
@@ -329,7 +352,8 @@ export class MailcowImapProvider implements MailProvider {
           company: email.split('@')[1] ?? '',
           subject: message.envelope?.subject || '(No subject)',
           preview,
-          body: bodyText ? bodyText.split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 24) : ['No body preview available.'],
+          bodyText,
+          body: displayBody ? displayBody.split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 24) : ['No body preview available.'],
           bodyHtml: sandboxHtml(parsed?.html),
           attachments,
           to: mapAddressList(message.envelope?.to),
@@ -354,7 +378,7 @@ export class MailcowImapProvider implements MailProvider {
       if (!selected) return null
       const label = folderLabel(selected)
       await client.mailboxOpen(mailbox)
-      const message = await client.fetchOne(uid, { uid: true, envelope: true, flags: true, internalDate: true, source: { maxLength: 1024 * 1024 * 3 } }, { uid: true })
+      const message = await client.fetchOne(uid, { uid: true, envelope: true, flags: true, internalDate: true, source: { maxLength: MAX_FORWARD_SOURCE_BYTES } }, { uid: true })
       if (!message) return null
       const parsed = message.source ? await simpleParser(message.source) : null
       const from = message.envelope?.from?.[0]
@@ -362,7 +386,8 @@ export class MailcowImapProvider implements MailProvider {
       const isAuthenticatedMailbox = email.toLowerCase() === this.credentials.email.toLowerCase()
       const name = isAuthenticatedMailbox ? this.fromAddress.name : (from?.name || email)
       const date = message.internalDate ?? new Date()
-      const bodyText = decodeText(parsed?.text).trim()
+      const bodyText = decodeText(parsed?.text)
+      const displayBody = bodyText.trim()
       const attachments = (parsed?.attachments ?? []).map((attachment: { contentType?: string; filename?: string; size?: number }) => {
         const mapped = mapAttachment(attachment.contentType)
         return { type: mapped.type, tone: mapped.tone, title: attachment.filename || 'Attachment', sub: attachment.contentType || 'application/octet-stream', meta: formatAttachmentMeta(attachment.size, attachment.contentType) }
@@ -372,10 +397,30 @@ export class MailcowImapProvider implements MailProvider {
         initials: name.split(/\s+/).slice(0, 2).map((part: string) => part[0] ?? '').join('').toUpperCase() || 'OO',
         time: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }), receivedAt: date.toISOString(),
         unread: !message.flags?.has('\\Seen'), starred: Boolean(message.flags?.has('\\Flagged')), tone: 'cyan', email, role: '', company: email.split('@')[1] ?? '',
-        subject: message.envelope?.subject || '(No subject)', preview: bodyText.split('\n').find(Boolean)?.slice(0, 160) ?? 'No preview available.',
-        body: bodyText ? bodyText.split('\n').map((line) => line.trim()).filter(Boolean) : ['No body preview available.'], bodyHtml: sandboxHtml(parsed?.html), attachments,
+        subject: message.envelope?.subject || '(No subject)', preview: displayBody.split('\n').find(Boolean)?.slice(0, 160) ?? 'No preview available.',
+        bodyText, body: displayBody ? displayBody.split('\n').map((line) => line.trim()).filter(Boolean) : ['No body preview available.'], bodyHtml: sandboxHtml(parsed?.html), attachments,
         to: mapAddressList(message.envelope?.to), cc: mapAddressList(message.envelope?.cc), labels: decodeLabelsFromFlags(message.flags),
       }
+    } finally {
+      await client.logout().catch(() => {})
+    }
+  }
+
+  private async getOriginalAttachments(id: string) {
+    const { mailbox, uid } = decodeMessageId(id)
+    const client = this.createImapClient()
+    await client.connect()
+    try {
+      await client.mailboxOpen(mailbox)
+      const message = await client.fetchOne(uid, { uid: true, source: { maxLength: MAX_FORWARD_SOURCE_BYTES } }, { uid: true })
+      if (!message?.source) return []
+      const parsed = await simpleParser(message.source)
+      return parsed.attachments.map((attachment: { filename?: string | null; contentType: string; content: Buffer; cid?: string | null }) => ({
+        filename: attachment.filename,
+        contentType: attachment.contentType,
+        content: attachment.content,
+        cid: attachment.cid,
+      }))
     } finally {
       await client.logout().catch(() => {})
     }
@@ -430,18 +475,26 @@ export class MailcowImapProvider implements MailProvider {
     return { id: info.messageId, status: 'sent' }
   }
 
-  async forward(id: string, input: { to: string; cc?: string; bcc?: string; body: string; html?: string; attachments?: OutgoingAttachment[] }) {
+  async forward(id: string, input: { to: string; cc?: string; bcc?: string; body: string; html?: string; forwardedContentIncluded?: boolean; attachments?: OutgoingAttachment[] }) {
     const original = await this.getMessage(id)
     if (!original) throw new Error('Message not found')
+    const originalAttachments = await this.getOriginalAttachments(id)
+    const text = input.forwardedContentIncluded ? input.body : buildForwardedText(original, input.body)
+    const html = input.forwardedContentIncluded
+      ? sanitizeForwardHtml(input.html) || escapeHtml(input.body).replace(/\n/g, '<br>')
+      : buildForwardedHtml(original, input.html, input.body)
     const info = await this.sendAndArchive({
       from: this.fromAddress,
       to: input.to,
       cc: input.cc?.trim() || undefined,
       bcc: input.bcc?.trim() || undefined,
       subject: original.subject.startsWith('Fwd:') ? original.subject : `Fwd: ${original.subject}`,
-      text: buildForwardedText(original, input.body),
-      html: buildForwardedHtml(original, input.html, input.body),
-      attachments: prepareAttachments(input.attachments),
+      text,
+      html,
+      attachments: [
+        ...(prepareAttachments(input.attachments) ?? []),
+        ...(prepareOriginalAttachments(originalAttachments) ?? []),
+      ],
     })
     return { id: info.messageId, status: 'sent' }
   }

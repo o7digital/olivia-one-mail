@@ -21,6 +21,8 @@ export interface MailMessage {
   subject: string
   preview: string
   body: string[]
+  /** Complete text part, kept separate from the display preview for forwarding. */
+  bodyText?: string
   bodyHtml?: string
   attachments: MailAttachment[]
   to?: string[]

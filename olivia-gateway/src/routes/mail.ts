@@ -8,6 +8,7 @@ const folderQuery = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).optional(),
 })
 const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024
+const MAX_FORWARD_HTML_BYTES = 20 * 1024 * 1024
 const attachmentSchema = z.object({
   filename: z.string().min(1).max(255),
   contentType: z.string().min(1).max(200),
@@ -37,7 +38,8 @@ const forwardSchema = z.object({
   cc: z.string().max(4000).optional().default(''),
   bcc: z.string().max(4000).optional().default(''),
   body: z.string().default(''),
-  html: z.string().max(500_000).optional().default(''),
+  html: z.string().max(MAX_FORWARD_HTML_BYTES).optional().default(''),
+  forwardedContentIncluded: z.boolean().optional().default(false),
   attachments: attachmentsSchema,
 })
 const moveSchema = z.object({ folder: z.string().min(1) })

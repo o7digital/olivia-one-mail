@@ -43,26 +43,50 @@ function formatForwardDate(message) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(receivedAt)
 }
 
-function ForwardedMessagePreview({ message }) {
-  if (!message) return null
-  return (
-    <section className="forwardedMessagePreview" aria-label="Original message included">
-      <b>Forwarded message</b>
-      <dl>
-        <div><dt>From:</dt><dd>{message.sender} &lt;{message.email}&gt;</dd></div>
-        <div><dt>Date:</dt><dd>{formatForwardDate(message)}</dd></div>
-        <div><dt>Subject:</dt><dd>{message.subject}</dd></div>
-        {message.to?.length ? <div><dt>To:</dt><dd>{message.to.join(', ')}</dd></div> : null}
-        {message.cc?.length ? <div><dt>CC:</dt><dd>{message.cc.join(', ')}</dd></div> : null}
-      </dl>
-      <div className="forwardedMessageBody">{message.body.map((line, index) => <p key={`${index}:${line}`}>{line}</p>)}</div>
-    </section>
-  )
+function forwardedBodyText(message) {
+  return message?.bodyText || message?.body?.join('\n') || ''
+}
+
+function forwardedBodyHtml(message) {
+  if (message?.bodyHtml) return message.bodyHtml
+  return plainTextToHtml(forwardedBodyText(message))
+}
+
+function buildForwardDraft(message) {
+  if (!message) return { body: '', html: '' }
+  const date = formatForwardDate(message)
+  const headers = [
+    `From: ${message.sender} <${message.email}>`,
+    `Date: ${date}`,
+    `Subject: ${message.subject}`,
+    ...(message.to?.length ? [`To: ${message.to.join(', ')}`] : []),
+    ...(message.cc?.length ? [`Cc: ${message.cc.join(', ')}`] : []),
+  ]
+  const historyText = `\n\n---------- Forwarded message ---------\n${headers.join('\n')}\n\n${forwardedBodyText(message)}`
+  const headerHtml = headers.map((header) => `<div>${plainTextToHtml(header)}</div>`).join('')
+  const historyHtml = `<div class="forwardNote"><br></div><section class="forwardedMessagePreview" data-forwarded-content="true" contenteditable="false" aria-label="Original message included"><strong>Forwarded message</strong><div class="forwardedMessageHeaders">${headerHtml}</div><div class="forwardedMessageBody">${forwardedBodyHtml(message)}</div></section>`
+  return { body: historyText, html: sanitizeComposerHtml(historyHtml) }
+}
+
+function prependForwardNote(noteDraft, forwardDraft) {
+  if (!noteDraft?.body?.trim()) return forwardDraft
+  return {
+    body: `${noteDraft.body.trimEnd()}\n\n${forwardDraft.body.trimStart()}`,
+    html: `${sanitizeComposerHtml(noteDraft.html || plainTextToHtml(noteDraft.body))}${forwardDraft.html}`,
+  }
 }
 
 export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initialTo = '', initialSubject = '', initialBody = '', forwardedMessage = null, onClose, onSent }) {
-  const initialDraft = { to: initialTo, cc: '', bcc: '', subject: initialSubject, body: initialBody, html: plainTextToHtml(initialBody) }
-  const restoredDraft = initialBody ? null : loadComposeDraft(mailboxEmail, mode, messageId)
+  const forwardDraft = mode === 'forward' ? buildForwardDraft(forwardedMessage) : { body: '', html: '' }
+  const initialDraft = { to: initialTo, cc: '', bcc: '', subject: initialSubject, body: forwardDraft.body || initialBody, html: forwardDraft.html || plainTextToHtml(initialBody) }
+  const savedDraft = initialBody ? null : loadComposeDraft(mailboxEmail, mode, messageId)
+  const legacyForwardDraft = savedDraft && mode === 'forward' && forwardedMessage && !savedDraft.body.includes('---------- Forwarded message ---------')
+  const restoredDraft = legacyForwardDraft
+    ? {
+        ...savedDraft,
+        ...prependForwardNote(savedDraft, forwardDraft),
+      }
+    : savedDraft
   const [draft, setDraft] = useState(restoredDraft || initialDraft)
   const [showCc, setShowCc] = useState(Boolean(restoredDraft?.cc))
   const [showBcc, setShowBcc] = useState(Boolean(restoredDraft?.bcc))
@@ -72,8 +96,8 @@ export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initi
   const [saveStatus, setSaveStatus] = useState(restoredDraft ? 'Draft restored' : '')
   const [windowState, setWindowState] = useState('normal')
   const [attachments, setAttachments] = useState([])
-  const [forwardedPreview, setForwardedPreview] = useState(forwardedMessage)
   const draftRef = useRef(draft)
+  const editorDirtyRef = useRef(false)
   const saveTimerRef = useRef(null)
   const sentRef = useRef(false)
   const editorRef = useRef(null)
@@ -96,7 +120,12 @@ export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initi
     let active = true
     mailService.getMessage(messageId)
       .then((message) => {
-        if (active) setForwardedPreview(message)
+        if (!active || editorDirtyRef.current || (restoredDraft && !legacyForwardDraft) || !message) return
+        const nextForwardDraft = legacyForwardDraft ? prependForwardNote(savedDraft, buildForwardDraft(message)) : buildForwardDraft(message)
+        const nextDraft = { ...draftRef.current, body: nextForwardDraft.body, html: nextForwardDraft.html }
+        draftRef.current = nextDraft
+        setDraft(nextDraft)
+        if (editorRef.current) editorRef.current.innerHTML = nextForwardDraft.html
       })
       .catch(() => {
         // Keep the message data already loaded in the inbox when detail loading fails.
@@ -129,6 +158,7 @@ export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initi
 
   function updateBodyFromEditor() {
     if (!editorRef.current) return
+    editorDirtyRef.current = true
     const body = editorRef.current.innerText.replace(/\u00a0/g, ' ')
     if (!body.trim()) editorRef.current.innerHTML = ''
     const nextDraft = { ...draftRef.current, body, html: body.trim() ? sanitizeComposerHtml(editorRef.current.innerHTML) : '' }
@@ -176,7 +206,7 @@ export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initi
       const serializedAttachments = await Promise.all(attachments.map(({ file }) => serializeAttachment(file)))
       if (mode === 'reply') await mailService.replyToMessage(messageId, draft.body, draft.html, serializedAttachments)
       else if (mode === 'reply-all') await mailService.replyAllMessage(messageId, draft.body, draft.html, serializedAttachments)
-      else if (mode === 'forward') await mailService.forwardMessage(messageId, { to: draft.to, cc: draft.cc, bcc: draft.bcc, body: draft.body, html: draft.html, attachments: serializedAttachments })
+      else if (mode === 'forward') await mailService.forwardMessage(messageId, { to: draft.to, cc: draft.cc, bcc: draft.bcc, body: draft.body, html: draft.html, forwardedContentIncluded: draft.body.includes('---------- Forwarded message ---------'), attachments: serializedAttachments })
       else await mailService.sendMessage({ ...draft, attachments: serializedAttachments })
     } catch (sendError) {
       setError(sendError.message)
@@ -234,7 +264,6 @@ export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initi
         {showBcc ? <input name="bcc" value={draft.bcc} onChange={updateField} placeholder="CCI" aria-label="Blind carbon copy recipients" /> : null}
         <input name="subject" value={draft.subject} onChange={updateField} placeholder="Subject" aria-label="Subject" disabled={config.subjectDisabled} />
         <div ref={editorRef} className="composeEditor" contentEditable role="textbox" aria-label="Message body" aria-multiline="true" data-placeholder={mode === 'forward' ? 'Add a note…' : 'Write something brilliant…'} onInput={updateBodyFromEditor} />
-        {mode === 'forward' ? <ForwardedMessagePreview message={forwardedPreview} /> : null}
         {attachments.length ? <div className="composeAttachments" aria-label="Selected attachments">
           {attachments.map(({ id, file }) => <div className="composeAttachment" key={id}>
             <FileText size={15} />
