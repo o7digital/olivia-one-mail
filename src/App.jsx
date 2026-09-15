@@ -315,6 +315,7 @@ function App() {
           initialBody={composeState.initialBody}
           initialSubject={composeState.initialSubject}
           initialTo={composeState.initialTo}
+          mailboxEmail={session.session?.user?.email}
           messageId={composeState.messageId}
           mode={composeState.mode}
           onClose={() => setComposeState(null)}

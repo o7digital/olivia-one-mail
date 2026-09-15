@@ -1,8 +1,8 @@
-import { Paperclip, Send, Sparkles, X } from 'lucide-react'
-import { useState } from 'react'
-import { IconButton } from '../../components/common/IconButton'
+import { Maximize2, Minus, Paperclip, Send, Sparkles, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { aiService } from '../../services/aiService'
 import { mailService } from '../../services/mailService'
+import { clearComposeDraft, hasDraftContent, loadComposeDraft, saveComposeDraft } from './draftStorage'
 
 const modeConfig = {
   new: { title: 'New Message', sentMessage: 'Message sent', toDisabled: false, subjectDisabled: false },
@@ -11,17 +11,47 @@ const modeConfig = {
   forward: { title: 'Forward', sentMessage: 'Message forwarded', toDisabled: false, subjectDisabled: true },
 }
 
-export function ComposeModal({ mode = 'new', messageId, initialTo = '', initialSubject = '', initialBody = '', onClose, onSent }) {
-  const [draft, setDraft] = useState({ to: initialTo, cc: '', bcc: '', subject: initialSubject, body: initialBody })
-  const [showCc, setShowCc] = useState(false)
-  const [showBcc, setShowBcc] = useState(false)
+export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initialTo = '', initialSubject = '', initialBody = '', onClose, onSent }) {
+  const initialDraft = { to: initialTo, cc: '', bcc: '', subject: initialSubject, body: initialBody }
+  const restoredDraft = initialBody ? null : loadComposeDraft(mailboxEmail, mode, messageId)
+  const [draft, setDraft] = useState(restoredDraft || initialDraft)
+  const [showCc, setShowCc] = useState(Boolean(restoredDraft?.cc))
+  const [showBcc, setShowBcc] = useState(Boolean(restoredDraft?.bcc))
   const [sending, setSending] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState('')
+  const [saveStatus, setSaveStatus] = useState(restoredDraft ? 'Draft restored' : '')
+  const [windowState, setWindowState] = useState('normal')
+  const draftRef = useRef(draft)
+  const saveTimerRef = useRef(null)
+  const sentRef = useRef(false)
   const config = modeConfig[mode] ?? modeConfig.new
 
+  draftRef.current = draft
+
+  useEffect(() => () => {
+    window.clearTimeout(saveTimerRef.current)
+    if (!sentRef.current) saveComposeDraft(mailboxEmail, mode, messageId, draftRef.current)
+  }, [mailboxEmail, messageId, mode])
+
+  function queueDraftSave(nextDraft) {
+    window.clearTimeout(saveTimerRef.current)
+    if (!hasDraftContent(nextDraft)) {
+      clearComposeDraft(mailboxEmail, mode, messageId)
+      setSaveStatus('')
+      return
+    }
+    setSaveStatus('Saving draft...')
+    saveTimerRef.current = window.setTimeout(() => {
+      setSaveStatus(saveComposeDraft(mailboxEmail, mode, messageId, nextDraft) ? 'Draft saved' : 'Draft not saved')
+    }, 350)
+  }
+
   function updateField(event) {
-    setDraft((current) => ({ ...current, [event.target.name]: event.target.value }))
+    const nextDraft = { ...draftRef.current, [event.target.name]: event.target.value }
+    draftRef.current = nextDraft
+    setDraft(nextDraft)
+    queueDraftSave(nextDraft)
     setError('')
   }
 
@@ -46,6 +76,9 @@ export function ComposeModal({ mode = 'new', messageId, initialTo = '', initialS
       setSending(false)
       return
     }
+    sentRef.current = true
+    window.clearTimeout(saveTimerRef.current)
+    clearComposeDraft(mailboxEmail, mode, messageId)
     onSent(config.sentMessage)
     onClose()
   }
@@ -60,7 +93,10 @@ export function ComposeModal({ mode = 'new', messageId, initialTo = '', initialS
         subject: draft.subject,
         currentDraft: draft.body,
       })
-      setDraft((current) => ({ ...current, body: response.draft, subject: response.subject || current.subject }))
+      const nextDraft = { ...draftRef.current, body: response.draft, subject: response.subject || draftRef.current.subject }
+      draftRef.current = nextDraft
+      setDraft(nextDraft)
+      queueDraftSave(nextDraft)
     } catch (composeError) {
       setError(composeError.message)
     } finally {
@@ -69,9 +105,16 @@ export function ComposeModal({ mode = 'new', messageId, initialTo = '', initialS
   }
 
   return (
-    <div className="overlay">
-      <form className="modal composeModal" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="compose-title">
-        <div><b id="compose-title">{config.title}</b><IconButton label="Close composer" onClick={onClose}><X size={17} /></IconButton></div>
+    <div className={`overlay composeOverlay is-${windowState}`}>
+      <form className={`modal composeModal is-${windowState}`} onSubmit={submit} role="dialog" aria-modal={windowState !== 'minimized'} aria-labelledby="compose-title">
+        <div className="composeTitlebar">
+          <div className="composeWindowControls">
+            <button className="windowControl close" type="button" aria-label="Close composer" onClick={onClose}><X size={9} /></button>
+            <button className="windowControl minimize" type="button" aria-label={windowState === 'minimized' ? 'Restore composer' : 'Minimize composer'} onClick={() => setWindowState((current) => current === 'minimized' ? 'normal' : 'minimized')}><Minus size={9} /></button>
+            <button className="windowControl maximize" type="button" aria-label={windowState === 'maximized' ? 'Reduce composer' : 'Maximize composer'} onClick={() => setWindowState((current) => current === 'maximized' ? 'normal' : 'maximized')}><Maximize2 size={8} /></button>
+          </div>
+          <b id="compose-title">{config.title}</b>
+        </div>
         <div className="composeRecipients">
           <input autoFocus name="to" value={draft.to} onChange={updateField} placeholder="To" aria-label="Recipient" disabled={config.toDisabled} />
           {!config.toDisabled ? <div className="composeRecipientToggles">
@@ -87,6 +130,7 @@ export function ComposeModal({ mode = 'new', messageId, initialTo = '', initialS
         <div className="composeActions">
           <button className="sendAi" type="submit" disabled={sending}><Send size={15} />{sending ? 'Sending…' : 'Send'}</button>
           <button className="icon" type="button" aria-label="Attach file"><Paperclip size={16} /></button>
+          {saveStatus ? <span className={`composeSaveStatus ${saveStatus === 'Draft not saved' ? 'error' : ''}`} role="status">{saveStatus}</span> : null}
           <button className="aiCompose" type="button" onClick={writeWithOlivia} disabled={generating}><Sparkles size={14} />{generating ? 'Writing…' : 'Write with Olivia'}</button>
         </div>
       </form>

@@ -338,8 +338,18 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 
 .overlay { position: fixed; inset: 0; background: rgba(2, 8, 18, .68); backdrop-filter: blur(8px); z-index: 30; display: grid; place-items: center; padding: 20px; }
 .modal { width: min(720px, 92vw); min-height: 480px; border: 1px solid rgba(148, 185, 226, .22); border-radius: 16px; background: linear-gradient(180deg, #0d1c31, #091523); box-shadow: 0 30px 90px rgba(0, 0, 0, .5); padding: 14px; }
-.composeModal { width: min(1100px, calc(100vw - 64px)); height: min(820px, calc(100vh - 64px)); min-height: min(560px, calc(100vh - 64px)); display: flex; flex-direction: column; }
-.modal > div:first-child { display: flex; align-items: center; justify-content: space-between; }
+.composeModal { width: min(1100px, calc(100vw - 64px)); height: min(820px, calc(100vh - 64px)); min-width: min(640px, calc(100vw - 40px)); min-height: min(560px, calc(100vh - 40px)); max-width: calc(100vw - 40px); max-height: calc(100dvh - 40px); display: flex; flex-direction: column; overflow: hidden; resize: both; }
+.composeModal.is-maximized { width: calc(100vw - 32px); height: calc(100dvh - 32px); max-width: none; max-height: none; resize: none; border-radius: 10px; }
+.composeOverlay.is-minimized { display: block; padding: 0; background: transparent; backdrop-filter: none; pointer-events: none; }
+.composeModal.is-minimized { width: min(430px, calc(100vw - 32px)); height: 50px; min-width: 0; min-height: 0; max-width: none; max-height: none; position: fixed; right: 16px; bottom: 16px; padding: 12px 14px; resize: none; pointer-events: auto; }
+.composeModal.is-minimized > :not(.composeTitlebar) { display: none; }
+.modal > .composeTitlebar { min-height: 24px; flex: 0 0 auto; display: grid; grid-template-columns: 62px 1fr 62px; align-items: center; justify-content: stretch; }
+.composeTitlebar > b { grid-column: 2; text-align: center; font-size: 11px; }
+.composeWindowControls { display: flex; align-items: center; gap: 8px; }
+.windowControl { width: 13px; height: 13px; flex: 0 0 13px; display: grid; place-items: center; border: 0; border-radius: 50%; padding: 0; color: rgba(25, 22, 28, .72); cursor: pointer; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .14); }
+.windowControl.close { background: #ff5f57; }.windowControl.minimize { background: #febc2e; }.windowControl.maximize { background: #28c840; }
+.windowControl svg { opacity: 0; }.composeWindowControls:hover .windowControl svg, .windowControl:focus-visible svg { opacity: 1; }
+.modal > div:first-child:not(.composeTitlebar) { display: flex; align-items: center; justify-content: space-between; }
 .modal input, .modal textarea { width: 100%; border: 0; border-bottom: 1px solid rgba(145, 181, 224, .12); background: transparent; color: white; padding: 11px 8px; outline: none; }
 .composeRecipients { position: relative; display: flex; align-items: center; border-bottom: 1px solid rgba(145, 181, 224, .12); }
 .composeRecipients input { border-bottom: 0; padding-right: 78px; }
@@ -350,7 +360,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 .composeModal textarea { flex: 1 1 auto; height: auto; min-height: 300px; }
 .modal input::placeholder, .modal textarea::placeholder { color: #71849b; }
 .formError { color: #fda4af; font-size: 9px; margin: 0 8px 8px; }
-.composeActions { display: flex; align-items: center; gap: 4px; }.modal .sendAi { margin-left: 0; }.aiCompose { margin-left: auto; border: 0; background: transparent; color: #9fa8eb; display: flex; align-items: center; gap: 5px; font-size: 9px; cursor: pointer; }
+.composeActions { display: flex; align-items: center; gap: 4px; }.modal .sendAi { margin-left: 0; }.composeSaveStatus { margin-left: 7px; color: #718ca2; font-size: 8px; }.composeSaveStatus.error { color: #fda4af; }.aiCompose { margin-left: auto; border: 0; background: transparent; color: #9fa8eb; display: flex; align-items: center; gap: 5px; font-size: 9px; cursor: pointer; }
 .confirmDialog { width: min(440px, 92vw); position: relative; border: 1px solid rgba(149, 112, 244, .34); border-radius: 17px; background: linear-gradient(160deg, #101d35, #11152d); padding: 28px; box-shadow: 0 30px 100px rgba(0, 0, 0, .55), 0 0 50px rgba(111, 60, 196, .12); }.confirmIcon { width: 46px; height: 46px; display: grid; place-items: center; border: 1px solid rgba(167, 139, 250, .35); border-radius: 13px; color: #c1adff; background: rgba(108, 54, 190, .2); }.confirmClose { position: absolute; top: 14px; right: 14px; }.confirmDialog > small { display: block; margin-top: 16px; color: #8e75d7; font-size: 8px; text-transform: uppercase; letter-spacing: .13em; }.confirmDialog h2 { margin: 7px 0; font-size: 20px; }.confirmDialog > p { color: #8ea0b7; font-size: 10px; line-height: 1.6; }.confirmMeta { margin-top: 18px; border: 1px solid rgba(145, 181, 224, .1); border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; }.confirmMeta span { color: #71869e; font-size: 9px; }.confirmMeta b { font-size: 11px; }.confirmActions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }.confirmActions button { border: 1px solid rgba(145, 181, 224, .13); border-radius: 8px; background: rgba(255, 255, 255, .03); padding: 8px 11px; font-size: 9px; cursor: pointer; }.confirmActions button:last-child { border-color: rgba(167, 139, 250, .35); background: linear-gradient(180deg, #704fd2, #5032a8); }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 50; border: 1px solid rgba(92, 220, 206, .25); border-radius: 999px; background: rgba(9, 27, 42, .94); box-shadow: 0 16px 40px rgba(0, 0, 0, .4); padding: 10px 15px; display: flex; align-items: center; gap: 8px; font-size: 9px; color: #c6e6e9; }.toast span { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 9px #4ade80; }
 .navScrim { display: none; }
@@ -475,7 +485,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
   .tasksPage { padding: 28px 18px; }.tasksSummary { flex-wrap: wrap; }.taskComposer { grid-template-columns: 1fr; }.taskComposerIcon { display: none; }.taskComposer > button { width: 100%; }.taskRow { min-height: 68px; }.taskDelete { opacity: 1; }
   .calendarPage { padding: 25px 14px; }.calendarSignal { display: none; }.calendarWorkspace { min-width: 650px; }.calendarPage { overflow-x: auto; }.calendarGrid { grid-template-rows: repeat(6, 72px); }
   .overlay { padding: 12px; }
-  .composeModal { width: calc(100vw - 24px); height: calc(100dvh - 24px); min-height: 0; }
+  .composeModal { width: calc(100vw - 24px); height: calc(100dvh - 24px); min-width: 0; min-height: 0; max-width: none; max-height: none; resize: none; }
+  .composeModal.is-maximized { width: calc(100vw - 12px); height: calc(100dvh - 12px); }
+  .composeModal.is-minimized { width: calc(100vw - 24px); height: 50px; right: 12px; bottom: 12px; }
   .composeModal textarea { min-height: 180px; }
 }
 
