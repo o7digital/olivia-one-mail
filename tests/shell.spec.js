@@ -48,7 +48,12 @@ test('mail shell interactions and desktop screenshots', async ({ page }) => {
   await expect(page.getByRole('dialog', { name: 'Reply All' })).toBeVisible()
   await page.getByRole('button', { name: 'Close composer' }).click()
   await page.getByRole('button', { name: 'Forward', exact: true }).click()
-  await expect(page.getByRole('dialog', { name: 'Forward' })).toBeVisible()
+  const forwardComposer = page.getByRole('dialog', { name: 'Forward' })
+  await expect(forwardComposer).toBeVisible()
+  const forwardedMessage = forwardComposer.getByLabel('Original message included')
+  await expect(forwardedMessage).toContainText('Liam Chen <liam@northstar.io>')
+  await expect(forwardedMessage).toContainText('Q3 Performance Review')
+  await expect(forwardedMessage).toContainText('Please find attached the Q3 performance review and recommendations')
   await page.getByRole('button', { name: 'Close composer' }).click()
 
   await page.screenshot({ path: 'artifacts/olivia-one-mail-desktop.png', fullPage: true })

@@ -22,6 +22,37 @@ function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => entities[character])
 }
 
+function forwardedHeaders(original: MailMessage) {
+  const parsedDate = original.receivedAt ? new Date(original.receivedAt) : null
+  const date = parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate.toUTCString() : original.time
+  return [
+    `From: ${original.sender} <${original.email}>`,
+    `Date: ${date}`,
+    `Subject: ${original.subject}`,
+    ...(original.to?.length ? [`To: ${original.to.join(', ')}`] : []),
+    ...(original.cc?.length ? [`Cc: ${original.cc.join(', ')}`] : []),
+  ]
+}
+
+export function buildForwardedText(original: MailMessage, note: string) {
+  const prefix = note.trim() ? `${note.trimEnd()}\n\n` : ''
+  return `${prefix}---------- Forwarded message ---------\n${forwardedHeaders(original).join('\n')}\n\n${original.body.join('\n')}`
+}
+
+export function buildForwardedHtml(original: MailMessage, noteHtml: string | undefined, noteText: string) {
+  const note = noteHtml?.trim()
+    ? noteHtml.trim()
+    : noteText.trim()
+      ? escapeHtml(noteText.trimEnd()).replace(/\n/g, '<br>')
+      : ''
+  const headerHtml = forwardedHeaders(original)
+    .map((line) => `<div>${escapeHtml(line)}</div>`)
+    .join('')
+  const bodyHtml = escapeHtml(original.body.join('\n')).replace(/\n/g, '<br>')
+  const separator = note ? '<br><br>' : ''
+  return `${note}${separator}<div style="border-top:1px solid #cccccc;padding-top:12px"><strong>Forwarded message</strong>${headerHtml}<br><div>${bodyHtml}</div></div>`
+}
+
 function prepareAttachments(attachments: OutgoingAttachment[] | undefined) {
   return attachments?.map((attachment) => ({
     filename: attachment.filename.replace(/^.*[\\/]/, '') || 'attachment',
@@ -342,7 +373,7 @@ export class MailcowImapProvider implements MailProvider {
         time: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }), receivedAt: date.toISOString(),
         unread: !message.flags?.has('\\Seen'), starred: Boolean(message.flags?.has('\\Flagged')), tone: 'cyan', email, role: '', company: email.split('@')[1] ?? '',
         subject: message.envelope?.subject || '(No subject)', preview: bodyText.split('\n').find(Boolean)?.slice(0, 160) ?? 'No preview available.',
-        body: bodyText ? bodyText.split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 200) : ['No body preview available.'], bodyHtml: sandboxHtml(parsed?.html), attachments,
+        body: bodyText ? bodyText.split('\n').map((line) => line.trim()).filter(Boolean) : ['No body preview available.'], bodyHtml: sandboxHtml(parsed?.html), attachments,
         to: mapAddressList(message.envelope?.to), cc: mapAddressList(message.envelope?.cc), labels: decodeLabelsFromFlags(message.flags),
       }
     } finally {
@@ -408,8 +439,8 @@ export class MailcowImapProvider implements MailProvider {
       cc: input.cc?.trim() || undefined,
       bcc: input.bcc?.trim() || undefined,
       subject: original.subject.startsWith('Fwd:') ? original.subject : `Fwd: ${original.subject}`,
-      text: `${input.body}\n\n---- Forwarded message ----\n${original.body.join('\n')}`,
-      html: input.html?.trim() ? `${input.html}<br><br><hr><p>Forwarded message</p><pre>${escapeHtml(original.body.join('\n'))}</pre>` : undefined,
+      text: buildForwardedText(original, input.body),
+      html: buildForwardedHtml(original, input.html, input.body),
       attachments: prepareAttachments(input.attachments),
     })
     return { id: info.messageId, status: 'sent' }

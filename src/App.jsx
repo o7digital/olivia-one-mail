@@ -86,7 +86,7 @@ function App() {
       setComposeState({ mode, messageId: message.id, initialTo: message.email, initialSubject: subject, initialBody })
     } else if (mode === 'forward') {
       const subject = message.subject.startsWith('Fwd:') ? message.subject : `Fwd: ${message.subject}`
-      setComposeState({ mode, messageId: message.id, initialTo: '', initialSubject: subject })
+      setComposeState({ mode, messageId: message.id, initialTo: '', initialSubject: subject, forwardedMessage: message })
     } else {
       setComposeState({ mode: 'new', initialTo: '', initialSubject: '' })
     }
@@ -318,6 +318,7 @@ function App() {
           mailboxEmail={session.session?.user?.email}
           messageId={composeState.messageId}
           mode={composeState.mode}
+          forwardedMessage={composeState.forwardedMessage}
           onClose={() => setComposeState(null)}
           onSent={(message) => {
             notify(message)

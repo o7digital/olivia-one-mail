@@ -36,7 +36,31 @@ async function serializeAttachment(file) {
   }
 }
 
-export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initialTo = '', initialSubject = '', initialBody = '', onClose, onSent }) {
+function formatForwardDate(message) {
+  if (!message?.receivedAt) return message?.time || ''
+  const receivedAt = new Date(message.receivedAt)
+  if (Number.isNaN(receivedAt.getTime())) return message.time || ''
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(receivedAt)
+}
+
+function ForwardedMessagePreview({ message }) {
+  if (!message) return null
+  return (
+    <section className="forwardedMessagePreview" aria-label="Original message included">
+      <b>Forwarded message</b>
+      <dl>
+        <div><dt>From:</dt><dd>{message.sender} &lt;{message.email}&gt;</dd></div>
+        <div><dt>Date:</dt><dd>{formatForwardDate(message)}</dd></div>
+        <div><dt>Subject:</dt><dd>{message.subject}</dd></div>
+        {message.to?.length ? <div><dt>To:</dt><dd>{message.to.join(', ')}</dd></div> : null}
+        {message.cc?.length ? <div><dt>CC:</dt><dd>{message.cc.join(', ')}</dd></div> : null}
+      </dl>
+      <div className="forwardedMessageBody">{message.body.map((line, index) => <p key={`${index}:${line}`}>{line}</p>)}</div>
+    </section>
+  )
+}
+
+export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initialTo = '', initialSubject = '', initialBody = '', forwardedMessage = null, onClose, onSent }) {
   const initialDraft = { to: initialTo, cc: '', bcc: '', subject: initialSubject, body: initialBody, html: plainTextToHtml(initialBody) }
   const restoredDraft = initialBody ? null : loadComposeDraft(mailboxEmail, mode, messageId)
   const [draft, setDraft] = useState(restoredDraft || initialDraft)
@@ -48,6 +72,7 @@ export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initi
   const [saveStatus, setSaveStatus] = useState(restoredDraft ? 'Draft restored' : '')
   const [windowState, setWindowState] = useState('normal')
   const [attachments, setAttachments] = useState([])
+  const [forwardedPreview, setForwardedPreview] = useState(forwardedMessage)
   const draftRef = useRef(draft)
   const saveTimerRef = useRef(null)
   const sentRef = useRef(false)
@@ -65,6 +90,21 @@ export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initi
     window.clearTimeout(saveTimerRef.current)
     if (!sentRef.current) saveComposeDraft(mailboxEmail, mode, messageId, draftRef.current)
   }, [mailboxEmail, messageId, mode])
+
+  useEffect(() => {
+    if (mode !== 'forward' || !messageId) return undefined
+    let active = true
+    mailService.getMessage(messageId)
+      .then((message) => {
+        if (active) setForwardedPreview(message)
+      })
+      .catch(() => {
+        // Keep the message data already loaded in the inbox when detail loading fails.
+      })
+    return () => {
+      active = false
+    }
+  }, [messageId, mode])
 
   function queueDraftSave(nextDraft) {
     window.clearTimeout(saveTimerRef.current)
@@ -193,7 +233,8 @@ export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initi
         {showCc ? <input name="cc" value={draft.cc} onChange={updateField} placeholder="CC" aria-label="Carbon copy recipients" /> : null}
         {showBcc ? <input name="bcc" value={draft.bcc} onChange={updateField} placeholder="CCI" aria-label="Blind carbon copy recipients" /> : null}
         <input name="subject" value={draft.subject} onChange={updateField} placeholder="Subject" aria-label="Subject" disabled={config.subjectDisabled} />
-        <div ref={editorRef} className="composeEditor" contentEditable role="textbox" aria-label="Message body" aria-multiline="true" data-placeholder={mode === 'forward' ? 'Add a note (the original message is attached automatically)…' : 'Write something brilliant…'} onInput={updateBodyFromEditor} />
+        <div ref={editorRef} className="composeEditor" contentEditable role="textbox" aria-label="Message body" aria-multiline="true" data-placeholder={mode === 'forward' ? 'Add a note…' : 'Write something brilliant…'} onInput={updateBodyFromEditor} />
+        {mode === 'forward' ? <ForwardedMessagePreview message={forwardedPreview} /> : null}
         {attachments.length ? <div className="composeAttachments" aria-label="Selected attachments">
           {attachments.map(({ id, file }) => <div className="composeAttachment" key={id}>
             <FileText size={15} />
