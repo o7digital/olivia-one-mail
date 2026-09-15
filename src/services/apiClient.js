@@ -31,9 +31,11 @@ function buildUrl(path, params) {
 async function request(path, options = {}) {
   const method = options.method ?? 'GET'
   const attempts = method === 'GET' ? 2 : 1
+  const isOutgoingMail = ['/api/mail/send', '/api/mail/reply/', '/api/mail/reply-all/', '/api/mail/forward/']
+    .some((prefix) => path.startsWith(prefix))
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), path.startsWith('/api/ai/') ? 120000 : 20000)
+    const timeout = setTimeout(() => controller.abort(), path.startsWith('/api/ai/') || isOutgoingMail ? 120000 : 20000)
     try {
       const token = currentCsrfToken()
       const response = await fetch(buildUrl(path, options.params), {

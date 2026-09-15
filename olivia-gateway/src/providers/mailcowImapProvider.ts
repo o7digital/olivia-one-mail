@@ -125,6 +125,9 @@ export class MailcowImapProvider implements MailProvider {
       host: this.config.imapHost,
       port: this.config.imapPort,
       secure: this.config.imapSecure,
+      connectionTimeout: 8000,
+      greetingTimeout: 8000,
+      socketTimeout: 12000,
       auth: {
         user: this.credentials.email,
         pass: this.credentials.password,
@@ -138,6 +141,9 @@ export class MailcowImapProvider implements MailProvider {
       port: this.config.smtpPort,
       secure: this.config.smtpSecure,
       requireTLS: !this.config.smtpSecure,
+      connectionTimeout: 8000,
+      greetingTimeout: 8000,
+      socketTimeout: 15000,
       auth: {
         user: this.credentials.email,
         pass: this.credentials.password,
@@ -186,7 +192,12 @@ export class MailcowImapProvider implements MailProvider {
       envelope: compiled.envelope,
       raw: rawMessage,
     })
-    await this.appendToSent(rawMessage)
+    // SMTP acceptance means the message is sent. A slow IMAP Sent-folder copy
+    // must not make the browser retry and deliver the same message twice.
+    void this.appendToSent(rawMessage).catch((error: unknown) => {
+      const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : 'IMAP_APPEND_FAILED'
+      console.warn(JSON.stringify({ event: 'mail.sent_archive_failed', code }))
+    })
     return info
   }
 
