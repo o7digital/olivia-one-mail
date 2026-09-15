@@ -22,6 +22,7 @@ export function loadComposeDraft(mailboxEmail, mode, messageId) {
       bcc: typeof parsed.bcc === 'string' ? parsed.bcc : '',
       subject: typeof parsed.subject === 'string' ? parsed.subject : '',
       body: typeof parsed.body === 'string' ? parsed.body : '',
+      html: typeof parsed.html === 'string' ? parsed.html : '',
     }
   } catch {
     return null

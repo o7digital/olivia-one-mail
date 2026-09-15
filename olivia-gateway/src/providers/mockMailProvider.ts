@@ -27,15 +27,15 @@ export class MockMailProvider implements MailProvider {
     return findMessage(id)
   }
 
-  async sendMessage(input: { to: string; cc?: string; bcc?: string; subject: string; body: string }) {
+  async sendMessage(input: { to: string; cc?: string; bcc?: string; subject: string; body: string; html?: string }) {
     return { id: `sent-${Date.now()}`, status: `queued:${input.to}` }
   }
 
-  async reply(id: string, input: { body: string }) {
+  async reply(id: string, input: { body: string; html?: string }) {
     return { id: `${id}:reply`, status: `queued:${input.body.length}` }
   }
 
-  async replyAll(id: string, input: { body: string }) {
+  async replyAll(id: string, input: { body: string; html?: string }) {
     const original = findMessage(id)
     if (!original) throw new Error('Message not found')
     const recipients = computeReplyAllRecipients({
@@ -47,7 +47,7 @@ export class MockMailProvider implements MailProvider {
     return { id: `${id}:reply-all`, status: `queued:${recipients.to.length + recipients.cc.length}:${input.body.length}` }
   }
 
-  async forward(id: string, input: { to: string; cc?: string; bcc?: string; body: string }) {
+  async forward(id: string, input: { to: string; cc?: string; bcc?: string; body: string; html?: string }) {
     return { id: `${id}:forward`, status: `queued:${input.to}:${input.body.length}` }
   }
 

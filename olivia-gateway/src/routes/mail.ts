@@ -13,13 +13,15 @@ const sendSchema = z.object({
   bcc: z.string().max(4000).optional().default(''),
   subject: z.string().min(1),
   body: z.string().default(''),
+  html: z.string().max(500_000).optional().default(''),
 })
-const replySchema = z.object({ body: z.string().min(1) })
+const replySchema = z.object({ body: z.string().min(1), html: z.string().max(500_000).optional().default('') })
 const forwardSchema = z.object({
   to: z.string().min(1),
   cc: z.string().max(4000).optional().default(''),
   bcc: z.string().max(4000).optional().default(''),
   body: z.string().default(''),
+  html: z.string().max(500_000).optional().default(''),
 })
 const moveSchema = z.object({ folder: z.string().min(1) })
 const labelsSchema = z.object({ labels: z.array(z.string().min(1).max(60)).max(20) })

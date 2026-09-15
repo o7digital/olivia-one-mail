@@ -357,7 +357,16 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 .composeRecipientToggles button { border: 0; border-radius: 5px; background: transparent; color: #7f93aa; padding: 4px; font-size: 8px; cursor: pointer; }
 .composeRecipientToggles button:hover, .composeRecipientToggles button[aria-expanded='true'] { color: #72dff2; background: rgba(57, 217, 255, .07); }
 .modal textarea { height: 290px; resize: none; border-bottom: 0; }
-.composeModal textarea { flex: 1 1 auto; height: auto; min-height: 300px; }
+.composeEditor { flex: 1 1 auto; min-height: 250px; overflow: auto; padding: 13px 8px; color: white; outline: 0; font-size: 12px; line-height: 1.55; white-space: pre-wrap; }
+.composeEditor:empty::before { content: attr(data-placeholder); color: #71849b; pointer-events: none; }
+.composeEditor ul, .composeEditor ol { margin: 6px 0; padding-left: 25px; }.composeEditor blockquote { margin: 7px 0; border-left: 3px solid rgba(var(--theme-accent-rgb), .42); padding-left: 12px; color: #b4c2d1; }
+.composeEditor a { color: var(--theme-accent); }
+.composeFormatting { min-height: 42px; flex: 0 0 auto; display: flex; align-items: center; gap: 2px; overflow-x: auto; margin: 0 0 8px; border: 1px solid rgba(145, 181, 224, .12); border-radius: 8px; padding: 4px 6px; background: rgba(255, 255, 255, .025); scrollbar-width: thin; }
+.composeFormatting button { width: 29px; height: 29px; flex: 0 0 29px; display: grid; place-items: center; border: 0; border-radius: 5px; padding: 0; background: transparent; color: #9eafc1; cursor: pointer; }
+.composeFormatting button:hover, .composeFormatting button.active, .composeFormatting button[aria-pressed='true'] { color: #effaff; background: rgba(var(--theme-accent-rgb), .11); }
+.composeFormatting select { height: 29px; flex: 0 0 104px; border: 0; border-radius: 5px; outline: 0; padding: 0 7px; background: rgba(255, 255, 255, .035); color: #b9c7d5; font: inherit; font-size: 9px; cursor: pointer; }
+.composeFormatting .fontSizeSelect { flex-basis: 70px; }.formatDivider { width: 1px; height: 19px; flex: 0 0 1px; margin: 0 3px; background: rgba(145, 181, 224, .16); }
+.formatColor { width: 29px; height: 29px; flex: 0 0 29px; position: relative; display: grid; place-items: center; border-radius: 5px; color: #aebdca; font-size: 13px; font-weight: 800; cursor: pointer; }.formatColor:hover { background: rgba(var(--theme-accent-rgb), .11); }.formatColor::after { content: ''; width: 14px; height: 2px; position: absolute; bottom: 4px; background: var(--format-color, #edf5ff); }.modal .formatColor input { width: 100%; height: 100%; position: absolute; inset: 0; border: 0; padding: 0; opacity: 0; cursor: pointer; }
 .modal input::placeholder, .modal textarea::placeholder { color: #71849b; }
 .formError { color: #fda4af; font-size: 9px; margin: 0 8px 8px; }
 .composeActions { display: flex; align-items: center; gap: 4px; }.modal .sendAi { margin-left: 0; }.composeSaveStatus { margin-left: 7px; color: #718ca2; font-size: 8px; }.composeSaveStatus.error { color: #fda4af; }.aiCompose { margin-left: auto; border: 0; background: transparent; color: #9fa8eb; display: flex; align-items: center; gap: 5px; font-size: 9px; cursor: pointer; }
@@ -488,7 +497,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
   .composeModal { width: calc(100vw - 24px); height: calc(100dvh - 24px); min-width: 0; min-height: 0; max-width: none; max-height: none; resize: none; }
   .composeModal.is-maximized { width: calc(100vw - 12px); height: calc(100dvh - 12px); }
   .composeModal.is-minimized { width: calc(100vw - 24px); height: 50px; right: 12px; bottom: 12px; }
-  .composeModal textarea { min-height: 180px; }
+  .composeEditor { min-height: 150px; }
+  .composeFormatting { min-height: 40px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
