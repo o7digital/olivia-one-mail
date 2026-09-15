@@ -109,7 +109,6 @@ test('mail shell interactions and desktop screenshots', async ({ page }) => {
   await composer.getByRole('button', { name: 'Maximize composer' }).click()
   await expect(composer).toHaveClass(/is-maximized/)
   await composer.getByRole('button', { name: 'Reduce composer' }).click()
-  await page.screenshot({ path: 'artifacts/olivia-one-compose.png', fullPage: true })
   await composer.getByRole('button', { name: 'Close composer' }).click()
 
   await page.getByRole('button', { name: 'Compose', exact: true }).click()
@@ -119,12 +118,30 @@ test('mail shell interactions and desktop screenshots', async ({ page }) => {
   const restoredBody = restoredComposer.getByRole('textbox', { name: 'Message body' })
   await expect(restoredBody).toContainText('Here are the next steps for our partnership.')
   expect(await restoredBody.evaluate((element) => element.innerHTML)).toContain('<ul>')
+  const fileChooserPromise = page.waitForEvent('filechooser')
+  await restoredComposer.getByRole('button', { name: 'Attach files' }).click()
+  const fileChooser = await fileChooserPromise
+  await fileChooser.setFiles([
+    { name: 'proposal.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 test proposal') },
+    { name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('Remove this file before sending') },
+  ])
+  await expect(restoredComposer.getByLabel('Selected attachments')).toContainText('proposal.pdf')
+  await expect(restoredComposer.getByLabel('Selected attachments')).toContainText('notes.txt')
+  await restoredComposer.getByRole('button', { name: 'Remove notes.txt' }).click()
+  await expect(restoredComposer.getByLabel('Selected attachments')).not.toContainText('notes.txt')
+  await page.screenshot({ path: 'artifacts/olivia-one-compose.png', fullPage: true })
   const sendRequestPromise = page.waitForRequest((request) => request.url().endsWith('/api/mail/send'))
   await restoredComposer.getByRole('button', { name: 'Send', exact: true }).click()
   const sendPayload = (await sendRequestPromise).postDataJSON()
   expect(sendPayload.body).toContain('Here are the next steps')
   expect(sendPayload.html).toContain('<ul>')
   expect(sendPayload.html).toMatch(/font-weight:\s*bold/i)
+  expect(sendPayload.attachments).toEqual([{
+    filename: 'proposal.pdf',
+    contentType: 'application/pdf',
+    size: 22,
+    contentBase64: Buffer.from('%PDF-1.4 test proposal').toString('base64'),
+  }])
   await expect(restoredComposer).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Compose', exact: true }).click()

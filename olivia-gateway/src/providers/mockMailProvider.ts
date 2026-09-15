@@ -1,7 +1,7 @@
 import { folders, messages } from '../data/mockData.js'
 import { computeReplyAllRecipients } from '../services/mailRecipients.js'
 import type { Folder, MailMessage } from '../types/domain.js'
-import type { MailProvider } from './mailProvider.js'
+import type { MailProvider, OutgoingAttachment } from './mailProvider.js'
 
 const MOCK_MAILBOX_EMAIL = 'olivier.steineur@o7digitalgroup.com'
 
@@ -27,15 +27,15 @@ export class MockMailProvider implements MailProvider {
     return findMessage(id)
   }
 
-  async sendMessage(input: { to: string; cc?: string; bcc?: string; subject: string; body: string; html?: string }) {
+  async sendMessage(input: { to: string; cc?: string; bcc?: string; subject: string; body: string; html?: string; attachments?: OutgoingAttachment[] }) {
     return { id: `sent-${Date.now()}`, status: `queued:${input.to}` }
   }
 
-  async reply(id: string, input: { body: string; html?: string }) {
+  async reply(id: string, input: { body: string; html?: string; attachments?: OutgoingAttachment[] }) {
     return { id: `${id}:reply`, status: `queued:${input.body.length}` }
   }
 
-  async replyAll(id: string, input: { body: string; html?: string }) {
+  async replyAll(id: string, input: { body: string; html?: string; attachments?: OutgoingAttachment[] }) {
     const original = findMessage(id)
     if (!original) throw new Error('Message not found')
     const recipients = computeReplyAllRecipients({
@@ -47,7 +47,7 @@ export class MockMailProvider implements MailProvider {
     return { id: `${id}:reply-all`, status: `queued:${recipients.to.length + recipients.cc.length}:${input.body.length}` }
   }
 
-  async forward(id: string, input: { to: string; cc?: string; bcc?: string; body: string; html?: string }) {
+  async forward(id: string, input: { to: string; cc?: string; bcc?: string; body: string; html?: string; attachments?: OutgoingAttachment[] }) {
     return { id: `${id}:forward`, status: `queued:${input.to}:${input.body.length}` }
   }
 

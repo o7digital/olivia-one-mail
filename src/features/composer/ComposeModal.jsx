@@ -1,4 +1,4 @@
-import { Maximize2, Minus, Paperclip, Send, Sparkles, X } from 'lucide-react'
+import { FileText, Maximize2, Minus, Paperclip, Send, Sparkles, X } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { aiService } from '../../services/aiService'
 import { mailService } from '../../services/mailService'
@@ -13,6 +13,29 @@ const modeConfig = {
   forward: { title: 'Forward', sentMessage: 'Message forwarded', toDisabled: false, subjectDisabled: true },
 }
 
+const MAX_ATTACHMENT_BYTES = 15 * 1024 * 1024
+const MAX_ATTACHMENT_COUNT = 10
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(bytes < 10240 ? 1 : 0)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+async function serializeAttachment(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  let binary = ''
+  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000))
+  }
+  return {
+    filename: file.name,
+    contentType: file.type || 'application/octet-stream',
+    size: file.size,
+    contentBase64: window.btoa(binary),
+  }
+}
+
 export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initialTo = '', initialSubject = '', initialBody = '', onClose, onSent }) {
   const initialDraft = { to: initialTo, cc: '', bcc: '', subject: initialSubject, body: initialBody, html: plainTextToHtml(initialBody) }
   const restoredDraft = initialBody ? null : loadComposeDraft(mailboxEmail, mode, messageId)
@@ -24,10 +47,12 @@ export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initi
   const [error, setError] = useState('')
   const [saveStatus, setSaveStatus] = useState(restoredDraft ? 'Draft restored' : '')
   const [windowState, setWindowState] = useState('normal')
+  const [attachments, setAttachments] = useState([])
   const draftRef = useRef(draft)
   const saveTimerRef = useRef(null)
   const sentRef = useRef(false)
   const editorRef = useRef(null)
+  const attachmentInputRef = useRef(null)
   const config = modeConfig[mode] ?? modeConfig.new
 
   draftRef.current = draft
@@ -73,6 +98,29 @@ export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initi
     setError('')
   }
 
+  function addAttachments(event) {
+    const selected = Array.from(event.target.files || [])
+    event.target.value = ''
+    if (!selected.length) return
+
+    const availableSlots = Math.max(MAX_ATTACHMENT_COUNT - attachments.length, 0)
+    const candidates = selected.slice(0, availableSlots)
+    let totalSize = attachments.reduce((sum, item) => sum + item.file.size, 0)
+    const accepted = []
+    for (const file of candidates) {
+      if (totalSize + file.size > MAX_ATTACHMENT_BYTES) continue
+      totalSize += file.size
+      accepted.push({ id: `${file.name}:${file.size}:${file.lastModified}:${crypto.randomUUID()}`, file })
+    }
+    setError(accepted.length === selected.length ? '' : 'You can attach up to 10 files with a combined size of 15 MB.')
+    setAttachments([...attachments, ...accepted])
+  }
+
+  function removeAttachment(id) {
+    setAttachments((current) => current.filter((attachment) => attachment.id !== id))
+    setError('')
+  }
+
   async function submit(event) {
     event.preventDefault()
     if (mode === 'new' && (!draft.to.trim() || !draft.subject.trim())) {
@@ -85,10 +133,11 @@ export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initi
     }
     setSending(true)
     try {
-      if (mode === 'reply') await mailService.replyToMessage(messageId, draft.body, draft.html)
-      else if (mode === 'reply-all') await mailService.replyAllMessage(messageId, draft.body, draft.html)
-      else if (mode === 'forward') await mailService.forwardMessage(messageId, { to: draft.to, cc: draft.cc, bcc: draft.bcc, body: draft.body, html: draft.html })
-      else await mailService.sendMessage(draft)
+      const serializedAttachments = await Promise.all(attachments.map(({ file }) => serializeAttachment(file)))
+      if (mode === 'reply') await mailService.replyToMessage(messageId, draft.body, draft.html, serializedAttachments)
+      else if (mode === 'reply-all') await mailService.replyAllMessage(messageId, draft.body, draft.html, serializedAttachments)
+      else if (mode === 'forward') await mailService.forwardMessage(messageId, { to: draft.to, cc: draft.cc, bcc: draft.bcc, body: draft.body, html: draft.html, attachments: serializedAttachments })
+      else await mailService.sendMessage({ ...draft, attachments: serializedAttachments })
     } catch (sendError) {
       setError(sendError.message)
       setSending(false)
@@ -145,11 +194,19 @@ export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initi
         {showBcc ? <input name="bcc" value={draft.bcc} onChange={updateField} placeholder="CCI" aria-label="Blind carbon copy recipients" /> : null}
         <input name="subject" value={draft.subject} onChange={updateField} placeholder="Subject" aria-label="Subject" disabled={config.subjectDisabled} />
         <div ref={editorRef} className="composeEditor" contentEditable role="textbox" aria-label="Message body" aria-multiline="true" data-placeholder={mode === 'forward' ? 'Add a note (the original message is attached automatically)…' : 'Write something brilliant…'} onInput={updateBodyFromEditor} />
+        {attachments.length ? <div className="composeAttachments" aria-label="Selected attachments">
+          {attachments.map(({ id, file }) => <div className="composeAttachment" key={id}>
+            <FileText size={15} />
+            <span><b>{file.name}</b><small>{formatFileSize(file.size)}</small></span>
+            <button type="button" aria-label={`Remove ${file.name}`} title={`Remove ${file.name}`} onClick={() => removeAttachment(id)}><X size={13} /></button>
+          </div>)}
+        </div> : null}
         <RichTextToolbar editorRef={editorRef} onChange={updateBodyFromEditor} />
         {error ? <p className="formError" role="alert">{error}</p> : null}
         <div className="composeActions">
           <button className="sendAi" type="submit" disabled={sending}><Send size={15} />{sending ? 'Sending…' : 'Send'}</button>
-          <button className="icon" type="button" aria-label="Attach file"><Paperclip size={16} /></button>
+          <input ref={attachmentInputRef} className="attachmentInput" type="file" multiple aria-label="File attachments" onChange={addAttachments} />
+          <button className="icon" type="button" aria-label="Attach files" title="Attach files" onClick={() => attachmentInputRef.current?.click()}><Paperclip size={16} /></button>
           {saveStatus ? <span className={`composeSaveStatus ${saveStatus === 'Draft not saved' ? 'error' : ''}`} role="status">{saveStatus}</span> : null}
           <button className="aiCompose" type="button" onClick={writeWithOlivia} disabled={generating}><Sparkles size={14} />{generating ? 'Writing…' : 'Write with Olivia'}</button>
         </div>

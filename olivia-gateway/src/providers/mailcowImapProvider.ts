@@ -4,7 +4,7 @@ import nodemailer from 'nodemailer'
 import { getMailcowConnectionConfig, resolveFromName, type MailboxCredentials, type MailcowConnectionConfig } from '../services/mailcowAuth.js'
 import { computeReplyAllRecipients } from '../services/mailRecipients.js'
 import type { Folder, MailAttachment, MailMessage, MailPage } from '../types/domain.js'
-import type { MailProvider } from './mailProvider.js'
+import type { MailProvider, OutgoingAttachment } from './mailProvider.js'
 
 interface OutgoingMessage {
   from: string | { name: string; address: string }
@@ -14,11 +14,20 @@ interface OutgoingMessage {
   subject: string
   text: string
   html?: string
+  attachments?: Array<{ filename: string; contentType: string; content: Buffer }>
 }
 
 function escapeHtml(value: string) {
   const entities: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
   return value.replace(/[&<>"']/g, (character) => entities[character])
+}
+
+function prepareAttachments(attachments: OutgoingAttachment[] | undefined) {
+  return attachments?.map((attachment) => ({
+    filename: attachment.filename.replace(/^.*[\\/]/, '') || 'attachment',
+    contentType: attachment.contentType,
+    content: Buffer.from(attachment.contentBase64, 'base64'),
+  }))
 }
 
 const SPECIAL_USE_LABELS: Record<string, string> = {
@@ -330,7 +339,7 @@ export class MailcowImapProvider implements MailProvider {
     }
   }
 
-  async sendMessage(input: { to: string; cc?: string; bcc?: string; subject: string; body: string; html?: string }) {
+  async sendMessage(input: { to: string; cc?: string; bcc?: string; subject: string; body: string; html?: string; attachments?: OutgoingAttachment[] }) {
     const info = await this.sendAndArchive({
       from: this.fromAddress,
       to: input.to,
@@ -339,11 +348,12 @@ export class MailcowImapProvider implements MailProvider {
       subject: input.subject,
       text: input.body,
       html: input.html?.trim() || undefined,
+      attachments: prepareAttachments(input.attachments),
     })
     return { id: info.messageId, status: 'sent' }
   }
 
-  async reply(id: string, input: { body: string; html?: string }) {
+  async reply(id: string, input: { body: string; html?: string; attachments?: OutgoingAttachment[] }) {
     const original = await this.getMessage(id)
     if (!original) throw new Error('Message not found')
     const info = await this.sendAndArchive({
@@ -352,11 +362,12 @@ export class MailcowImapProvider implements MailProvider {
       subject: original.subject.startsWith('Re:') ? original.subject : `Re: ${original.subject}`,
       text: input.body,
       html: input.html?.trim() || undefined,
+      attachments: prepareAttachments(input.attachments),
     })
     return { id: info.messageId, status: 'sent' }
   }
 
-  async replyAll(id: string, input: { body: string; html?: string }) {
+  async replyAll(id: string, input: { body: string; html?: string; attachments?: OutgoingAttachment[] }) {
     const original = await this.getMessage(id)
     if (!original) throw new Error('Message not found')
     const recipients = computeReplyAllRecipients({
@@ -372,11 +383,12 @@ export class MailcowImapProvider implements MailProvider {
       subject: original.subject.startsWith('Re:') ? original.subject : `Re: ${original.subject}`,
       text: input.body,
       html: input.html?.trim() || undefined,
+      attachments: prepareAttachments(input.attachments),
     })
     return { id: info.messageId, status: 'sent' }
   }
 
-  async forward(id: string, input: { to: string; cc?: string; bcc?: string; body: string; html?: string }) {
+  async forward(id: string, input: { to: string; cc?: string; bcc?: string; body: string; html?: string; attachments?: OutgoingAttachment[] }) {
     const original = await this.getMessage(id)
     if (!original) throw new Error('Message not found')
     const info = await this.sendAndArchive({
@@ -387,6 +399,7 @@ export class MailcowImapProvider implements MailProvider {
       subject: original.subject.startsWith('Fwd:') ? original.subject : `Fwd: ${original.subject}`,
       text: `${input.body}\n\n---- Forwarded message ----\n${original.body.join('\n')}`,
       html: input.html?.trim() ? `${input.html}<br><br><hr><p>Forwarded message</p><pre>${escapeHtml(original.body.join('\n'))}</pre>` : undefined,
+      attachments: prepareAttachments(input.attachments),
     })
     return { id: info.messageId, status: 'sent' }
   }
