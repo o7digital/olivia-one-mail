@@ -71,51 +71,70 @@ function hexToRgb(hex) {
   return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 }
 }
 
-function rgbToHsl({ r, g, b }) {
-  const rn = r / 255
-  const gn = g / 255
-  const bn = b / 255
-  const max = Math.max(rn, gn, bn)
-  const min = Math.min(rn, gn, bn)
-  const delta = max - min
-  const l = (max + min) / 2
-  let h = 0
-  let s = 0
-  if (delta) {
-    s = l > 0.5 ? delta / (2 - max - min) : delta / (max + min)
-    if (max === rn) h = ((gn - bn) / delta) % 6
-    else if (max === gn) h = (bn - rn) / delta + 2
-    else h = (rn - gn) / delta + 4
-    h *= 60
-    if (h < 0) h += 360
-  }
-  return { h, s: s * 100, l: l * 100 }
+function mixChannel(channel, target, ratio) {
+  return Math.round(channel + (target - channel) * ratio)
 }
 
-function hslToRgb({ h, s, l }) {
-  const sn = s / 100
-  const ln = l / 100
-  const c = (1 - Math.abs(2 * ln - 1)) * sn
-  const x = c * (1 - Math.abs(((h / 60) % 2) - 1))
-  const m = ln - c / 2
-  let [rp, gp, bp] = [0, 0, 0]
-  if (h < 60) [rp, gp, bp] = [c, x, 0]
-  else if (h < 120) [rp, gp, bp] = [x, c, 0]
-  else if (h < 180) [rp, gp, bp] = [0, c, x]
-  else if (h < 240) [rp, gp, bp] = [0, x, c]
-  else if (h < 300) [rp, gp, bp] = [x, 0, c]
-  else [rp, gp, bp] = [c, 0, x]
-  return { r: Math.round((rp + m) * 255), g: Math.round((gp + m) * 255), b: Math.round((bp + m) * 255) }
-}
-
-// Adjusts a theme color's saturation (and slightly its lightness) by a 40-160% intensity factor.
-export function adjustColorIntensity(hex, intensityPercent) {
+// 100% keeps the original color. Above 100% blends toward white (lighter); below 100% blends toward black (darker).
+// This is a straight, monotonic blend (no saturation/hue math) so the result always moves in the expected direction.
+function intensityBlend(intensityPercent) {
   const factor = clampIntensity(intensityPercent) / 100
-  const hsl = rgbToHsl(hexToRgb(hex))
-  const nextSaturation = Math.min(100, Math.max(0, hsl.s * factor))
-  const nextLightness = Math.min(92, Math.max(8, hsl.l + (factor - 1) * 12))
-  const { r, g, b } = hslToRgb({ h: hsl.h, s: nextSaturation, l: nextLightness })
+  const ratio = Math.min(0.82, (Math.abs(factor - 1) / 0.6) * 0.82)
+  return { ratio, target: factor > 1 ? 255 : 0 }
+}
+
+export function adjustColorIntensity(hex, intensityPercent) {
+  const { r, g, b } = hexToRgb(hex)
+  const { ratio, target } = intensityBlend(intensityPercent)
+  const rr = mixChannel(r, target, ratio)
+  const gg = mixChannel(g, target, ratio)
+  const bb = mixChannel(b, target, ratio)
   const toHex = (channel) => channel.toString(16).padStart(2, '0')
-  return { hex: `#${toHex(r)}${toHex(g)}${toHex(b)}`, rgb: `${r}, ${g}, ${b}` }
+  return { hex: `#${toHex(rr)}${toHex(gg)}${toHex(bb)}`, rgb: `${rr}, ${gg}, ${bb}` }
+}
+
+function adjustRgbaIntensity([r, g, b, a], intensityPercent) {
+  const { ratio, target } = intensityBlend(intensityPercent)
+  const rr = mixChannel(r, target, ratio)
+  const gg = mixChannel(g, target, ratio)
+  const bb = mixChannel(b, target, ratio)
+  return `rgba(${rr}, ${gg}, ${bb}, ${a})`
+}
+
+// Base (100%) palette values, matching the .app[data-theme='X'] rules in styles/index.css.
+const THEME_PALETTES = {
+  default: { accent: '#39d9ff', secondary: '#8b5cf6', bgStart: '#0d2035', bgMid: '#07111f', bgEnd: '#0b1a2e', topbar: [6, 16, 29, .93], cardStart: [15, 34, 55, .98], cardEnd: [8, 24, 42, .97], actionStart: '#159ab3', actionEnd: '#08708d', selectedStart: [23, 74, 112, .58], selectedEnd: [13, 44, 75, .66] },
+  green: { accent: '#59e59b', secondary: '#22c55e', bgStart: '#10291f', bgMid: '#07150f', bgEnd: '#0c2118', topbar: [7, 22, 15, .94], cardStart: [16, 41, 31, .98], cardEnd: [8, 28, 20, .97], actionStart: '#269f69', actionEnd: '#16764b', selectedStart: [29, 101, 73, .58], selectedEnd: [16, 67, 47, .68] },
+  gray: { accent: '#c7d0da', secondary: '#7f8fa4', bgStart: '#222831', bgMid: '#11151a', bgEnd: '#1b2027', topbar: [17, 21, 26, .95], cardStart: [37, 43, 51, .98], cardEnd: [22, 27, 32, .97], actionStart: '#687684', actionEnd: '#46515e', selectedStart: [64, 75, 87, .65], selectedEnd: [42, 50, 59, .72] },
+  orange: { accent: '#ffb454', secondary: '#f97316', bgStart: '#2a1c12', bgMid: '#160e09', bgEnd: '#21140b', topbar: [25, 15, 8, .95], cardStart: [44, 30, 20, .98], cardEnd: [26, 16, 11, .97], actionStart: '#d77824', actionEnd: '#a94a10', selectedStart: [122, 69, 26, .62], selectedEnd: [76, 40, 16, .7] },
+  violet: { accent: '#b69cff', secondary: '#8b5cf6', bgStart: '#21183a', bgMid: '#100b1e', bgEnd: '#1b1230', topbar: [17, 11, 31, .95], cardStart: [36, 26, 61, .98], cardEnd: [21, 15, 39, .97], actionStart: '#7f5ddb', actionEnd: '#5c38b6', selectedStart: [74, 50, 119, .64], selectedEnd: [47, 31, 78, .72] },
+}
+
+// Recomputes every theme CSS variable at the given intensity, so the whole
+// app (background, cards, buttons) gets lighter/darker, not just the accent.
+export function buildThemeCssVars(themeId, intensityPercent) {
+  const base = THEME_PALETTES[themeId] ?? THEME_PALETTES.default
+  const accent = adjustColorIntensity(base.accent, intensityPercent)
+  const secondary = adjustColorIntensity(base.secondary, intensityPercent)
+  const bgStart = adjustColorIntensity(base.bgStart, intensityPercent)
+  const bgMid = adjustColorIntensity(base.bgMid, intensityPercent)
+  const bgEnd = adjustColorIntensity(base.bgEnd, intensityPercent)
+  const actionStart = adjustColorIntensity(base.actionStart, intensityPercent)
+  const actionEnd = adjustColorIntensity(base.actionEnd, intensityPercent)
+  return {
+    '--theme-accent': accent.hex,
+    '--theme-accent-rgb': accent.rgb,
+    '--theme-secondary-rgb': secondary.rgb,
+    '--theme-bg-start': bgStart.hex,
+    '--theme-bg-mid': bgMid.hex,
+    '--theme-bg-end': bgEnd.hex,
+    '--theme-topbar': adjustRgbaIntensity(base.topbar, intensityPercent),
+    '--theme-card-start': adjustRgbaIntensity(base.cardStart, intensityPercent),
+    '--theme-card-end': adjustRgbaIntensity(base.cardEnd, intensityPercent),
+    '--theme-action-start': actionStart.hex,
+    '--theme-action-end': actionEnd.hex,
+    '--theme-selected-start': adjustRgbaIntensity(base.selectedStart, intensityPercent),
+    '--theme-selected-end': adjustRgbaIntensity(base.selectedEnd, intensityPercent),
+  }
 }
 

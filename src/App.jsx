@@ -20,7 +20,7 @@ import { useSession } from './hooks/useSession'
 import { pulseService } from './services/pulseService'
 import { intelligenceService } from './services/intelligenceService'
 import { useInbox, useMailFolders } from './features/inbox/useInbox'
-import { COLOR_THEMES, adjustColorIntensity, loadColorIntensity, loadColorTheme, saveColorIntensity, saveColorTheme } from './theme'
+import { buildThemeCssVars, loadColorIntensity, loadColorTheme, saveColorIntensity, saveColorTheme } from './theme'
 
 function App() {
   const location = useLocation()
@@ -200,12 +200,8 @@ function App() {
     )
   }
 
-  const activeThemeDef = COLOR_THEMES.find((theme) => theme.id === colorTheme) ?? COLOR_THEMES[0]
-  const accentAdjusted = adjustColorIntensity(activeThemeDef.colors[0], colorIntensity)
-  const secondaryAdjusted = adjustColorIntensity(activeThemeDef.colors[2], colorIntensity)
-
   return (
-    <div className="app" data-theme={colorTheme} style={{ '--theme-accent': accentAdjusted.hex, '--theme-accent-rgb': accentAdjusted.rgb, '--theme-secondary-rgb': secondaryAdjusted.rgb }}>
+    <div className="app" data-theme={colorTheme} style={buildThemeCssVars(colorTheme, colorIntensity)}>
       <div className="glow g1" /><div className="glow g2" />
       <TopBar
         aiOpen={aiOpen}
