@@ -20,7 +20,7 @@ import { useSession } from './hooks/useSession'
 import { pulseService } from './services/pulseService'
 import { intelligenceService } from './services/intelligenceService'
 import { useInbox, useMailFolders } from './features/inbox/useInbox'
-import { loadColorTheme, saveColorTheme } from './theme'
+import { COLOR_THEMES, adjustColorIntensity, loadColorIntensity, loadColorTheme, saveColorIntensity, saveColorTheme } from './theme'
 
 function App() {
   const location = useLocation()
@@ -40,6 +40,7 @@ function App() {
   const [privacyAccepted, setPrivacyAccepted] = useState(false)
   const [askState, setAskState] = useState(null)
   const [colorTheme, setColorTheme] = useState('default')
+  const [colorIntensity, setColorIntensity] = useState(100)
   const session = useSession()
   const isAuthenticated = session.isAuthenticated
   const folders = useMailFolders(isAuthenticated)
@@ -60,7 +61,10 @@ function App() {
 
   useEffect(() => {
     const email = session.session?.user?.email
-    if (email) setColorTheme(loadColorTheme(email))
+    if (!email) return
+    const theme = loadColorTheme(email)
+    setColorTheme(theme)
+    setColorIntensity(loadColorIntensity(email, theme))
   }, [session.session?.user?.email])
 
   useEffect(() => {
@@ -83,7 +87,7 @@ function App() {
   function openCompose(mode, message, initialBody = '') {
     if (mode === 'reply' || mode === 'reply-all') {
       const subject = message.subject.startsWith('Re:') ? message.subject : `Re: ${message.subject}`
-      setComposeState({ mode, messageId: message.id, initialTo: message.email, initialSubject: subject, initialBody })
+      setComposeState({ mode, messageId: message.id, initialTo: message.email, initialSubject: subject, initialBody, repliedMessage: message })
     } else if (mode === 'forward') {
       const subject = message.subject.startsWith('Fwd:') ? message.subject : `Fwd: ${message.subject}`
       setComposeState({ mode, messageId: message.id, initialTo: '', initialSubject: subject, forwardedMessage: message })
@@ -135,6 +139,12 @@ function App() {
   function changeColorTheme(theme) {
     const nextTheme = saveColorTheme(session.session?.user?.email, theme)
     setColorTheme(nextTheme)
+    setColorIntensity(loadColorIntensity(session.session?.user?.email, nextTheme))
+  }
+
+  function changeColorIntensity(value) {
+    const nextIntensity = saveColorIntensity(session.session?.user?.email, colorTheme, value)
+    setColorIntensity(nextIntensity)
   }
 
   async function handleLogin(event) {
@@ -190,8 +200,12 @@ function App() {
     )
   }
 
+  const activeThemeDef = COLOR_THEMES.find((theme) => theme.id === colorTheme) ?? COLOR_THEMES[0]
+  const accentAdjusted = adjustColorIntensity(activeThemeDef.colors[0], colorIntensity)
+  const secondaryAdjusted = adjustColorIntensity(activeThemeDef.colors[2], colorIntensity)
+
   return (
-    <div className="app" data-theme={colorTheme}>
+    <div className="app" data-theme={colorTheme} style={{ '--theme-accent': accentAdjusted.hex, '--theme-accent-rgb': accentAdjusted.rgb, '--theme-secondary-rgb': secondaryAdjusted.rgb }}>
       <div className="glow g1" /><div className="glow g2" />
       <TopBar
         aiOpen={aiOpen}
@@ -302,7 +316,7 @@ function App() {
           <Route key={page} path={`/${page}`} element={(
             <main className="grid pageGrid">
               <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} user={session.session?.user} />
-              <FeaturePage page={page} colorTheme={colorTheme} onColorThemeChange={changeColorTheme} />
+              <FeaturePage page={page} colorTheme={colorTheme} onColorThemeChange={changeColorTheme} colorIntensity={colorIntensity} onColorIntensityChange={changeColorIntensity} mailboxEmail={session.session?.user?.email} />
               <AppRail />
             </main>
           )} />
@@ -319,6 +333,7 @@ function App() {
           messageId={composeState.messageId}
           mode={composeState.mode}
           forwardedMessage={composeState.forwardedMessage}
+          repliedMessage={composeState.repliedMessage}
           onClose={() => setComposeState(null)}
           onSent={(message) => {
             notify(message)

@@ -76,9 +76,36 @@ function prependForwardNote(noteDraft, forwardDraft) {
   }
 }
 
-export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initialTo = '', initialSubject = '', initialBody = '', forwardedMessage = null, onClose, onSent }) {
+function quotedReplyText(message) {
+  return forwardedBodyText(message).split('\n').map((line) => `> ${line}`).join('\n')
+}
+
+function replyQuoteHeaderText(message) {
+  return `On ${formatForwardDate(message)}, ${message?.sender || message?.email} <${message?.email || ''}> wrote:`
+}
+
+function buildReplyDraft(message) {
+  if (!message) return { body: '', html: '' }
+  const headerText = replyQuoteHeaderText(message)
+  const historyText = `\n\n${headerText}\n${quotedReplyText(message)}`
+  const historyHtml = `<div class="replyNote"><br></div><blockquote class="quotedMessagePreview" data-quoted-content="true" contenteditable="false" aria-label="Original message included"><div class="quotedMessageHeader">${plainTextToHtml(headerText)}</div><div class="quotedMessageBody">${forwardedBodyHtml(message)}</div></blockquote>`
+  return { body: historyText, html: sanitizeComposerHtml(historyHtml) }
+}
+
+function prependReplyNote(noteBody, replyDraft) {
+  if (!replyDraft.body) return { body: noteBody, html: plainTextToHtml(noteBody) }
+  if (!noteBody?.trim()) return replyDraft
+  return {
+    body: `${noteBody.trimEnd()}\n\n${replyDraft.body.trimStart()}`,
+    html: `${plainTextToHtml(noteBody)}${replyDraft.html}`,
+  }
+}
+
+export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initialTo = '', initialSubject = '', initialBody = '', forwardedMessage = null, repliedMessage = null, onClose, onSent }) {
+  const isReplyMode = mode === 'reply' || mode === 'reply-all'
   const forwardDraft = mode === 'forward' ? buildForwardDraft(forwardedMessage) : { body: '', html: '' }
-  const initialDraft = { to: initialTo, cc: '', bcc: '', subject: initialSubject, body: forwardDraft.body || initialBody, html: forwardDraft.html || plainTextToHtml(initialBody) }
+  const replyDraft = isReplyMode ? prependReplyNote(initialBody, buildReplyDraft(repliedMessage)) : { body: '', html: '' }
+  const initialDraft = { to: initialTo, cc: '', bcc: '', subject: initialSubject, body: forwardDraft.body || replyDraft.body || initialBody, html: forwardDraft.html || replyDraft.html || plainTextToHtml(initialBody) }
   const savedDraft = initialBody ? null : loadComposeDraft(mailboxEmail, mode, messageId)
   const legacyForwardDraft = savedDraft && mode === 'forward' && forwardedMessage && !savedDraft.body.includes('---------- Forwarded message ---------')
   const restoredDraft = legacyForwardDraft
@@ -116,11 +143,20 @@ export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initi
   }, [mailboxEmail, messageId, mode])
 
   useEffect(() => {
-    if (mode !== 'forward' || !messageId) return undefined
+    if ((mode !== 'forward' && !isReplyMode) || !messageId) return undefined
     let active = true
     mailService.getMessage(messageId)
       .then((message) => {
         if (!active || editorDirtyRef.current || (restoredDraft && !legacyForwardDraft) || !message) return
+        if (isReplyMode) {
+          const nextReplyDraft = prependReplyNote(initialBody, buildReplyDraft(message))
+          if (!nextReplyDraft.body) return
+          const nextDraft = { ...draftRef.current, body: nextReplyDraft.body, html: nextReplyDraft.html }
+          draftRef.current = nextDraft
+          setDraft(nextDraft)
+          if (editorRef.current) editorRef.current.innerHTML = nextReplyDraft.html
+          return
+        }
         const nextForwardDraft = legacyForwardDraft ? prependForwardNote(savedDraft, buildForwardDraft(message)) : buildForwardDraft(message)
         const nextDraft = { ...draftRef.current, body: nextForwardDraft.body, html: nextForwardDraft.html }
         draftRef.current = nextDraft

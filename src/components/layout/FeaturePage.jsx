@@ -3,7 +3,7 @@ import { useClerk } from '@clerk/react'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { peopleService } from '../../services/peopleService'
-import { COLOR_THEMES } from '../../theme'
+import { COLOR_THEMES, adjustColorIntensity, loadColorIntensity, saveColorIntensity } from '../../theme'
 
 const pageDetails = {
   calendar: { eyebrow: 'Schedule', title: 'Calendar', copy: 'Your connected calendar experience will arrive in Phase 2.', icon: CalendarDays, stats: ['3 meetings today', 'Next: 2:30 PM', 'Focus time protected'] },
@@ -13,7 +13,7 @@ const pageDetails = {
   settings: { eyebrow: 'Workspace', title: 'Settings', copy: 'Account, provider, intelligence, and security preferences.', icon: Settings2, stats: ['O7 Mail protected', 'AI assistance on', 'Mock provider active'] },
 }
 
-export function FeaturePage({ page, colorTheme = 'default', onColorThemeChange }) {
+export function FeaturePage({ page, colorTheme = 'default', onColorThemeChange, colorIntensity = 100, onColorIntensityChange, mailboxEmail }) {
   const [dynamicStats, setDynamicStats] = useState(null)
   const detail = pageDetails[page]
   const Icon = detail.icon
@@ -48,7 +48,7 @@ export function FeaturePage({ page, colorTheme = 'default', onColorThemeChange }
   return (
     <section className="featurePage card">
       <div className="featureHero"><span className="featureIcon"><Icon size={24} /></span><small>{detail.eyebrow}</small><h1>{detail.title}</h1><p>{detail.copy}</p></div>
-      {page === 'settings' ? <AppearanceSettings colorTheme={colorTheme} onColorThemeChange={onColorThemeChange} /> : null}
+      {page === 'settings' ? <AppearanceSettings colorTheme={colorTheme} onColorThemeChange={onColorThemeChange} colorIntensity={colorIntensity} onColorIntensityChange={onColorIntensityChange} mailboxEmail={mailboxEmail} /> : null}
       {page === 'settings' ? <ConnectedAccounts /> : null}
       <div className="featureStats">{(dynamicStats ?? detail.stats).map((stat) => <div key={stat}><span /><b>{stat}</b></div>)}</div>
       <div className="phaseNote"><Sparkles size={17} /><div><b>Phase 2 gateway ready</b><p>This route now has a server-side boundary. Live provider adapters can replace the mock gateway without redesigning the UI.</p></div></div>
@@ -56,8 +56,24 @@ export function FeaturePage({ page, colorTheme = 'default', onColorThemeChange }
   )
 }
 
-function AppearanceSettings({ colorTheme, onColorThemeChange }) {
+function AppearanceSettings({ colorTheme, onColorThemeChange, colorIntensity = 100, onColorIntensityChange, mailboxEmail }) {
   const activeTheme = COLOR_THEMES.find((theme) => theme.id === colorTheme) ?? COLOR_THEMES[0]
+  const [intensities, setIntensities] = useState(() => Object.fromEntries(COLOR_THEMES.map((theme) => [theme.id, loadColorIntensity(mailboxEmail, theme.id)])))
+
+  useEffect(() => {
+    setIntensities(Object.fromEntries(COLOR_THEMES.map((theme) => [theme.id, loadColorIntensity(mailboxEmail, theme.id)])))
+  }, [mailboxEmail])
+
+  // Keep the active card's slider in sync with the intensity applied to the app shell.
+  useEffect(() => {
+    setIntensities((current) => (current[colorTheme] === colorIntensity ? current : { ...current, [colorTheme]: colorIntensity }))
+  }, [colorTheme, colorIntensity])
+
+  function updateIntensity(themeId, value) {
+    const nextIntensity = saveColorIntensity(mailboxEmail, themeId, value)
+    setIntensities((current) => ({ ...current, [themeId]: nextIntensity }))
+    if (themeId === colorTheme) onColorIntensityChange?.(nextIntensity)
+  }
 
   return (
     <section className="appearanceSettings" aria-labelledby="appearance-settings-title">
@@ -68,12 +84,29 @@ function AppearanceSettings({ colorTheme, onColorThemeChange }) {
       <div className="themeGrid" role="radiogroup" aria-label="Color theme">
         {COLOR_THEMES.map((theme) => {
           const selected = theme.id === activeTheme.id
+          const intensity = intensities[theme.id] ?? 100
+          const previewAccent = adjustColorIntensity(theme.colors[0], intensity)
+          const previewSecondary = adjustColorIntensity(theme.colors[2], intensity)
           return (
-            <button className={`themeOption ${selected ? 'selected' : ''}`} type="button" role="radio" aria-checked={selected} key={theme.id} onClick={() => onColorThemeChange?.(theme.id)}>
-              <span className="themePreview" style={{ '--theme-preview-accent': theme.colors[0], '--theme-preview-surface': theme.colors[1], '--theme-preview-secondary': theme.colors[2] }} aria-hidden="true"><i /><i /><i /></span>
-              <span className="themeOptionCopy"><b>{theme.name}</b><small>{theme.description}</small></span>
-              <span className="themeCheck" aria-hidden="true">{selected ? <Check size={14} /> : null}</span>
-            </button>
+            <div className={`themeOption ${selected ? 'selected' : ''}`} key={theme.id}>
+              <button className="themeOptionButton" type="button" role="radio" aria-checked={selected} onClick={() => onColorThemeChange?.(theme.id)}>
+                <span className="themePreview" style={{ '--theme-preview-accent': previewAccent.hex, '--theme-preview-surface': theme.colors[1], '--theme-preview-secondary': previewSecondary.hex }} aria-hidden="true"><i /><i /><i /></span>
+                <span className="themeOptionCopy"><b>{theme.name}</b><small>{theme.description}</small></span>
+                <span className="themeCheck" aria-hidden="true">{selected ? <Check size={14} /> : null}</span>
+              </button>
+              <label className="themeIntensity">
+                <span>Intensity</span>
+                <input
+                  type="range"
+                  min={40}
+                  max={160}
+                  step={5}
+                  value={intensity}
+                  aria-label={`${theme.name} color intensity`}
+                  onChange={(event) => updateIntensity(theme.id, Number(event.target.value))}
+                />
+              </label>
+            </div>
           )
         })}
       </div>

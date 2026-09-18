@@ -28,6 +28,8 @@ export function sanitizeComposerHtml(value) {
         continue
       } else if (name === 'data-forwarded-content' && attribute.value === 'true') {
         continue
+      } else if (name === 'data-quoted-content' && attribute.value === 'true') {
+        continue
       } else if (name.startsWith('aria-')) {
         continue
       } else if (name === 'class' && /^[a-zA-Z0-9_-]+(?:\s+[a-zA-Z0-9_-]+)*$/.test(attribute.value)) {
