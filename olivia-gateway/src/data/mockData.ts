@@ -58,6 +58,8 @@ export const messages: MailMessage[] = [
     company: 'Northstar',
     subject: 'Q3 Performance Review',
     preview: 'Please find attached the Q3 performance review and recommendations.',
+    bodyText: 'Hi Olivier,\nPlease find attached the Q3 performance review and recommendations for the next quarter.\nBest,\nLiam',
+    bodyHtml: '<html><head><style>body, html { font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; }</style></head><body><p>Hi Olivier,</p><p>Please find attached the Q3 performance review and recommendations for the next quarter.</p><p>Best,<br>Liam</p></body></html>',
     body: ['Hi Olivier,', 'Please find attached the Q3 performance review and recommendations for the next quarter.', 'Best,', 'Liam'],
     attachments: [],
   },

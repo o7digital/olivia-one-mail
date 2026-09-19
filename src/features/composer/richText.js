@@ -1,5 +1,6 @@
 const ALLOWED_TAGS = new Set(['A', 'B', 'BLOCKQUOTE', 'BR', 'CODE', 'DIV', 'EM', 'FONT', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'HR', 'I', 'IMG', 'LI', 'OL', 'P', 'PRE', 'SECTION', 'SPAN', 'STRONG', 'SUB', 'SUP', 'TABLE', 'TBODY', 'TD', 'TH', 'THEAD', 'TR', 'U', 'UL'])
 const ALLOWED_STYLES = new Set(['color', 'font-family', 'font-size', 'font-style', 'font-weight', 'text-align', 'text-decoration'])
+const DROPPED_TAGS = new Set(['HEAD', 'LINK', 'META', 'NOSCRIPT', 'SCRIPT', 'STYLE', 'TEMPLATE', 'TITLE'])
 
 export function plainTextToHtml(value) {
   const container = document.createElement('div')
@@ -8,11 +9,15 @@ export function plainTextToHtml(value) {
 }
 
 export function sanitizeComposerHtml(value) {
-  const documentFragment = new DOMParser().parseFromString(`<div>${value || ''}</div>`, 'text/html')
-  const root = documentFragment.body.firstElementChild
-  if (!root) return ''
+  const parsedDocument = new DOMParser().parseFromString(value || '', 'text/html')
+  const root = parsedDocument.createElement('div')
+  root.innerHTML = parsedDocument.body.innerHTML
 
   for (const element of Array.from(root.querySelectorAll('*')).reverse()) {
+    if (DROPPED_TAGS.has(element.tagName)) {
+      element.remove()
+      continue
+    }
     if (!ALLOWED_TAGS.has(element.tagName)) {
       element.replaceWith(...element.childNodes)
       continue
