@@ -615,22 +615,35 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 .composeModal input::placeholder, .composeModal textarea::placeholder { color: var(--compose-muted); }
 .composeModal .composeRecipients { border-color: var(--compose-border); }
 .composeModal .composeRecipientToggles button { color: var(--compose-muted); }
-.composeModal .composeEditor {
+.composeModal .composeEditorFrame {
+  flex: 1 1 auto;
   min-height: 250px;
-  padding: 18px 16px;
+  overflow: auto;
   border: 1px solid var(--compose-border);
   border-radius: 11px;
   background: var(--compose-editor);
+}
+.composeModal .composeEditor {
+  min-height: 100%;
+  padding: 18px 16px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--compose-text);
   font-size: 15px;
   line-height: 1.62;
   caret-color: var(--theme-accent);
+  overflow: visible;
 }
-.composeModal .composeEditor:focus-visible { outline: 0; border-color: color-mix(in srgb, var(--theme-accent) 72%, var(--compose-border)); box-shadow: 0 0 0 3px rgba(var(--theme-accent-rgb), .1); }
+.composeModal .composeEditorFrame.has-history .composeEditor { min-height: 220px; }
+.composeModal .composeEditorFrame:focus-within { border-color: color-mix(in srgb, var(--theme-accent) 72%, var(--compose-border)); box-shadow: 0 0 0 3px rgba(var(--theme-accent-rgb), .1); }
+.composeModal .composeEditor:focus-visible { outline: 0; }
 .composeModal .composeEditor:empty::before { color: var(--compose-muted); }
 .composeModal .composeEditor > :not(.quotedMessagePreview):not(.forwardedMessagePreview),
 .composeModal .composeEditor > :not(.quotedMessagePreview):not(.forwardedMessagePreview) * { color: var(--compose-text) !important; }
 .composeModal .composeEditor > .replyNote { height: 12px; }
+.composeModal .composeHistory { padding: 0 16px 16px; }
+.composeModal .composeHistory .quotedMessagePreview { margin-top: 0; }
 .composeModal .quotedMessagePreview, .composeModal .forwardedMessagePreview {
   max-height: 190px;
   overflow: auto;

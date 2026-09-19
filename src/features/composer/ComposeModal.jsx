@@ -98,56 +98,43 @@ function replyQuoteHeaderText(message) {
   return `On ${formatForwardDate(message)}, ${message?.sender || message?.email} <${message?.email || ''}> wrote:`
 }
 
-function buildReplyDraft(message) {
+function buildReplyHistory(message) {
   if (!message) return { body: '', html: '' }
   const headerText = replyQuoteHeaderText(message)
-  const historyText = `\n\n${headerText}\n${quotedReplyText(message)}`
-  const historyHtml = `<div class="replyNote"><br></div><blockquote class="quotedMessagePreview" data-quoted-content="true" contenteditable="false" aria-label="Original message included"><div class="quotedMessageHeader">${plainTextToHtml(headerText)}</div><div class="quotedMessageBody">${quotedReplyHtml(message)}</div></blockquote>`
+  const historyText = `${headerText}\n${quotedReplyText(message)}`
+  const historyHtml = `<blockquote class="quotedMessagePreview" data-quoted-content="true" aria-label="Original message included"><div class="quotedMessageHeader">${plainTextToHtml(headerText)}</div><div class="quotedMessageBody">${quotedReplyHtml(message)}</div></blockquote>`
   return { body: historyText, html: sanitizeComposerHtml(historyHtml) }
-}
-
-function prependReplyNote(noteBody, replyDraft) {
-  const noteText = typeof noteBody === 'string' ? noteBody : noteBody?.body || ''
-  const noteHtml = typeof noteBody === 'string'
-    ? plainTextToHtml(noteBody)
-    : sanitizeComposerHtml(noteBody?.html || plainTextToHtml(noteText))
-  if (!replyDraft.body) return { body: noteText, html: noteHtml }
-  if (!noteText.trim()) return replyDraft
-  return {
-    body: `${noteText.trimEnd()}\n\n${replyDraft.body.trimStart()}`,
-    html: `${noteHtml}${replyDraft.html}`,
-  }
 }
 
 function extractSavedReplyNote(draft) {
   if (!draft) return null
   const historyStart = draft.body.search(/(?:^|\n)On .+ wrote:\s*(?:\n|$)/)
-  const body = historyStart >= 0 ? draft.body.slice(0, historyStart).trimEnd() : draft.body
   const parsedDocument = new DOMParser().parseFromString(draft.html || '', 'text/html')
   const root = parsedDocument.createElement('div')
   root.innerHTML = parsedDocument.body.innerHTML
   root.querySelectorAll('[data-quoted-content="true"], .replyNote').forEach((element) => element.remove())
-  return { ...draft, body, html: sanitizeComposerHtml(root.innerHTML) }
+  const html = sanitizeComposerHtml(root.innerHTML)
+  const recoveredBody = (root.innerText || root.textContent || '').replace(/\u00a0/g, ' ').trim()
+  const bodyBeforeHistory = historyStart >= 0 ? draft.body.slice(0, historyStart).trimEnd() : draft.body
+  return { ...draft, body: recoveredBody || bodyBeforeHistory, html }
 }
 
 export function ComposeModal({ colorTheme = 'default', mailboxEmail = '', mode = 'new', messageId, initialTo = '', initialSubject = '', initialBody = '', forwardedMessage = null, repliedMessage = null, onClose, onSent }) {
   const isReplyMode = mode === 'reply' || mode === 'reply-all'
   const forwardDraft = mode === 'forward' ? buildForwardDraft(forwardedMessage) : { body: '', html: '' }
-  const replyDraft = isReplyMode ? prependReplyNote(initialBody, buildReplyDraft(repliedMessage)) : { body: '', html: '' }
-  const initialDraft = { to: initialTo, cc: '', bcc: '', subject: initialSubject, body: forwardDraft.body || replyDraft.body || initialBody, html: forwardDraft.html || replyDraft.html || plainTextToHtml(initialBody) }
+  const initialReplyHistory = isReplyMode ? buildReplyHistory(repliedMessage) : { body: '', html: '' }
+  const initialDraft = { to: initialTo, cc: '', bcc: '', subject: initialSubject, body: forwardDraft.body || initialBody, html: forwardDraft.html || plainTextToHtml(initialBody) }
   const savedDraft = initialBody ? null : loadComposeDraft(mailboxEmail, mode, messageId)
   const legacyForwardDraft = savedDraft && mode === 'forward' && forwardedMessage && !savedDraft.body.includes('---------- Forwarded message ---------')
   const savedReplyNote = savedDraft && isReplyMode ? extractSavedReplyNote(savedDraft) : null
-  const refreshedSavedReply = savedReplyNote && repliedMessage
-    ? { ...savedDraft, ...prependReplyNote(savedReplyNote, buildReplyDraft(repliedMessage)) }
-    : null
   const restoredDraft = legacyForwardDraft
     ? {
         ...savedDraft,
         ...prependForwardNote(savedDraft, forwardDraft),
       }
-    : (refreshedSavedReply || savedDraft)
+    : (savedReplyNote || savedDraft)
   const [draft, setDraft] = useState(restoredDraft || initialDraft)
+  const [replyHistory, setReplyHistory] = useState(initialReplyHistory)
   const [showCc, setShowCc] = useState(Boolean(restoredDraft?.cc))
   const [showBcc, setShowBcc] = useState(Boolean(restoredDraft?.bcc))
   const [sending, setSending] = useState(false)
@@ -180,17 +167,12 @@ export function ComposeModal({ colorTheme = 'default', mailboxEmail = '', mode =
     let active = true
     mailService.getMessage(messageId)
       .then((message) => {
-        if (!active || editorDirtyRef.current || (restoredDraft && !legacyForwardDraft && !savedReplyNote) || !message) return
+        if (!active || !message) return
         if (isReplyMode) {
-          const replyNote = savedReplyNote || initialBody
-          const nextReplyDraft = prependReplyNote(replyNote, buildReplyDraft(message))
-          if (!nextReplyDraft.body) return
-          const nextDraft = { ...draftRef.current, body: nextReplyDraft.body, html: nextReplyDraft.html }
-          draftRef.current = nextDraft
-          setDraft(nextDraft)
-          if (editorRef.current) editorRef.current.innerHTML = nextReplyDraft.html
+          setReplyHistory(buildReplyHistory(message))
           return
         }
+        if (editorDirtyRef.current || (restoredDraft && !legacyForwardDraft)) return
         const nextForwardDraft = legacyForwardDraft ? prependForwardNote(savedDraft, buildForwardDraft(message)) : buildForwardDraft(message)
         const nextDraft = { ...draftRef.current, body: nextForwardDraft.body, html: nextForwardDraft.html }
         draftRef.current = nextDraft
@@ -366,7 +348,10 @@ export function ComposeModal({ colorTheme = 'default', mailboxEmail = '', mode =
         {showCc ? <input name="cc" value={draft.cc} onChange={updateField} placeholder="CC" aria-label="Carbon copy recipients" /> : null}
         {showBcc ? <input name="bcc" value={draft.bcc} onChange={updateField} placeholder="CCI" aria-label="Blind carbon copy recipients" /> : null}
         <input name="subject" value={draft.subject} onChange={updateField} placeholder="Subject" aria-label="Subject" disabled={config.subjectDisabled} />
-        <div ref={editorRef} className="composeEditor" contentEditable role="textbox" aria-label="Message body" aria-multiline="true" data-placeholder={mode === 'forward' ? 'Add a note…' : 'Write something brilliant…'} onInput={updateBodyFromEditor} onPaste={pastePlainText} />
+        <div className={`composeEditorFrame${isReplyMode ? ' has-history' : ''}`}>
+          <div ref={editorRef} className="composeEditor" contentEditable role="textbox" aria-label="Message body" aria-multiline="true" data-placeholder={mode === 'forward' ? 'Add a note…' : 'Write something brilliant…'} onInput={updateBodyFromEditor} onPaste={pastePlainText} />
+          {isReplyMode && replyHistory.html ? <div className="composeHistory" dangerouslySetInnerHTML={{ __html: replyHistory.html }} /> : null}
+        </div>
         {attachments.length ? <div className="composeAttachments" aria-label="Selected attachments">
           {attachments.map(({ id, file }) => <div className="composeAttachment" key={id}>
             <FileText size={15} />
