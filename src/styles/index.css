@@ -237,7 +237,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 .body p { font-size: 9.5px; line-height: 1.55; color: #d5dfeb; margin: 0 0 7px; }
 .attachTitle { font-size: 8.5px; font-weight: 800; display: flex; align-items: center; gap: 6px; margin: 7px 0 8px; }
 .attachments { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.attachment { border: 1px solid rgba(144, 177, 216, .13); color: inherit; background: rgba(255, 255, 255, .025); border-radius: 8px; padding: 8px; display: grid; grid-template-columns: 38px 1fr; gap: 8px; align-items: center; text-align: left; cursor: pointer; }
+.attachment { border: 1px solid rgba(144, 177, 216, .13); color: inherit; text-decoration: none; background: rgba(255, 255, 255, .025); border-radius: 8px; padding: 8px; display: grid; grid-template-columns: 38px 1fr; gap: 8px; align-items: center; text-align: left; cursor: pointer; }
 .attachment:hover { border-color: rgba(57, 217, 255, .25); background: rgba(255, 255, 255, .04); }
 .attachment svg { padding: 6px; border-radius: 7px; }
 .attachment.purple svg { background: linear-gradient(135deg, #6d28d9, #4338ca); }.attachment.green svg { background: linear-gradient(135deg, #047857, #14b8a6); }.attachment.blue svg { background: linear-gradient(135deg, #1d4ed8, #0e7490); }

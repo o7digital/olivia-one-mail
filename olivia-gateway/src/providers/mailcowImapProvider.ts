@@ -426,6 +426,17 @@ export class MailcowImapProvider implements MailProvider {
     }
   }
 
+  async getAttachment(id: string, filename: string) {
+    const attachments = await this.getOriginalAttachments(id)
+    const attachment = attachments.find((item: { filename?: string | null; contentType: string; content: Buffer; cid?: string | null }) => (item.filename || 'Attachment') === filename)
+    if (!attachment) return null
+    return {
+      filename: (attachment.filename || 'Attachment').replace(/[\\/\0-\x1f]/g, '_'),
+      contentType: attachment.contentType || 'application/octet-stream',
+      content: attachment.content,
+    }
+  }
+
   async sendMessage(input: { to: string; cc?: string; bcc?: string; subject: string; body: string; html?: string; attachments?: OutgoingAttachment[] }) {
     const info = await this.sendAndArchive({
       from: this.fromAddress,

@@ -64,6 +64,18 @@ export async function registerMailRoutes(app: FastifyInstance) {
     return message
   })
 
+  app.get('/api/mail/messages/:id/attachments/:filename', async (request, reply) => {
+    const params = z.object({ id: z.string(), filename: z.string().min(1).max(255) }).parse(request.params)
+    const attachment = await createMailProvider(process.env.MAIL_PROVIDER, request.session).getAttachment?.(params.id, params.filename)
+    if (!attachment) return reply.code(404).send({ message: 'Attachment not found' })
+    const safeFilename = attachment.filename.replace(/[\\"\r\n]/g, '_')
+    return reply
+      .header('Content-Type', attachment.contentType)
+      .header('Content-Disposition', `attachment; filename="${safeFilename}"`)
+      .header('Cache-Control', 'private, no-store')
+      .send(attachment.content)
+  })
+
   app.post('/api/mail/messages/:id/read', async (request) => {
     const params = z.object({ id: z.string() }).parse(request.params)
     return createMailProvider(process.env.MAIL_PROVIDER, request.session).markRead(params.id)

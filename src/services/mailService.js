@@ -5,6 +5,7 @@ export const mailService = {
   listFolders: () => apiClient.get('/api/mail/folders'),
   listMessages: (folder = 'Inbox', page = 1, pageSize = 25) => apiClient.get('/api/mail/messages', { folder, page, pageSize }),
   getMessage: (id) => apiClient.get(`/api/mail/messages/${id}`),
+  getAttachmentUrl: (id, filename) => `/api/mail/messages/${encodeURIComponent(id)}/attachments/${encodeURIComponent(filename)}`,
   markRead: (id) => apiClient.post(`/api/mail/messages/${id}/read`, {}),
   toggleStar: (id) => apiClient.post(`/api/mail/messages/${id}/star`, {}),
   moveMessage: (id, folder) => apiClient.post(`/api/mail/messages/${id}/move`, { folder }),

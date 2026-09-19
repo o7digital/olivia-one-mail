@@ -12,6 +12,7 @@ export interface MailProvider {
   listMessages(folder: string): Promise<MailMessage[]>
   listMessagePage?(folder: string, page: number, pageSize: number): Promise<MailPage>
   getMessage(id: string): Promise<MailMessage | null>
+  getAttachment?(id: string, filename: string): Promise<{ filename: string; contentType: string; content: Buffer } | null>
   sendMessage(input: { to: string; cc?: string; bcc?: string; subject: string; body: string; html?: string; attachments?: OutgoingAttachment[] }): Promise<{ id: string; status: string }>
   reply(id: string, input: { body: string; html?: string; attachments?: OutgoingAttachment[] }): Promise<{ id: string; status: string }>
   replyAll(id: string, input: { body: string; html?: string; attachments?: OutgoingAttachment[] }): Promise<{ id: string; status: string }>
