@@ -3,6 +3,47 @@ import { mailService } from '../../services/mailService'
 
 export const DEFAULT_LABELS = ['Clients', 'Partnerships', 'Projects', 'Personal']
 
+function inboxCacheKey(mailboxEmail, folder, page) {
+  const mailbox = String(mailboxEmail || '').trim().toLowerCase()
+  return mailbox ? `olivia-one:inbox-cache:v1:${encodeURIComponent(mailbox)}:${encodeURIComponent(folder)}:${page}` : ''
+}
+
+function readInboxCache(mailboxEmail, folder, page) {
+  const key = inboxCacheKey(mailboxEmail, folder, page)
+  if (!key) return null
+  try {
+    const cached = JSON.parse(window.localStorage.getItem(key) || 'null')
+    if (!Array.isArray(cached?.messages) || !cached.pagination) return null
+    return cached
+  } catch {
+    return null
+  }
+}
+
+function writeInboxCache(mailboxEmail, folder, page, messages, pagination) {
+  const key = inboxCacheKey(mailboxEmail, folder, page)
+  if (!key) return
+  const cachedMessages = messages.map((message, index) => index === 0
+    ? {
+        ...message,
+        bodyText: message.bodyText?.slice(0, 80_000),
+        bodyHtml: message.bodyHtml?.slice(0, 160_000),
+        body: message.body?.slice(0, 24).map((line) => line.slice(0, 2_000)),
+      }
+    : {
+        ...message,
+        bodyText: undefined,
+        bodyHtml: undefined,
+        body: message.preview ? [message.preview] : [],
+        attachments: [],
+      })
+  try {
+    window.localStorage.setItem(key, JSON.stringify({ messages: cachedMessages, pagination }))
+  } catch {
+    // Mailbox display must continue when browser storage is full or unavailable.
+  }
+}
+
 export function useMailFolders(enabled = true) {
   const [folders, setFolders] = useState([])
   const [status, setStatus] = useState('loading')
@@ -15,7 +56,6 @@ export function useMailFolders(enabled = true) {
         if (active) setStatus('idle')
         return
       }
-      await mailService.ensureSession()
       const nextFolders = await mailService.listFolders()
       if (!active) return
       setFolders(nextFolders)
@@ -33,10 +73,11 @@ export function useMailFolders(enabled = true) {
   return { folders, status }
 }
 
-export function useInbox(folder, query, enabled = true) {
+export function useInbox(folder, query, enabled = true, mailboxEmail = '') {
   const [messages, setMessages] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [status, setStatus] = useState('loading')
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState(null)
   const [knownLabels, setKnownLabels] = useState(DEFAULT_LABELS)
   const [labelFilter, setLabelFilter] = useState(null)
@@ -66,26 +107,38 @@ export function useInbox(folder, query, enabled = true) {
       setError(null)
       return
     }
-    if (!silent) setStatus('loading')
+    const cached = readInboxCache(mailboxEmail, folder, page)
+    if (cached) {
+      setMessages(cached.messages)
+      setPagination(cached.pagination)
+      setSelectedId((current) => cached.messages.some(({ id }) => id === current) ? current : cached.messages[0]?.id ?? null)
+      setStatus('ready')
+    } else if (!silent) {
+      setStatus('loading')
+    }
+    if (!silent) setRefreshing(true)
     setError(null)
     try {
-      await mailService.ensureSession()
       const response = await mailService.listMessages(folder, page)
       const nextMessages = Array.isArray(response) ? response : response.messages
-      setMessages(nextMessages)
-      setPagination(Array.isArray(response)
+      const nextPagination = Array.isArray(response)
         ? { page: 1, pageSize: nextMessages.length || 25, total: nextMessages.length, totalPages: nextMessages.length ? 1 : 0 }
-        : response.pagination)
+        : response.pagination
+      setMessages(nextMessages)
+      setPagination(nextPagination)
+      writeInboxCache(mailboxEmail, folder, page, nextMessages, nextPagination)
       setSelectedId((current) => nextMessages.some(({ id }) => id === current) ? current : nextMessages[0]?.id ?? null)
       setStatus('ready')
     } catch (loadError) {
       setError(loadError)
-      setStatus('error')
+      if (!cached) setStatus('error')
+    } finally {
+      if (!silent) setRefreshing(false)
     }
-  }, [enabled, folder, page])
+  }, [enabled, folder, mailboxEmail, page])
 
   useEffect(() => {
-    load()
+    load(true)
     setLabelFilter(null)
   }, [load])
 
@@ -199,10 +252,10 @@ export function useInbox(folder, query, enabled = true) {
   return {
     archiveMessage,
     category,
-    checkMail: () => {
-      if (page !== 1) setPage(1)
-      else load()
-    },
+      checkMail: () => {
+        if (page !== 1) setPage(1)
+        else load()
+      },
     deleteMessage,
     error,
     filteredMessages,
@@ -222,6 +275,7 @@ export function useInbox(folder, query, enabled = true) {
     setSortBy,
     sortBy,
     status,
+    refreshing,
     toggleStarMessage,
     updateMessageLabels,
   }

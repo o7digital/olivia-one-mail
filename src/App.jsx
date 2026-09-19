@@ -43,7 +43,7 @@ function App() {
   const session = useSession()
   const isAuthenticated = session.isAuthenticated
   const folders = useMailFolders(isAuthenticated)
-  const inbox = useInbox(activeFolder, query, isAuthenticated)
+  const inbox = useInbox(activeFolder, query, isAuthenticated, session.session?.user?.email)
   const aiWorkspace = useAIWorkspace(inbox.selected?.id, isAuthenticated)
 
   const notify = useCallback((message) => {
@@ -253,6 +253,7 @@ function App() {
               selectedId={inbox.selectedId}
               sortBy={inbox.sortBy}
               status={inbox.status}
+              refreshing={inbox.refreshing}
             />
             <MailReader
               aiOpen={aiOpen}

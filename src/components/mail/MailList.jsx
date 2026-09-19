@@ -12,7 +12,7 @@ const SORT_OPTIONS = [
 
 export function MailList({
   activeFolder, category, error, labelFilter, messages, onCategoryChange, onClearLabelFilter, onRetry, onSelect,
-  onCheckMail, onPageChange, onSortChange, pagination, query, selectedId, sortBy, status,
+  onCheckMail, onPageChange, onSortChange, pagination, query, refreshing = false, selectedId, sortBy, status,
 }) {
   const [sortMenuOpen, setSortMenuOpen] = useState(false)
   const activeSortLabel = SORT_OPTIONS.find(({ value }) => value === sortBy)?.label ?? 'Sort messages'
@@ -49,9 +49,9 @@ export function MailList({
           </div>
         </div>
       </div>
-      <button className="checkMail" type="button" onClick={onCheckMail} disabled={status === 'loading'} aria-busy={status === 'loading'}>
-        <RefreshCw size={14} className={status === 'loading' ? 'checkMailSpinner' : ''} />
-        <span>{status === 'loading' ? 'Checking…' : 'Check Mail'}</span>
+      <button className="checkMail" type="button" onClick={onCheckMail} disabled={status === 'loading' || refreshing} aria-busy={status === 'loading' || refreshing}>
+        <RefreshCw size={14} className={status === 'loading' || refreshing ? 'checkMailSpinner' : ''} />
+        <span>{status === 'loading' || refreshing ? 'Checking…' : 'Check Mail'}</span>
       </button>
       {activeFolder === 'Inbox' ? (
         <div className="tabs" role="tablist" aria-label="Inbox category">

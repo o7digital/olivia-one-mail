@@ -27,6 +27,20 @@ test('privacy notice is available and consent is required before authentication'
   await expect(page.getByRole('checkbox')).toBeChecked()
 })
 
+test('cached inbox stays visible while startup mail refresh is slow', async ({ page }) => {
+  await signIn(page)
+  const firstMessage = page.locator('.mailrow').first()
+  await expect(firstMessage).toBeVisible()
+
+  await page.route('**/api/mail/messages?*', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1800))
+    await route.continue()
+  })
+  await page.reload()
+  await expect(firstMessage).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Check Mail' })).toBeVisible()
+})
+
 test('mail shell interactions and desktop screenshots', async ({ page }) => {
   await page.setViewportSize({ width: 1728, height: 1080 })
   await signIn(page)
