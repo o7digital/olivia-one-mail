@@ -93,12 +93,21 @@ function buildReplyDraft(message) {
 }
 
 function prependReplyNote(noteBody, replyDraft) {
-  if (!replyDraft.body) return { body: noteBody, html: plainTextToHtml(noteBody) }
-  if (!noteBody?.trim()) return replyDraft
+  const noteText = typeof noteBody === 'string' ? noteBody : noteBody?.body || ''
+  const noteHtml = typeof noteBody === 'string'
+    ? plainTextToHtml(noteBody)
+    : sanitizeComposerHtml(noteBody?.html || plainTextToHtml(noteText))
+  if (!replyDraft.body) return { body: noteText, html: noteHtml }
+  if (!noteText.trim()) return replyDraft
   return {
-    body: `${noteBody.trimEnd()}\n\n${replyDraft.body.trimStart()}`,
-    html: `${plainTextToHtml(noteBody)}${replyDraft.html}`,
+    body: `${noteText.trimEnd()}\n\n${replyDraft.body.trimStart()}`,
+    html: `${noteHtml}${replyDraft.html}`,
   }
+}
+
+function hasReplyHistory(draft) {
+  if (draft?.html) return draft.html.includes('data-quoted-content="true"')
+  return /(?:^|\n)On .+ wrote:\s*(?:\n|$)/.test(draft?.body || '')
 }
 
 export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initialTo = '', initialSubject = '', initialBody = '', forwardedMessage = null, repliedMessage = null, onClose, onSent }) {
@@ -108,6 +117,7 @@ export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initi
   const initialDraft = { to: initialTo, cc: '', bcc: '', subject: initialSubject, body: forwardDraft.body || replyDraft.body || initialBody, html: forwardDraft.html || replyDraft.html || plainTextToHtml(initialBody) }
   const savedDraft = initialBody ? null : loadComposeDraft(mailboxEmail, mode, messageId)
   const legacyForwardDraft = savedDraft && mode === 'forward' && forwardedMessage && !savedDraft.body.includes('---------- Forwarded message ---------')
+  const legacyReplyDraft = savedDraft && isReplyMode && repliedMessage && !hasReplyHistory(savedDraft)
   const restoredDraft = legacyForwardDraft
     ? {
         ...savedDraft,
@@ -147,9 +157,10 @@ export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initi
     let active = true
     mailService.getMessage(messageId)
       .then((message) => {
-        if (!active || editorDirtyRef.current || (restoredDraft && !legacyForwardDraft) || !message) return
+        if (!active || editorDirtyRef.current || (restoredDraft && !legacyForwardDraft && !legacyReplyDraft) || !message) return
         if (isReplyMode) {
-          const nextReplyDraft = prependReplyNote(initialBody, buildReplyDraft(message))
+          const replyNote = legacyReplyDraft ? savedDraft : initialBody
+          const nextReplyDraft = prependReplyNote(replyNote, buildReplyDraft(message))
           if (!nextReplyDraft.body) return
           const nextDraft = { ...draftRef.current, body: nextReplyDraft.body, html: nextReplyDraft.html }
           draftRef.current = nextDraft

@@ -178,7 +178,7 @@ export function MailReader({
           : <div className="body">{message.body.map((paragraph, index) => <p key={`${message.id}-${index}`}>{paragraph}</p>)}</div>}
 
         {message.attachments.length ? (
-          <><div className="attachTitle"><Paperclip size={15} />{message.attachments.length} Attachments</div><div className="attachments">{message.attachments.map((attachment, index) => <AttachmentCard key={`${attachment.title}-${index}`} attachment={attachment} messageId={message.id} />)}</div></>
+          <><div className="attachTitle"><Paperclip size={15} />{message.attachments.length} Attachments</div><div className="attachments">{message.attachments.map((attachment, index) => <AttachmentCard key={`${attachment.title}-${index}`} attachment={attachment} messageId={message.id} index={index} />)}</div></>
         ) : null}
 
         <SuggestedReply key={message.id} aiStatus={aiStatus} message={message} onInsert={onInsertReply} onSent={onNotify} suggestedReply={analysis?.suggestedReply ?? ''} />

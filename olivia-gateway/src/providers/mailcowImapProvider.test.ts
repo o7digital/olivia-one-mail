@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import nodemailer from 'nodemailer'
-import { buildForwardedHtml, buildForwardedText, MailcowImapProvider } from './mailcowImapProvider.js'
+import { buildForwardedHtml, buildForwardedText, buildReplyHtml, buildReplyText, MailcowImapProvider } from './mailcowImapProvider.js'
 
 const originalMessage = {
   id: 'message-1', folder: 'Inbox', sender: 'Qonto Support', initials: 'QS', time: '5:16 PM', receivedAt: '2026-09-14T22:16:00.000Z',
@@ -30,6 +30,59 @@ test('forwarded HTML retains a plain-text note and escapes untrusted original fi
   assert.match(html, /From: &lt;Qonto&gt; &lt;support@qonto.com&gt;/)
   assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/)
   assert.doesNotMatch(html, /<script>/)
+})
+
+test('reply history includes the original sender, date, subject context and full body', () => {
+  const text = buildReplyText(originalMessage, 'Thanks, I will review this.')
+  const html = buildReplyHtml(originalMessage, '<p>Thanks, I will review this.</p>', 'Thanks, I will review this.')
+
+  assert.match(text, /Thanks, I will review this\./)
+  assert.match(text, /On Mon, 14 Sep 2026 22:16:00 GMT, Qonto Support <support@qonto.com> wrote:/)
+  assert.match(text, /> Amount: 408,89 EUR\n> \n> Account: O7 Digital/)
+  assert.match(html, /data-quoted-content="true"/)
+  assert.match(html, /On Mon, 14 Sep 2026 22:16:00 GMT, Qonto Support &lt;support@qonto.com&gt; wrote:/)
+  assert.match(html, /<strong>Amount:<\/strong> 408,89 EUR/)
+})
+
+test('reply preserves history already included by the composer', () => {
+  const body = 'Thanks.\n\nOn Mon, 14 Sep 2026 22:16:00 GMT, Qonto Support <support@qonto.com> wrote:\n> Amount'
+  const html = '<p>Thanks.</p><blockquote data-quoted-content="true">Original</blockquote>'
+  assert.equal(buildReplyText(originalMessage, body), body)
+  assert.equal(buildReplyHtml(originalMessage, html, body), html)
+})
+
+test('reply sends original history when an older saved draft has none', async () => {
+  const provider = new MailcowImapProvider(
+    { email: 'sender@example.com', password: 'secret' },
+    { imapHost: 'imap', imapPort: 993, imapSecure: true, smtpHost: 'smtp', smtpPort: 587, smtpSecure: false, fromName: 'Sender', fromNameMap: {} },
+  )
+  let captured: Record<string, unknown> | undefined
+  ;(provider as unknown as { getMessage: () => Promise<typeof originalMessage> }).getMessage = async () => originalMessage
+  ;(provider as unknown as { sendAndArchive: (message: Record<string, unknown>) => Promise<{ messageId: string }> }).sendAndArchive = async (message) => {
+    captured = message
+    return { messageId: 'reply-id' }
+  }
+
+  await provider.reply('message-1', { body: 'My reply', html: '<p>My reply</p>' })
+
+  assert.match(String(captured?.text), /Amount: 408,89 EUR/)
+  assert.match(String(captured?.html), /data-quoted-content="true"/)
+})
+
+test('attachment lookup uses its index so duplicate filenames download the right file', async () => {
+  const provider = new MailcowImapProvider(
+    { email: 'sender@example.com', password: 'secret' },
+    { imapHost: 'imap', imapPort: 993, imapSecure: true, smtpHost: 'smtp', smtpPort: 587, smtpSecure: false, fromName: 'Sender', fromNameMap: {} },
+  )
+  const attachments = [
+    { filename: 'same.pdf', contentType: 'application/pdf', content: Buffer.from('first') },
+    { filename: 'same.pdf', contentType: 'application/pdf', content: Buffer.from('second') },
+  ]
+  ;(provider as unknown as { getOriginalAttachments: () => Promise<typeof attachments> }).getOriginalAttachments = async () => attachments
+
+  const result = await provider.getAttachment('message-1', 1)
+  assert.equal(result?.filename, 'same.pdf')
+  assert.equal(result?.content.toString(), 'second')
 })
 
 test('forward sends the editor history and carries original MIME attachments', async () => {

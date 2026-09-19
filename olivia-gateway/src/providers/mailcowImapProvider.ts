@@ -66,6 +66,30 @@ export function buildForwardedHtml(original: MailMessage, noteHtml: string | und
   return `${note}${separator}<div style="border-top:1px solid #cccccc;padding-top:12px"><strong>Forwarded message</strong>${headerHtml}<br><div>${bodyHtml}</div></div>`
 }
 
+function replyHeader(original: MailMessage) {
+  const parsedDate = original.receivedAt ? new Date(original.receivedAt) : null
+  const date = parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate.toUTCString() : original.time
+  return `On ${date}, ${original.sender} <${original.email}> wrote:`
+}
+
+export function buildReplyText(original: MailMessage, note: string) {
+  if (/(?:^|\n)On .+ wrote:\s*(?:\n|$)/.test(note)) return note
+  const quotedBody = (original.bodyText || original.body.join('\n')).split('\n').map((line) => `> ${line}`).join('\n')
+  return `${note.trimEnd()}\n\n${replyHeader(original)}\n${quotedBody}`
+}
+
+export function buildReplyHtml(original: MailMessage, noteHtml: string | undefined, noteText: string) {
+  if (noteHtml?.includes('data-quoted-content="true"')) return sanitizeForwardHtml(noteHtml)
+  const note = noteHtml?.trim()
+    ? sanitizeForwardHtml(noteHtml)
+    : noteText.trim()
+      ? escapeHtml(noteText.trimEnd()).replace(/\n/g, '<br>')
+      : ''
+  const bodyHtml = sanitizeForwardHtml(original.bodyHtml) || escapeHtml(original.bodyText || original.body.join('\n')).replace(/\n/g, '<br>')
+  const separator = note ? '<br><br>' : ''
+  return `${note}${separator}<blockquote class="quotedMessagePreview" data-quoted-content="true"><div class="quotedMessageHeader">${escapeHtml(replyHeader(original))}</div><div class="quotedMessageBody">${bodyHtml}</div></blockquote>`
+}
+
 function prepareAttachments(attachments: OutgoingAttachment[] | undefined) {
   return attachments?.map((attachment) => ({
     filename: attachment.filename.replace(/^.*[\\/]/, '') || 'attachment',
@@ -426,9 +450,9 @@ export class MailcowImapProvider implements MailProvider {
     }
   }
 
-  async getAttachment(id: string, filename: string) {
+  async getAttachment(id: string, index: number) {
     const attachments = await this.getOriginalAttachments(id)
-    const attachment = attachments.find((item: { filename?: string | null; contentType: string; content: Buffer; cid?: string | null }) => (item.filename || 'Attachment') === filename)
+    const attachment = attachments[index] as { filename?: string | null; contentType: string; content: Buffer; cid?: string | null } | undefined
     if (!attachment) return null
     return {
       filename: (attachment.filename || 'Attachment').replace(/[\\/\0-\x1f]/g, '_'),
@@ -458,8 +482,8 @@ export class MailcowImapProvider implements MailProvider {
       from: this.fromAddress,
       to: original.email,
       subject: original.subject.startsWith('Re:') ? original.subject : `Re: ${original.subject}`,
-      text: input.body,
-      html: input.html?.trim() || undefined,
+      text: buildReplyText(original, input.body),
+      html: input.html?.trim() ? buildReplyHtml(original, input.html, input.body) : undefined,
       attachments: prepareAttachments(input.attachments),
     })
     return { id: info.messageId, status: 'sent' }
@@ -479,8 +503,8 @@ export class MailcowImapProvider implements MailProvider {
       to: recipients.to,
       cc: recipients.cc.length ? recipients.cc : undefined,
       subject: original.subject.startsWith('Re:') ? original.subject : `Re: ${original.subject}`,
-      text: input.body,
-      html: input.html?.trim() || undefined,
+      text: buildReplyText(original, input.body),
+      html: input.html?.trim() ? buildReplyHtml(original, input.html, input.body) : undefined,
       attachments: prepareAttachments(input.attachments),
     })
     return { id: info.messageId, status: 'sent' }
