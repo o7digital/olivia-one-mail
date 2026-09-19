@@ -195,6 +195,12 @@ export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initi
     }, 350)
   }
 
+  function closeAsDraft() {
+    window.clearTimeout(saveTimerRef.current)
+    if (!sentRef.current) saveComposeDraft(mailboxEmail, mode, messageId, draftRef.current)
+    onClose()
+  }
+
   function updateField(event) {
     const nextDraft = { ...draftRef.current, [event.target.name]: event.target.value }
     draftRef.current = nextDraft
@@ -290,11 +296,16 @@ export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initi
   }
 
   return (
-    <div className={`overlay composeOverlay is-${windowState}`}>
+    <div
+      className={`overlay composeOverlay is-${windowState}`}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && windowState !== 'minimized') closeAsDraft()
+      }}
+    >
       <form className={`modal composeModal is-${windowState}`} onSubmit={submit} role="dialog" aria-modal={windowState !== 'minimized'} aria-labelledby="compose-title">
         <div className="composeTitlebar">
           <div className="composeWindowControls">
-            <button className="windowControl close" type="button" aria-label="Close composer" onClick={onClose}><X size={9} /></button>
+            <button className="windowControl close" type="button" aria-label="Close composer" onClick={closeAsDraft}><X size={9} /></button>
             <button className="windowControl minimize" type="button" aria-label={windowState === 'minimized' ? 'Restore composer' : 'Minimize composer'} onClick={() => setWindowState((current) => current === 'minimized' ? 'normal' : 'minimized')}><Minus size={9} /></button>
             <button className="windowControl maximize" type="button" aria-label={windowState === 'maximized' ? 'Reduce composer' : 'Maximize composer'} onClick={() => setWindowState((current) => current === 'maximized' ? 'normal' : 'maximized')}><Maximize2 size={8} /></button>
           </div>

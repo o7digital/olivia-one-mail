@@ -3,7 +3,37 @@ const STORAGE_PREFIX = 'olivia-one:compose-draft:v1'
 function storageKey(mailboxEmail, mode, messageId) {
   const mailbox = String(mailboxEmail || 'anonymous').trim().toLowerCase()
   const context = messageId || (mode === 'new' ? 'new-message' : mode)
+  const draftMode = mode === 'reply-all' ? 'reply' : mode
+  return `${STORAGE_PREFIX}:${encodeURIComponent(mailbox)}:${encodeURIComponent(draftMode)}:${encodeURIComponent(context)}`
+}
+
+function legacyStorageKey(mailboxEmail, mode, messageId) {
+  const mailbox = String(mailboxEmail || 'anonymous').trim().toLowerCase()
+  const context = messageId || (mode === 'new' ? 'new-message' : mode)
   return `${STORAGE_PREFIX}:${encodeURIComponent(mailbox)}:${encodeURIComponent(context)}`
+}
+
+function normalizeDraft(parsed) {
+  if (!parsed || typeof parsed !== 'object') return null
+  return {
+    to: typeof parsed.to === 'string' ? parsed.to : '',
+    cc: typeof parsed.cc === 'string' ? parsed.cc : '',
+    bcc: typeof parsed.bcc === 'string' ? parsed.bcc : '',
+    subject: typeof parsed.subject === 'string' ? parsed.subject : '',
+    body: typeof parsed.body === 'string' ? parsed.body : '',
+    html: typeof parsed.html === 'string' ? parsed.html : '',
+  }
+}
+
+function matchesLegacyMode(draft, mode, messageId) {
+  if (!draft) return false
+  if (!messageId) return mode === 'new'
+
+  const forwarded = draft.body.includes('---------- Forwarded message ---------') || /^Fwd:/i.test(draft.subject)
+  const reply = draft.html.includes('data-quoted-content="true"') || /(?:^|\n)On .+ wrote:\s*(?:\n|$)/.test(draft.body) || /^Re:/i.test(draft.subject)
+  if (mode === 'forward') return forwarded
+  if (mode === 'reply' || mode === 'reply-all') return reply && !forwarded
+  return false
 }
 
 export function hasDraftContent(draft) {
@@ -12,18 +42,16 @@ export function hasDraftContent(draft) {
 
 export function loadComposeDraft(mailboxEmail, mode, messageId) {
   try {
-    const stored = window.localStorage.getItem(storageKey(mailboxEmail, mode, messageId))
-    if (!stored) return null
-    const parsed = JSON.parse(stored)
-    if (!parsed || typeof parsed !== 'object') return null
-    return {
-      to: typeof parsed.to === 'string' ? parsed.to : '',
-      cc: typeof parsed.cc === 'string' ? parsed.cc : '',
-      bcc: typeof parsed.bcc === 'string' ? parsed.bcc : '',
-      subject: typeof parsed.subject === 'string' ? parsed.subject : '',
-      body: typeof parsed.body === 'string' ? parsed.body : '',
-      html: typeof parsed.html === 'string' ? parsed.html : '',
-    }
+    const key = storageKey(mailboxEmail, mode, messageId)
+    const currentDraft = normalizeDraft(JSON.parse(window.localStorage.getItem(key) || 'null'))
+    if (currentDraft) return currentDraft
+
+    const oldKey = legacyStorageKey(mailboxEmail, mode, messageId)
+    const legacyDraft = normalizeDraft(JSON.parse(window.localStorage.getItem(oldKey) || 'null'))
+    if (!matchesLegacyMode(legacyDraft, mode, messageId)) return null
+    window.localStorage.setItem(key, JSON.stringify(legacyDraft))
+    window.localStorage.removeItem(oldKey)
+    return legacyDraft
   } catch {
     return null
   }

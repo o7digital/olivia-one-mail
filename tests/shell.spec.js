@@ -168,6 +168,18 @@ test('mail shell interactions and desktop screenshots', async ({ page }) => {
   await expect(clearedComposer.getByRole('textbox', { name: 'Message body' })).toBeEmpty()
   await clearedComposer.getByRole('button', { name: 'Close composer' }).click()
 
+  await page.getByRole('button', { name: 'Compose', exact: true }).click()
+  const outsideClickComposer = page.getByRole('dialog', { name: 'New Message' })
+  await outsideClickComposer.getByRole('textbox', { name: 'Recipient' }).fill('draft@example.com')
+  await outsideClickComposer.getByRole('textbox', { name: 'Message body' }).fill('Keep this message as a draft.')
+  await page.mouse.click(20, 20)
+  await expect(outsideClickComposer).toHaveCount(0)
+  await page.getByRole('button', { name: 'Compose', exact: true }).click()
+  const outsideClickRestoredDraft = page.getByRole('dialog', { name: 'New Message' })
+  await expect(outsideClickRestoredDraft.getByRole('textbox', { name: 'Recipient' })).toHaveValue('draft@example.com')
+  await expect(outsideClickRestoredDraft.getByRole('textbox', { name: 'Message body' })).toContainText('Keep this message as a draft.')
+  await outsideClickRestoredDraft.getByRole('button', { name: 'Close composer' }).click()
+
   await expect(page.getByLabel('AI Workspace', { exact: true })).toContainText('Olivia V3.5 could not analyze this email')
 })
 
