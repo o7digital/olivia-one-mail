@@ -20,7 +20,7 @@ import { useSession } from './hooks/useSession'
 import { pulseService } from './services/pulseService'
 import { intelligenceService } from './services/intelligenceService'
 import { useInbox, useMailFolders } from './features/inbox/useInbox'
-import { buildThemeCssVars, loadColorIntensity, loadColorTheme, saveColorIntensity, saveColorTheme } from './theme'
+import { buildThemeCssVars, loadColorTheme, saveColorTheme } from './theme'
 
 function App() {
   const location = useLocation()
@@ -40,7 +40,6 @@ function App() {
   const [privacyAccepted, setPrivacyAccepted] = useState(false)
   const [askState, setAskState] = useState(null)
   const [colorTheme, setColorTheme] = useState('default')
-  const [colorIntensity, setColorIntensity] = useState(100)
   const session = useSession()
   const isAuthenticated = session.isAuthenticated
   const folders = useMailFolders(isAuthenticated)
@@ -64,7 +63,6 @@ function App() {
     if (!email) return
     const theme = loadColorTheme(email)
     setColorTheme(theme)
-    setColorIntensity(loadColorIntensity(email, theme))
   }, [session.session?.user?.email])
 
   useEffect(() => {
@@ -139,12 +137,6 @@ function App() {
   function changeColorTheme(theme) {
     const nextTheme = saveColorTheme(session.session?.user?.email, theme)
     setColorTheme(nextTheme)
-    setColorIntensity(loadColorIntensity(session.session?.user?.email, nextTheme))
-  }
-
-  function changeColorIntensity(value) {
-    const nextIntensity = saveColorIntensity(session.session?.user?.email, colorTheme, value)
-    setColorIntensity(nextIntensity)
   }
 
   async function handleLogin(event) {
@@ -201,7 +193,7 @@ function App() {
   }
 
   return (
-    <div className="app" data-theme={colorTheme} style={buildThemeCssVars(colorTheme, colorIntensity)}>
+    <div className="app" data-theme={colorTheme} style={buildThemeCssVars(colorTheme)}>
       <div className="glow g1" /><div className="glow g2" />
       <TopBar
         aiOpen={aiOpen}
@@ -312,7 +304,7 @@ function App() {
           <Route key={page} path={`/${page}`} element={(
             <main className="grid pageGrid">
               <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} user={session.session?.user} />
-              <FeaturePage page={page} colorTheme={colorTheme} onColorThemeChange={changeColorTheme} colorIntensity={colorIntensity} onColorIntensityChange={changeColorIntensity} mailboxEmail={session.session?.user?.email} />
+              <FeaturePage page={page} colorTheme={colorTheme} onColorThemeChange={changeColorTheme} />
               <AppRail />
             </main>
           )} />

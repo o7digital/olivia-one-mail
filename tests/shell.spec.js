@@ -186,7 +186,7 @@ test('mail shell interactions and desktop screenshots', async ({ page }) => {
 test('light theme keeps composer text readable and minimized composer restores from its full bar', async ({ page }) => {
   await signIn(page)
   await page.getByRole('button', { name: 'Setup connected accounts' }).click()
-  await page.getByRole('radio', { name: /Light A bright workspace/ }).click()
+  await page.getByRole('radio', { name: /Light White surfaces/ }).click()
   await expect(page.locator('.app')).toHaveAttribute('data-theme', 'light')
 
   await page.getByRole('button', { name: 'Compose', exact: true }).click()
@@ -201,7 +201,7 @@ test('light theme keeps composer text readable and minimized composer restores f
   await lightComposer.getByRole('button', { name: 'Close composer' }).click()
 
   await page.getByRole('button', { name: 'Setup connected accounts' }).click()
-  await page.getByRole('radio', { name: /Olivia The original cyan and midnight/ }).click()
+  await page.getByRole('radio', { name: /Dark Midnight surfaces/ }).click()
   await page.getByRole('button', { name: 'Compose', exact: true }).click()
   const darkComposer = page.getByRole('dialog', { name: 'New Message' })
   await expect(darkComposer.getByRole('textbox', { name: 'Message body' })).toHaveCSS('color', 'rgb(237, 245, 255)')
@@ -289,24 +289,32 @@ test('color themes can be changed in settings and persist for the account', asyn
   await signIn(page)
   await page.goto('/settings')
 
+  const lightMode = page.getByRole('radio', { name: /Light White surfaces/ })
+  const darkMode = page.getByRole('radio', { name: /Dark Midnight surfaces/ })
+  await lightMode.click()
+  await expect(lightMode).toHaveAttribute('aria-checked', 'true')
+  await expect(page.locator('.app')).toHaveAttribute('data-theme', 'light')
+  await darkMode.click()
+  await expect(darkMode).toHaveAttribute('aria-checked', 'true')
+
   for (const [name, id] of [['Olivia', 'default'], ['Green', 'green'], ['Graphite', 'gray'], ['Orange', 'orange'], ['Violet', 'violet']]) {
-    const option = page.getByRole('radio', { name: new RegExp(name) })
+    const option = page.getByRole('button', { name: new RegExp(name) })
     await expect(option).toBeVisible()
     await option.click()
-    await expect(option).toHaveAttribute('aria-checked', 'true')
+    await expect(option).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('.app')).toHaveAttribute('data-theme', id)
   }
 
-  const greenTheme = page.getByRole('radio', { name: /Green/ })
+  const greenTheme = page.getByRole('button', { name: /Green/ })
   await greenTheme.click()
-  await expect(greenTheme).toHaveAttribute('aria-checked', 'true')
+  await expect(greenTheme).toHaveAttribute('aria-pressed', 'true')
   await expect(page.locator('.app')).toHaveAttribute('data-theme', 'green')
-  await expect(page.getByRole('status')).toContainText('Green theme active')
+  await expect(page.getByRole('status')).toContainText('Dark mode · Green palette')
   await page.screenshot({ path: 'artifacts/olivia-one-settings-themes.png', fullPage: true })
 
   await page.reload()
   await expect(page.locator('.app')).toHaveAttribute('data-theme', 'green')
-  await expect(page.getByRole('radio', { name: /Green/ })).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByRole('button', { name: /Green/ })).toHaveAttribute('aria-pressed', 'true')
 })
 
 test('tablet layout and application routes', async ({ page }) => {

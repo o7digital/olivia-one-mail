@@ -3,7 +3,7 @@ import { useClerk } from '@clerk/react'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { peopleService } from '../../services/peopleService'
-import { COLOR_THEMES, adjustColorIntensity, loadColorIntensity, saveColorIntensity } from '../../theme'
+import { COLOR_THEMES } from '../../theme'
 
 const pageDetails = {
   calendar: { eyebrow: 'Schedule', title: 'Calendar', copy: 'Your connected calendar experience will arrive in Phase 2.', icon: CalendarDays, stats: ['3 meetings today', 'Next: 2:30 PM', 'Focus time protected'] },
@@ -13,7 +13,7 @@ const pageDetails = {
   settings: { eyebrow: 'Workspace', title: 'Settings', copy: 'Account, provider, intelligence, and security preferences.', icon: Settings2, stats: ['O7 Mail protected', 'AI assistance on', 'Mock provider active'] },
 }
 
-export function FeaturePage({ page, colorTheme = 'default', onColorThemeChange, colorIntensity = 100, onColorIntensityChange, mailboxEmail }) {
+export function FeaturePage({ page, colorTheme = 'default', onColorThemeChange }) {
   const [dynamicStats, setDynamicStats] = useState(null)
   const detail = pageDetails[page]
   const Icon = detail.icon
@@ -48,7 +48,7 @@ export function FeaturePage({ page, colorTheme = 'default', onColorThemeChange, 
   return (
     <section className="featurePage card">
       <div className="featureHero"><span className="featureIcon"><Icon size={24} /></span><small>{detail.eyebrow}</small><h1>{detail.title}</h1><p>{detail.copy}</p></div>
-      {page === 'settings' ? <AppearanceSettings colorTheme={colorTheme} onColorThemeChange={onColorThemeChange} colorIntensity={colorIntensity} onColorIntensityChange={onColorIntensityChange} mailboxEmail={mailboxEmail} /> : null}
+      {page === 'settings' ? <AppearanceSettings colorTheme={colorTheme} onColorThemeChange={onColorThemeChange} /> : null}
       {page === 'settings' ? <ConnectedAccounts /> : null}
       <div className="featureStats">{(dynamicStats ?? detail.stats).map((stat) => <div key={stat}><span /><b>{stat}</b></div>)}</div>
       <div className="phaseNote"><Sparkles size={17} /><div><b>Phase 2 gateway ready</b><p>This route now has a server-side boundary. Live provider adapters can replace the mock gateway without redesigning the UI.</p></div></div>
@@ -56,61 +56,55 @@ export function FeaturePage({ page, colorTheme = 'default', onColorThemeChange, 
   )
 }
 
-function AppearanceSettings({ colorTheme, onColorThemeChange, colorIntensity = 100, onColorIntensityChange, mailboxEmail }) {
+function AppearanceSettings({ colorTheme, onColorThemeChange }) {
   const activeTheme = COLOR_THEMES.find((theme) => theme.id === colorTheme) ?? COLOR_THEMES[0]
-  const [intensities, setIntensities] = useState(() => Object.fromEntries(COLOR_THEMES.map((theme) => [theme.id, loadColorIntensity(mailboxEmail, theme.id)])))
+  const darkThemes = COLOR_THEMES.filter((theme) => theme.id !== 'light')
+  const [preferredDarkTheme, setPreferredDarkTheme] = useState(colorTheme === 'light' ? 'default' : colorTheme)
 
   useEffect(() => {
-    setIntensities(Object.fromEntries(COLOR_THEMES.map((theme) => [theme.id, loadColorIntensity(mailboxEmail, theme.id)])))
-  }, [mailboxEmail])
+    if (colorTheme !== 'light') setPreferredDarkTheme(colorTheme)
+  }, [colorTheme])
 
-  // Keep the active card's slider in sync with the intensity applied to the app shell.
-  useEffect(() => {
-    setIntensities((current) => (current[colorTheme] === colorIntensity ? current : { ...current, [colorTheme]: colorIntensity }))
-  }, [colorTheme, colorIntensity])
-
-  function updateIntensity(themeId, value) {
-    const nextIntensity = saveColorIntensity(mailboxEmail, themeId, value)
-    setIntensities((current) => ({ ...current, [themeId]: nextIntensity }))
-    if (themeId === colorTheme) onColorIntensityChange?.(nextIntensity)
+  function selectDarkTheme(themeId) {
+    setPreferredDarkTheme(themeId)
+    onColorThemeChange?.(themeId)
   }
 
   return (
     <section className="appearanceSettings" aria-labelledby="appearance-settings-title">
       <div className="connectedHead">
-        <div><small>APPEARANCE</small><h2 id="appearance-settings-title">Color theme</h2><p>Choose the palette that feels most comfortable. Your choice is saved for this account.</p></div>
+        <div><small>APPEARANCE</small><h2 id="appearance-settings-title">Light or dark</h2><p>Choose a bright workspace with dark text, or a dark workspace with white text.</p></div>
         <span><Palette size={16} />Personalize</span>
       </div>
-      <div className="themeGrid" role="radiogroup" aria-label="Color theme">
-        {COLOR_THEMES.map((theme) => {
-          const selected = theme.id === activeTheme.id
-          const intensity = intensities[theme.id] ?? 100
-          const previewAccent = adjustColorIntensity(theme.colors[0], intensity)
-          const previewSecondary = adjustColorIntensity(theme.colors[2], intensity)
-          return (
-            <div className={`themeOption ${selected ? 'selected' : ''}`} key={theme.id}>
-              <button className="themeOptionButton" type="button" role="radio" aria-checked={selected} onClick={() => onColorThemeChange?.(theme.id)}>
-                <span className="themePreview" style={{ '--theme-preview-accent': previewAccent.hex, '--theme-preview-surface': theme.colors[1], '--theme-preview-secondary': previewSecondary.hex }} aria-hidden="true"><i /><i /><i /></span>
-                <span className="themeOptionCopy"><b>{theme.name}</b><small>{theme.description}</small></span>
-                <span className="themeCheck" aria-hidden="true">{selected ? <Check size={14} /> : null}</span>
-              </button>
-              <label className="themeIntensity">
-                <span>Intensity</span>
-                <input
-                  type="range"
-                  min={40}
-                  max={160}
-                  step={5}
-                  value={intensity}
-                  aria-label={`${theme.name} color intensity`}
-                  onChange={(event) => updateIntensity(theme.id, Number(event.target.value))}
-                />
-              </label>
-            </div>
-          )
-        })}
+      <div className="appearanceModeGrid" role="radiogroup" aria-label="Appearance mode">
+        <button className={`appearanceMode light ${colorTheme === 'light' ? 'selected' : ''}`} type="button" role="radio" aria-checked={colorTheme === 'light'} onClick={() => onColorThemeChange?.('light')}>
+          <span className="modePreview" aria-hidden="true"><i /><i /><i /></span>
+          <span><b>Light</b><small>White surfaces · dark text</small></span>
+          <i className="modeCheck" aria-hidden="true">{colorTheme === 'light' ? <Check size={16} /> : null}</i>
+        </button>
+        <button className={`appearanceMode dark ${colorTheme !== 'light' ? 'selected' : ''}`} type="button" role="radio" aria-checked={colorTheme !== 'light'} onClick={() => selectDarkTheme(preferredDarkTheme)}>
+          <span className="modePreview" aria-hidden="true"><i /><i /><i /></span>
+          <span><b>Dark</b><small>Midnight surfaces · white text</small></span>
+          <i className="modeCheck" aria-hidden="true">{colorTheme !== 'light' ? <Check size={16} /> : null}</i>
+        </button>
       </div>
-      <p className="themeStatus" role="status">{activeTheme.name} theme active</p>
+      <div className="darkPaletteSection">
+        <div><b>Dark palette</b><small>Used when Dark mode is selected</small></div>
+        <div className="darkPaletteGrid" aria-label="Dark color palette">
+          {darkThemes.map((theme) => {
+            const selected = colorTheme !== 'light' && theme.id === activeTheme.id
+            return (
+              <button key={theme.id} className={selected ? 'selected' : ''} type="button" aria-pressed={selected} onClick={() => selectDarkTheme(theme.id)}>
+                <span style={{ '--palette-accent': theme.colors[0], '--palette-surface': theme.colors[1], '--palette-secondary': theme.colors[2] }} aria-hidden="true" />
+                <b>{theme.name}</b>
+                <small>{theme.description}</small>
+                {selected ? <Check size={14} /> : null}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+      <p className="themeStatus" role="status">{colorTheme === 'light' ? 'Light mode active' : `Dark mode · ${activeTheme.name} palette`}</p>
     </section>
   )
 }
