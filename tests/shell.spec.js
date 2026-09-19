@@ -183,6 +183,30 @@ test('mail shell interactions and desktop screenshots', async ({ page }) => {
   await expect(page.getByLabel('AI Workspace', { exact: true })).toContainText('Olivia V3.5 could not analyze this email')
 })
 
+test('light theme keeps composer text readable and minimized composer restores from its full bar', async ({ page }) => {
+  await signIn(page)
+  await page.getByRole('button', { name: 'Setup connected accounts' }).click()
+  await page.getByRole('radio', { name: /Light A bright workspace/ }).click()
+  await expect(page.locator('.app')).toHaveAttribute('data-theme', 'light')
+
+  await page.getByRole('button', { name: 'Compose', exact: true }).click()
+  const lightComposer = page.getByRole('dialog', { name: 'New Message' })
+  const lightEditor = lightComposer.getByRole('textbox', { name: 'Message body' })
+  await expect(lightEditor).toHaveCSS('color', 'rgb(31, 41, 55)')
+  await lightEditor.fill('Readable dark text on a bright editor.')
+  await lightComposer.getByRole('button', { name: 'Minimize composer' }).click()
+  await expect(lightComposer.getByRole('button', { name: 'Restore composer' })).toBeVisible()
+  await lightComposer.getByRole('button', { name: 'Restore composer' }).click()
+  await expect(lightComposer).toBeVisible()
+  await lightComposer.getByRole('button', { name: 'Close composer' }).click()
+
+  await page.getByRole('button', { name: 'Setup connected accounts' }).click()
+  await page.getByRole('radio', { name: /Olivia The original cyan and midnight/ }).click()
+  await page.getByRole('button', { name: 'Compose', exact: true }).click()
+  const darkComposer = page.getByRole('dialog', { name: 'New Message' })
+  await expect(darkComposer.getByRole('textbox', { name: 'Message body' })).toHaveCSS('color', 'rgb(237, 245, 255)')
+})
+
 test('labels can be created, filtered, and cleared; sort reorders the list', async ({ page }) => {
   await page.setViewportSize({ width: 1728, height: 1080 })
   await signIn(page)

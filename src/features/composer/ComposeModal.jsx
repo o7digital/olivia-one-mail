@@ -110,7 +110,7 @@ function hasReplyHistory(draft) {
   return /(?:^|\n)On .+ wrote:\s*(?:\n|$)/.test(draft?.body || '')
 }
 
-export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initialTo = '', initialSubject = '', initialBody = '', forwardedMessage = null, repliedMessage = null, onClose, onSent }) {
+export function ComposeModal({ colorTheme = 'default', mailboxEmail = '', mode = 'new', messageId, initialTo = '', initialSubject = '', initialBody = '', forwardedMessage = null, repliedMessage = null, onClose, onSent }) {
   const isReplyMode = mode === 'reply' || mode === 'reply-all'
   const forwardDraft = mode === 'forward' ? buildForwardDraft(forwardedMessage) : { body: '', html: '' }
   const replyDraft = isReplyMode ? prependReplyNote(initialBody, buildReplyDraft(repliedMessage)) : { body: '', html: '' }
@@ -305,11 +305,25 @@ export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initi
       <form className={`modal composeModal is-${windowState}`} onSubmit={submit} role="dialog" aria-modal={windowState !== 'minimized'} aria-labelledby="compose-title">
         <div className="composeTitlebar">
           <div className="composeWindowControls">
-            <button className="windowControl close" type="button" aria-label="Close composer" onClick={closeAsDraft}><X size={9} /></button>
-            <button className="windowControl minimize" type="button" aria-label={windowState === 'minimized' ? 'Restore composer' : 'Minimize composer'} onClick={() => setWindowState((current) => current === 'minimized' ? 'normal' : 'minimized')}><Minus size={9} /></button>
-            <button className="windowControl maximize" type="button" aria-label={windowState === 'maximized' ? 'Reduce composer' : 'Maximize composer'} onClick={() => setWindowState((current) => current === 'maximized' ? 'normal' : 'maximized')}><Maximize2 size={8} /></button>
+            {windowState === 'minimized' ? (
+              <button className="windowControl close" type="button" aria-label="Close composer" onClick={closeAsDraft}><X size={9} /></button>
+            ) : (
+              <>
+                <button className="windowControl close" type="button" aria-label="Close composer" onClick={closeAsDraft}><X size={9} /></button>
+                <button className="windowControl minimize" type="button" aria-label="Minimize composer" onClick={() => setWindowState('minimized')}><Minus size={9} /></button>
+                <button className="windowControl maximize" type="button" aria-label={windowState === 'maximized' ? 'Reduce composer' : 'Maximize composer'} onClick={() => setWindowState((current) => current === 'maximized' ? 'normal' : 'maximized')}><Maximize2 size={8} /></button>
+              </>
+            )}
           </div>
-          <b id="compose-title">{config.title}</b>
+          {windowState === 'minimized' ? (
+            <>
+            <button className="composeRestore" type="button" aria-label="Restore composer" onClick={() => setWindowState('normal')}>
+              <Maximize2 size={14} />
+              <span><b>{config.title}</b><small>{saveStatus || 'Draft saved'} · Click to reopen</small></span>
+            </button>
+            <span id="compose-title" className="composeAccessibleTitle">{config.title}</span>
+            </>
+          ) : <b id="compose-title">{config.title}</b>}
         </div>
         <div className="composeRecipients">
           <input autoFocus name="to" value={draft.to} onChange={updateField} placeholder="To" aria-label="Recipient" disabled={config.toDisabled} />
@@ -329,7 +343,7 @@ export function ComposeModal({ mailboxEmail = '', mode = 'new', messageId, initi
             <button type="button" aria-label={`Remove ${file.name}`} title={`Remove ${file.name}`} onClick={() => removeAttachment(id)}><X size={13} /></button>
           </div>)}
         </div> : null}
-        <RichTextToolbar editorRef={editorRef} onChange={updateBodyFromEditor} />
+        <RichTextToolbar editorRef={editorRef} onChange={updateBodyFromEditor} defaultTextColor={colorTheme === 'light' ? '#1f2937' : '#edf5ff'} />
         {error ? <p className="formError" role="alert">{error}</p> : null}
         <div className="composeActions">
           <button className="sendAi" type="submit" disabled={sending}><Send size={15} />{sending ? 'Sending…' : 'Send'}</button>

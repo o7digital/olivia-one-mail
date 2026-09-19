@@ -322,6 +322,7 @@ function App() {
 
       {composeState ? (
         <ComposeModal
+          colorTheme={colorTheme}
           initialBody={composeState.initialBody}
           initialSubject={composeState.initialSubject}
           initialTo={composeState.initialTo}

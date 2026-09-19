@@ -9,9 +9,12 @@ const stateCommands = {
   ordered: 'insertOrderedList', unordered: 'insertUnorderedList',
 }
 
-export function RichTextToolbar({ editorRef, onChange }) {
+export function RichTextToolbar({ editorRef, onChange, defaultTextColor = '#edf5ff' }) {
   const selectionRef = useRef(null)
   const [active, setActive] = useState({})
+  const [textColor, setTextColor] = useState(defaultTextColor)
+
+  useEffect(() => setTextColor(defaultTextColor), [defaultTextColor])
 
   const captureSelection = useCallback(() => {
     const selection = window.getSelection()
@@ -81,7 +84,7 @@ export function RichTextToolbar({ editorRef, onChange }) {
       {formatButton('bold', 'Bold', 'bold', <Bold size={15} />)}
       {formatButton('italic', 'Italic', 'italic', <Italic size={15} />)}
       {formatButton('underline', 'Underline', 'underline', <Underline size={15} />)}
-      <label className="formatColor" title="Text color"><span>A</span><input type="color" aria-label="Text color" defaultValue="#edf5ff" onMouseDown={captureSelection} onChange={(event) => apply('foreColor', event.target.value)} /></label>
+      <label className="formatColor" title="Text color"><span>A</span><input type="color" aria-label="Text color" value={textColor} onMouseDown={captureSelection} onChange={(event) => { setTextColor(event.target.value); apply('foreColor', event.target.value) }} /></label>
       <span className="formatDivider" />
       <button type="button" aria-label="Align left" title="Align left" onMouseDown={(event) => event.preventDefault()} onClick={() => apply('justifyLeft')}><AlignLeft size={15} /></button>
       <button type="button" aria-label="Align center" title="Align center" onMouseDown={(event) => event.preventDefault()} onClick={() => apply('justifyCenter')}><AlignCenter size={15} /></button>
