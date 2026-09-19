@@ -302,7 +302,7 @@ export function ComposeModal({ colorTheme = 'default', mailboxEmail = '', mode =
         if (event.target === event.currentTarget && windowState !== 'minimized') closeAsDraft()
       }}
     >
-      <form className={`modal composeModal is-${windowState}`} onSubmit={submit} role="dialog" aria-modal={windowState !== 'minimized'} aria-labelledby="compose-title">
+      <form className={`modal composeModal compose-${colorTheme === 'light' ? 'light' : 'dark'} is-${windowState}`} onSubmit={submit} role="dialog" aria-modal={windowState !== 'minimized'} aria-labelledby="compose-title">
         <div className="composeTitlebar">
           <div className="composeWindowControls">
             {windowState === 'minimized' ? (

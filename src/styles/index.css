@@ -589,29 +589,73 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 .app[data-theme='light'] .profileMenu { background: #fff; border-color: #d7e0e9; }
 .app[data-theme='light'] .profileMenu button { color: #334155; }
 
-/* Make the composer comfortable to write in and make its minimized state easy to find. */
-.composeModal { color: #edf5ff; }
-.composeModal input, .composeModal textarea { font-size: 14px; }
-.composeModal .composeEditor { min-height: 250px; padding: 16px 12px; border: 1px solid rgba(145, 181, 224, .16); border-radius: 9px; background: #091523; color: #edf5ff; font-size: 15px; line-height: 1.65; }
-.composeModal .composeEditor:empty::before { color: #9aacbf; }
-.composeModal .composeFormatting { min-height: 46px; }
-.composeModal .composeFormatting button { width: 33px; height: 33px; flex-basis: 33px; }
-.composeModal .composeFormatting select { height: 33px; font-size: 11px; }
-.composeModal .composeFormatting button, .composeModal .composeFormatting select { color: #c4d0dd; }
-.composeModal .composeActions { min-height: 36px; }
+/* The composer is an opaque, high-contrast writing surface in both modes. */
+.app .composeModal {
+  --compose-shell: #0b1422;
+  --compose-editor: #101c2b;
+  --compose-surface: #142235;
+  --compose-border: #263950;
+  --compose-text: #f4f7fb;
+  --compose-muted: #91a3b7;
+  color: var(--compose-text);
+  border-color: var(--compose-border);
+  background: var(--compose-shell);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, .56), 0 0 0 1px rgba(255, 255, 255, .025);
+}
+.app .composeModal.compose-light {
+  --compose-shell: #f8fafc;
+  --compose-editor: #fff;
+  --compose-surface: #eef2f6;
+  --compose-border: #cbd5e1;
+  --compose-text: #17212b;
+  --compose-muted: #5f6f82;
+  box-shadow: 0 28px 80px rgba(26, 42, 60, .24), 0 0 0 1px rgba(255, 255, 255, .8);
+}
+.composeModal input, .composeModal textarea { color: var(--compose-text); border-color: var(--compose-border); font-size: 14px; }
+.composeModal input::placeholder, .composeModal textarea::placeholder { color: var(--compose-muted); }
+.composeModal .composeRecipients { border-color: var(--compose-border); }
+.composeModal .composeRecipientToggles button { color: var(--compose-muted); }
+.composeModal .composeEditor {
+  min-height: 250px;
+  padding: 18px 16px;
+  border: 1px solid var(--compose-border);
+  border-radius: 11px;
+  background: var(--compose-editor);
+  color: var(--compose-text);
+  font-size: 15px;
+  line-height: 1.62;
+  caret-color: var(--theme-accent);
+}
+.composeModal .composeEditor:focus-visible { outline: 0; border-color: color-mix(in srgb, var(--theme-accent) 72%, var(--compose-border)); box-shadow: 0 0 0 3px rgba(var(--theme-accent-rgb), .1); }
+.composeModal .composeEditor:empty::before { color: var(--compose-muted); }
+.composeModal .composeEditor > .replyNote { height: 12px; }
+.composeModal .quotedMessagePreview, .composeModal .forwardedMessagePreview {
+  max-height: 190px;
+  overflow: auto;
+  margin: 16px 0 0;
+  border: 1px solid var(--compose-border);
+  border-left: 3px solid color-mix(in srgb, var(--theme-accent) 64%, var(--compose-border));
+  border-radius: 9px;
+  padding: 12px 14px;
+  background: var(--compose-surface);
+  color: var(--compose-muted);
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.composeModal .quotedMessageHeader { margin-bottom: 9px; color: var(--compose-muted); font-size: 10px; font-weight: 700; }
+.composeModal .quotedMessageBody, .composeModal .quotedMessageBody *, .composeModal .forwardedMessageBody, .composeModal .forwardedMessageBody * { color: inherit !important; background: transparent !important; font-family: inherit !important; font-size: inherit !important; line-height: inherit !important; }
+.composeModal .quotedMessageBody img, .composeModal .forwardedMessageBody img { max-width: 100%; height: auto; }
+.composeModal .composeFormatting { min-height: 46px; border-color: var(--compose-border); background: var(--compose-surface); }
+.composeModal .composeFormatting button { width: 33px; height: 33px; flex-basis: 33px; color: var(--compose-muted); }
+.composeModal .composeFormatting select { height: 33px; background: var(--compose-editor); color: var(--compose-text); font-size: 11px; }
+.composeModal .composeFormatting button:hover, .composeModal .composeFormatting button.active, .composeModal .composeFormatting button[aria-pressed='true'] { color: var(--compose-text); }
+.composeModal .composeAttachment { border-color: var(--compose-border); background: var(--compose-surface); color: var(--compose-muted); }
+.composeModal .composeAttachment b { color: var(--compose-text); }
+.composeModal .composeAttachment small, .composeModal .composeSaveStatus { color: var(--compose-muted); }
+.composeModal .composeActions { min-height: 38px; }
 .composeModal .composeSaveStatus, .composeModal .aiCompose { font-size: 10px; }
-.app[data-theme='light'] .composeModal { color: #1f2937; border-color: #cbd5e1; background: linear-gradient(180deg, #fff, #f7f9fc); }
-.app[data-theme='light'] .composeModal input, .app[data-theme='light'] .composeModal textarea { color: #1f2937; border-color: #d9e1e9; }
-.app[data-theme='light'] .composeModal input::placeholder, .app[data-theme='light'] .composeModal textarea::placeholder { color: #64748b; }
-.app[data-theme='light'] .composeModal .composeEditor { color: #1f2937; background: #fff; border-color: #cbd5e1; }
-.app[data-theme='light'] .composeModal .composeEditor:empty::before { color: #64748b; }
-.app[data-theme='light'] .composeModal .composeEditor blockquote { color: #475569; }
-.app[data-theme='light'] .composeModal .composeFormatting, .app[data-theme='light'] .composeModal .composeAttachment { background: #f1f5f9; border-color: #d6dfe9; }
-.app[data-theme='light'] .composeModal .composeFormatting button, .app[data-theme='light'] .composeModal .composeFormatting select { color: #334155; }
-.app[data-theme='light'] .composeModal .composeFormatting select { background: #fff; }
-.app[data-theme='light'] .composeModal .composeAttachment, .app[data-theme='light'] .composeModal .composeAttachment b { color: #334155; }
-.app[data-theme='light'] .composeModal .composeAttachment small, .app[data-theme='light'] .composeModal .composeSaveStatus { color: #59697c; }
-.app[data-theme='light'] .composeModal .composeRecipientToggles button { color: #526173; }
+.composeModal .aiCompose { color: color-mix(in srgb, rgb(var(--theme-secondary-rgb)) 54%, var(--compose-text)); }
 .composeOverlay.is-minimized { z-index: 60; }
 .composeModal.is-minimized { width: min(440px, calc(100vw - 104px)); height: 68px; right: 72px; bottom: 18px; padding: 8px 12px; border-radius: 14px; box-shadow: 0 18px 50px rgba(0, 0, 0, .38); }
 .composeModal.is-minimized > .composeTitlebar { min-height: 50px; width: 100%; display: flex; align-items: center; gap: 12px; }
