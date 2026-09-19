@@ -244,6 +244,14 @@ export function ComposeModal({ colorTheme = 'default', mailboxEmail = '', mode =
     setError('')
   }
 
+  function pastePlainText(event) {
+    const text = event.clipboardData?.getData('text/plain')
+    if (!text) return
+    event.preventDefault()
+    document.execCommand('insertText', false, text)
+    updateBodyFromEditor()
+  }
+
   function addAttachments(event) {
     const selected = Array.from(event.target.files || [])
     event.target.value = ''
@@ -358,7 +366,7 @@ export function ComposeModal({ colorTheme = 'default', mailboxEmail = '', mode =
         {showCc ? <input name="cc" value={draft.cc} onChange={updateField} placeholder="CC" aria-label="Carbon copy recipients" /> : null}
         {showBcc ? <input name="bcc" value={draft.bcc} onChange={updateField} placeholder="CCI" aria-label="Blind carbon copy recipients" /> : null}
         <input name="subject" value={draft.subject} onChange={updateField} placeholder="Subject" aria-label="Subject" disabled={config.subjectDisabled} />
-        <div ref={editorRef} className="composeEditor" contentEditable role="textbox" aria-label="Message body" aria-multiline="true" data-placeholder={mode === 'forward' ? 'Add a note…' : 'Write something brilliant…'} onInput={updateBodyFromEditor} />
+        <div ref={editorRef} className="composeEditor" contentEditable role="textbox" aria-label="Message body" aria-multiline="true" data-placeholder={mode === 'forward' ? 'Add a note…' : 'Write something brilliant…'} onInput={updateBodyFromEditor} onPaste={pastePlainText} />
         {attachments.length ? <div className="composeAttachments" aria-label="Selected attachments">
           {attachments.map(({ id, file }) => <div className="composeAttachment" key={id}>
             <FileText size={15} />

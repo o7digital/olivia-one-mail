@@ -628,6 +628,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 }
 .composeModal .composeEditor:focus-visible { outline: 0; border-color: color-mix(in srgb, var(--theme-accent) 72%, var(--compose-border)); box-shadow: 0 0 0 3px rgba(var(--theme-accent-rgb), .1); }
 .composeModal .composeEditor:empty::before { color: var(--compose-muted); }
+.composeModal .composeEditor > :not(.quotedMessagePreview):not(.forwardedMessagePreview),
+.composeModal .composeEditor > :not(.quotedMessagePreview):not(.forwardedMessagePreview) * { color: var(--compose-text) !important; }
 .composeModal .composeEditor > .replyNote { height: 12px; }
 .composeModal .quotedMessagePreview, .composeModal .forwardedMessagePreview {
   max-height: 190px;

@@ -204,7 +204,21 @@ test('light theme keeps composer text readable and minimized composer restores f
   const lightComposer = page.getByRole('dialog', { name: 'New Message' })
   const lightEditor = lightComposer.getByRole('textbox', { name: 'Message body' })
   await expect(lightEditor).toHaveCSS('color', 'rgb(23, 33, 43)')
-  await lightEditor.fill('Readable dark text on a bright editor.')
+  await lightEditor.evaluate((element) => {
+    element.focus()
+    const clipboardData = new DataTransfer()
+    clipboardData.setData('text/plain', 'Clean pasted text.')
+    clipboardData.setData('text/html', '<span style="color: black">Clean pasted text.</span>')
+    element.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData }))
+  })
+  await expect(lightEditor).toContainText('Clean pasted text.')
+  expect(await lightEditor.evaluate((element) => element.innerHTML)).not.toContain('color: black')
+  await lightEditor.evaluate((element) => {
+    element.innerHTML = '<span style="color: rgb(255, 255, 255)">Theme-aware pasted text.</span>'
+    element.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste' }))
+  })
+  const pastedText = lightEditor.getByText('Theme-aware pasted text.')
+  await expect(pastedText).toHaveCSS('color', 'rgb(23, 33, 43)')
   await lightComposer.getByRole('button', { name: 'Minimize composer' }).click()
   await expect(lightComposer.getByRole('button', { name: 'Restore composer' })).toBeVisible()
   await lightComposer.getByRole('button', { name: 'Restore composer' }).click()
@@ -215,7 +229,9 @@ test('light theme keeps composer text readable and minimized composer restores f
   await page.getByRole('radio', { name: /Dark Midnight surfaces/ }).click()
   await page.getByRole('button', { name: 'Compose', exact: true }).click()
   const darkComposer = page.getByRole('dialog', { name: 'New Message' })
-  await expect(darkComposer.getByRole('textbox', { name: 'Message body' })).toHaveCSS('color', 'rgb(244, 247, 251)')
+  const darkEditor = darkComposer.getByRole('textbox', { name: 'Message body' })
+  await expect(darkEditor).toHaveCSS('color', 'rgb(244, 247, 251)')
+  await expect(darkEditor.getByText('Theme-aware pasted text.')).toHaveCSS('color', 'rgb(244, 247, 251)')
 })
 
 test('labels can be created, filtered, and cleared; sort reorders the list', async ({ page }) => {
