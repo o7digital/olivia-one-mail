@@ -48,8 +48,16 @@ function forwardedBodyText(message) {
 }
 
 function forwardedBodyHtml(message) {
-  if (message?.bodyHtml) return message.bodyHtml
-  return plainTextToHtml(forwardedBodyText(message))
+  const bodyText = forwardedBodyText(message)
+  if (!message?.bodyHtml) return plainTextToHtml(bodyText)
+
+  const sanitizedHtml = sanitizeComposerHtml(message.bodyHtml)
+  const preview = document.createElement('div')
+  preview.innerHTML = sanitizedHtml
+  const visibleText = (preview.textContent || '').replace(/\u00a0/g, ' ').trim()
+  if (visibleText || preview.querySelector('img')) return sanitizedHtml
+
+  return plainTextToHtml(bodyText)
 }
 
 function buildForwardDraft(message) {
@@ -80,6 +88,12 @@ function quotedReplyText(message) {
   return forwardedBodyText(message).split('\n').map((line) => `> ${line}`).join('\n')
 }
 
+function quotedReplyHtml(message) {
+  const bodyText = forwardedBodyText(message)
+  if (bodyText.trim()) return plainTextToHtml(bodyText)
+  return forwardedBodyHtml(message)
+}
+
 function replyQuoteHeaderText(message) {
   return `On ${formatForwardDate(message)}, ${message?.sender || message?.email} <${message?.email || ''}> wrote:`
 }
@@ -88,7 +102,7 @@ function buildReplyDraft(message) {
   if (!message) return { body: '', html: '' }
   const headerText = replyQuoteHeaderText(message)
   const historyText = `\n\n${headerText}\n${quotedReplyText(message)}`
-  const historyHtml = `<div class="replyNote"><br></div><blockquote class="quotedMessagePreview" data-quoted-content="true" contenteditable="false" aria-label="Original message included"><div class="quotedMessageHeader">${plainTextToHtml(headerText)}</div><div class="quotedMessageBody">${forwardedBodyHtml(message)}</div></blockquote>`
+  const historyHtml = `<div class="replyNote"><br></div><blockquote class="quotedMessagePreview" data-quoted-content="true" contenteditable="false" aria-label="Original message included"><div class="quotedMessageHeader">${plainTextToHtml(headerText)}</div><div class="quotedMessageBody">${quotedReplyHtml(message)}</div></blockquote>`
   return { body: historyText, html: sanitizeComposerHtml(historyHtml) }
 }
 
