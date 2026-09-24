@@ -319,16 +319,17 @@ test('profile menu signs out and returns to login', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Sign in to your mailbox' })).toBeVisible()
 })
 
-test('account setup opens connected provider choices', async ({ page }) => {
+test('account providers stay visibly unavailable until connectors are ready', async ({ page }) => {
   await signIn(page)
+  await page.goto('/settings?connect=google')
 
-  await page.getByRole('button', { name: 'Setup connected accounts' }).click()
   await expect(page.getByRole('heading', { name: 'Connected accounts' })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Google/ })).toBeVisible()
-  await page.getByRole('button', { name: /iCloud/ }).click()
-  await expect(page.getByRole('dialog', { name: 'Add iCloud' })).toBeVisible()
-  await expect(page.getByRole('textbox', { name: 'Email address' })).toHaveValue('olivier.steineur@icloud.com')
-  await expect(page.getByRole('textbox', { name: 'App-specific password' })).toBeVisible()
+  for (const provider of ['Google', 'Microsoft', 'iCloud', 'Other account']) {
+    const option = page.getByRole('button', { name: new RegExp(`${provider}.*Not available`) })
+    await expect(option).toBeVisible()
+    await expect(option).toBeDisabled()
+  }
+  await expect(page.getByRole('dialog')).toHaveCount(0)
 })
 
 test('color themes can be changed in settings and persist for the account', async ({ page }) => {
