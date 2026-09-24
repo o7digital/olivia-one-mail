@@ -404,6 +404,18 @@ test('color intensity is stored separately for each dark palette', async ({ page
   await expect(app).toHaveAttribute('data-theme', 'green')
   await expect(app).toHaveCSS('--theme-accent', adjustedGreenAccent)
 
+  const greenIntensityAtMaximum = page.getByRole('slider', { name: 'Green color intensity' })
+  await greenIntensityAtMaximum.fill('160')
+  await expect(app).toHaveAttribute('data-color-mode', 'light')
+  await expect(app).toHaveCSS('--theme-bg-start', '#ffffff')
+  await expect(app).toHaveCSS('--theme-bg-mid', '#ffffff')
+  await expect(app).toHaveCSS('--theme-bg-end', '#ffffff')
+  await expect(page.locator('.featureHero h1')).toHaveCSS('color', 'rgb(23, 33, 43)')
+  await expect(page.getByRole('status')).toContainText('Green palette · Light appearance')
+
+  await greenIntensityAtMaximum.fill('120')
+  await expect(app).toHaveAttribute('data-color-mode', 'dark')
+
   await page.getByRole('radio', { name: /Light White surfaces/ }).click()
   await expect(app).toHaveAttribute('data-theme', 'light')
   await expect(app).toHaveCSS('--theme-bg-start', '#f8fafc')
@@ -418,6 +430,15 @@ test('color intensity is stored separately for each dark palette', async ({ page
   await expect(app).toHaveCSS('--theme-accent', adjustedGreenAccent)
   await orangeTheme.click()
   await expect(page.getByRole('slider', { name: 'Orange color intensity' })).toHaveValue('80')
+
+  for (const name of ['Olivia', 'Green', 'Graphite', 'Orange', 'Violet']) {
+    await page.getByRole('button', { name: new RegExp(name) }).click()
+    await page.getByRole('slider', { name: `${name} color intensity` }).fill('160')
+    await expect(app).toHaveCSS('--theme-bg-start', '#ffffff')
+    await expect(app).toHaveCSS('--theme-bg-mid', '#ffffff')
+    await expect(app).toHaveCSS('--theme-bg-end', '#ffffff')
+    await expect(app).toHaveAttribute('data-color-mode', 'light')
+  }
 })
 
 test('tablet layout and application routes', async ({ page }) => {

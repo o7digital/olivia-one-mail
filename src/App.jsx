@@ -41,6 +41,7 @@ function App() {
   const [askState, setAskState] = useState(null)
   const [colorTheme, setColorTheme] = useState('default')
   const [colorIntensity, setColorIntensity] = useState(DEFAULT_COLOR_INTENSITY)
+  const lightAppearance = colorTheme === 'light' || colorIntensity >= 140
   const session = useSession()
   const isAuthenticated = session.isAuthenticated
   const folders = useMailFolders(isAuthenticated)
@@ -202,7 +203,7 @@ function App() {
   }
 
   return (
-    <div className="app" data-theme={colorTheme} style={buildThemeCssVars(colorTheme, colorIntensity)}>
+    <div className="app" data-theme={colorTheme} data-color-mode={lightAppearance ? 'light' : 'dark'} style={buildThemeCssVars(colorTheme, colorIntensity)}>
       <div className="glow g1" /><div className="glow g2" />
       <TopBar
         aiOpen={aiOpen}
@@ -324,7 +325,7 @@ function App() {
 
       {composeState ? (
         <ComposeModal
-          colorTheme={colorTheme}
+          colorTheme={lightAppearance ? 'light' : colorTheme}
           initialBody={composeState.initialBody}
           initialSubject={composeState.initialSubject}
           initialTo={composeState.initialTo}

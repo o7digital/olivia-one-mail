@@ -516,78 +516,75 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 @media(max-width:760px){.waitingHeader{align-items:flex-start;flex-direction:column}.waitingRow{grid-template-columns:auto 1fr}.waitingActions{grid-column:1/-1;flex-wrap:wrap}}
 
 /* The light palette keeps the mail workspace bright while preserving clear text contrast. */
-.app[data-theme='light'] {
+.app:is([data-theme='light'], [data-color-mode='light']) {
   color: #1f2937;
   --stroke: rgba(71, 85, 105, .18);
   --muted: #596579;
   color-scheme: light;
-  background:
-    radial-gradient(circle at 78% 0, rgba(118, 82, 213, .08), transparent 35%),
-    radial-gradient(circle at 12% 100%, rgba(8, 125, 163, .07), transparent 38%),
-    linear-gradient(145deg, #f8fafc, #edf2f7 56%, #e7edf4);
+  background: linear-gradient(145deg, var(--theme-bg-start), var(--theme-bg-mid) 56%, var(--theme-bg-end));
 }
-.app[data-theme='light'] .topbar { color: #1f2937; border-color: #d8e0e9; }
-.app[data-theme='light'] .brandmark { color: #35647d; border-color: #52829a; }
-.app[data-theme='light'] .searchbox { background: #f8fafc; border-color: #cbd5e1; }
-.app[data-theme='light'] .searchbox input { color: #1f2937; }
-.app[data-theme='light'] .searchbox input::placeholder { color: #64748b; }
-.app[data-theme='light'] .searchbox > button, .app[data-theme='light'] .shortcut { color: #526173; }
-.app[data-theme='light'] .shortcut { border-color: #d1d9e3; }
-.app[data-theme='light'] .aiTop { color: #493581; border-color: #d8c9ff; background: linear-gradient(180deg, #f6f2ff, #ece6ff); }
-.app[data-theme='light'] .icon, .app[data-theme='light'] .profile, .app[data-theme='light'] .profile small { color: #526173; }
-.app[data-theme='light'] .icon:hover, .app[data-theme='light'] .profile:hover { color: #17212b; background: rgba(15, 23, 42, .055); }
-.app[data-theme='light'] .card { border-color: #d5dee8; box-shadow: 0 10px 30px rgba(45, 65, 88, .08); }
-.app[data-theme='light'] .sidebar, .app[data-theme='light'] .list, .app[data-theme='light'] .reader, .app[data-theme='light'] .ai, .app[data-theme='light'] .rail { color: #1f2937; }
-.app[data-theme='light'] .account small, .app[data-theme='light'] .sectiontitle, .app[data-theme='light'] .labelsEmpty { color: #66758a; }
-.app[data-theme='light'] .accountSetup, .app[data-theme='light'] .navitem, .app[data-theme='light'] .section > button { color: #4b5b6c; }
-.app[data-theme='light'] .navitem.active, .app[data-theme='light'] .navitem:hover { color: #143647; background: #e3f1f5; }
-.app[data-theme='light'] .section > button.active { color: #143647; }
-.app[data-theme='light'] .section > button:hover { color: #1f2937; background: rgba(15, 23, 42, .045); }
-.app[data-theme='light'] .listhead, .app[data-theme='light'] .tabs, .app[data-theme='light'] .toolbar, .app[data-theme='light'] .sender { border-color: #e0e6ed; }
-.app[data-theme='light'] .listhead small { color: #087da3; }
-.app[data-theme='light'] .checkMail { color: #4a3487; background: #f1edff; border-color: #d8ccff; }
-.app[data-theme='light'] .tabs button, .app[data-theme='light'] .toolbar > button:not(.icon), .app[data-theme='light'] .toolbarMenuTrigger { color: #59697c; }
-.app[data-theme='light'] .tabs .active { color: #075d78; }
-.app[data-theme='light'] .mailrow { color: #253346; }
-.app[data-theme='light'] .mailrow:hover { background: rgba(15, 23, 42, .035); }
-.app[data-theme='light'] .mailrow.selected { background: linear-gradient(180deg, #e5f5f9, #eff5fb); }
-.app[data-theme='light'] .rowtop span, .app[data-theme='light'] .mailrow small, .app[data-theme='light'] .listfoot { color: #617186; }
-.app[data-theme='light'] .day { color: #65758a; }
-.app[data-theme='light'] .listfoot button { color: #526173; background: #f4f7fa; border-color: #d5dee8; }
-.app[data-theme='light'] .titleline h1, .app[data-theme='light'] .sender b { color: #17212b; }
-.app[data-theme='light'] .sender small, .app[data-theme='light'] .sender time, .app[data-theme='light'] .classifyLabel { color: #59697c; }
-.app[data-theme='light'] .body p { color: #334155; }
-.app[data-theme='light'] .summary p { color: #334155; }
-.app[data-theme='light'] .summary label { color: #07627f; }
-.app[data-theme='light'] .summary label button { color: #075d78; }
-.app[data-theme='light'] .attachment { background: #f8fafc; border-color: #d5dee8; }
-.app[data-theme='light'] .attachment span span, .app[data-theme='light'] .attachment small { color: #59697c; }
-.app[data-theme='light'] .replybox { background: linear-gradient(160deg, #f9fbfd, #f0f5fa); border-color: #d5dee8; }
-.app[data-theme='light'] .replytabs { border-color: #dfe6ed; }
-.app[data-theme='light'] .replytabs button, .app[data-theme='light'] .replyControlGroup > span { color: #5d6d80; }
-.app[data-theme='light'] .replytabs .active { color: #086783; }
-.app[data-theme='light'] .replyPills button { color: #475569; background: #fff; border-color: #d4dde7; }
-.app[data-theme='light'] .replyPills button.active { color: #463480; background: #f1edff; }
-.app[data-theme='light'] .replybox .draft { background: #fff; color: #1f2937; border-color: #cbd5e1; }
-.app[data-theme='light'] .replybox .draft::placeholder { color: #64748b; }
-.app[data-theme='light'] .aihead b, .app[data-theme='light'] .aitabs .active { color: #26374a; }
-.app[data-theme='light'] .aitabs button, .app[data-theme='light'] .insight > h3, .app[data-theme='light'] .insight small { color: #5d6d80; }
-.app[data-theme='light'] .insight p, .app[data-theme='light'] .aiTabContent > p { color: #3f4f62; }
-.app[data-theme='light'] .score { color: #087da3; }
-.app[data-theme='light'] .signal span { color: #59697c; }
-.app[data-theme='light'] .signal strong { color: #176178; }
-.app[data-theme='light'] .contextChip { color: #37566a; background: #eef7fa; }
-.app[data-theme='light'] .rail a { color: #53677c; }
-.app[data-theme='light'] .rail a:hover, .app[data-theme='light'] .rail a.active { color: #16475c; background: rgba(15, 23, 42, .06); }
-.app[data-theme='light'] .featureHero h1, .app[data-theme='light'] .connectedHead h2 { color: #17212b; }
-.app[data-theme='light'] .featureHero p, .app[data-theme='light'] .connectedHead p { color: #526173; }
-.app[data-theme='light'] .appearanceSettings, .app[data-theme='light'] .connectedAccounts { border-color: #d6dfe9; background: rgba(255, 255, 255, .7); }
-.app[data-theme='light'] .providerGrid > button { background: #f8fafc; border-color: #d7e0e9; }
-.app[data-theme='light'] .providerGrid button > span small { color: #526173; }
-.app[data-theme='light'] .providerGrid em { color: #086783; }
-.app[data-theme='light'] .featureStats > div { background: rgba(255, 255, 255, .72); border-color: #d7e0e9; }
-.app[data-theme='light'] .profileMenu { background: #fff; border-color: #d7e0e9; }
-.app[data-theme='light'] .profileMenu button { color: #334155; }
+.app:is([data-theme='light'], [data-color-mode='light']) .topbar { color: #1f2937; border-color: #d8e0e9; }
+.app:is([data-theme='light'], [data-color-mode='light']) .brandmark { color: #35647d; border-color: #52829a; }
+.app:is([data-theme='light'], [data-color-mode='light']) .searchbox { background: #f8fafc; border-color: #cbd5e1; }
+.app:is([data-theme='light'], [data-color-mode='light']) .searchbox input { color: #1f2937; }
+.app:is([data-theme='light'], [data-color-mode='light']) .searchbox input::placeholder { color: #64748b; }
+.app:is([data-theme='light'], [data-color-mode='light']) .searchbox > button, .app:is([data-theme='light'], [data-color-mode='light']) .shortcut { color: #526173; }
+.app:is([data-theme='light'], [data-color-mode='light']) .shortcut { border-color: #d1d9e3; }
+.app:is([data-theme='light'], [data-color-mode='light']) .aiTop { color: #493581; border-color: #d8c9ff; background: linear-gradient(180deg, #f6f2ff, #ece6ff); }
+.app:is([data-theme='light'], [data-color-mode='light']) .icon, .app:is([data-theme='light'], [data-color-mode='light']) .profile, .app:is([data-theme='light'], [data-color-mode='light']) .profile small { color: #526173; }
+.app:is([data-theme='light'], [data-color-mode='light']) .icon:hover, .app:is([data-theme='light'], [data-color-mode='light']) .profile:hover { color: #17212b; background: rgba(15, 23, 42, .055); }
+.app:is([data-theme='light'], [data-color-mode='light']) .card { border-color: #d5dee8; box-shadow: 0 10px 30px rgba(45, 65, 88, .08); }
+.app:is([data-theme='light'], [data-color-mode='light']) .sidebar, .app:is([data-theme='light'], [data-color-mode='light']) .list, .app:is([data-theme='light'], [data-color-mode='light']) .reader, .app:is([data-theme='light'], [data-color-mode='light']) .ai, .app:is([data-theme='light'], [data-color-mode='light']) .rail { color: #1f2937; }
+.app:is([data-theme='light'], [data-color-mode='light']) .account small, .app:is([data-theme='light'], [data-color-mode='light']) .sectiontitle, .app:is([data-theme='light'], [data-color-mode='light']) .labelsEmpty { color: #66758a; }
+.app:is([data-theme='light'], [data-color-mode='light']) .accountSetup, .app:is([data-theme='light'], [data-color-mode='light']) .navitem, .app:is([data-theme='light'], [data-color-mode='light']) .section > button { color: #4b5b6c; }
+.app:is([data-theme='light'], [data-color-mode='light']) .navitem.active, .app:is([data-theme='light'], [data-color-mode='light']) .navitem:hover { color: #143647; background: #e3f1f5; }
+.app:is([data-theme='light'], [data-color-mode='light']) .section > button.active { color: #143647; }
+.app:is([data-theme='light'], [data-color-mode='light']) .section > button:hover { color: #1f2937; background: rgba(15, 23, 42, .045); }
+.app:is([data-theme='light'], [data-color-mode='light']) .listhead, .app:is([data-theme='light'], [data-color-mode='light']) .tabs, .app:is([data-theme='light'], [data-color-mode='light']) .toolbar, .app:is([data-theme='light'], [data-color-mode='light']) .sender { border-color: #e0e6ed; }
+.app:is([data-theme='light'], [data-color-mode='light']) .listhead small { color: #087da3; }
+.app:is([data-theme='light'], [data-color-mode='light']) .checkMail { color: #4a3487; background: #f1edff; border-color: #d8ccff; }
+.app:is([data-theme='light'], [data-color-mode='light']) .tabs button, .app:is([data-theme='light'], [data-color-mode='light']) .toolbar > button:not(.icon), .app:is([data-theme='light'], [data-color-mode='light']) .toolbarMenuTrigger { color: #59697c; }
+.app:is([data-theme='light'], [data-color-mode='light']) .tabs .active { color: #075d78; }
+.app:is([data-theme='light'], [data-color-mode='light']) .mailrow { color: #253346; }
+.app:is([data-theme='light'], [data-color-mode='light']) .mailrow:hover { background: rgba(15, 23, 42, .035); }
+.app:is([data-theme='light'], [data-color-mode='light']) .mailrow.selected { background: linear-gradient(180deg, #e5f5f9, #eff5fb); }
+.app:is([data-theme='light'], [data-color-mode='light']) .rowtop span, .app:is([data-theme='light'], [data-color-mode='light']) .mailrow small, .app:is([data-theme='light'], [data-color-mode='light']) .listfoot { color: #617186; }
+.app:is([data-theme='light'], [data-color-mode='light']) .day { color: #65758a; }
+.app:is([data-theme='light'], [data-color-mode='light']) .listfoot button { color: #526173; background: #f4f7fa; border-color: #d5dee8; }
+.app:is([data-theme='light'], [data-color-mode='light']) .titleline h1, .app:is([data-theme='light'], [data-color-mode='light']) .sender b { color: #17212b; }
+.app:is([data-theme='light'], [data-color-mode='light']) .sender small, .app:is([data-theme='light'], [data-color-mode='light']) .sender time, .app:is([data-theme='light'], [data-color-mode='light']) .classifyLabel { color: #59697c; }
+.app:is([data-theme='light'], [data-color-mode='light']) .body p { color: #334155; }
+.app:is([data-theme='light'], [data-color-mode='light']) .summary p { color: #334155; }
+.app:is([data-theme='light'], [data-color-mode='light']) .summary label { color: #07627f; }
+.app:is([data-theme='light'], [data-color-mode='light']) .summary label button { color: #075d78; }
+.app:is([data-theme='light'], [data-color-mode='light']) .attachment { background: #f8fafc; border-color: #d5dee8; }
+.app:is([data-theme='light'], [data-color-mode='light']) .attachment span span, .app:is([data-theme='light'], [data-color-mode='light']) .attachment small { color: #59697c; }
+.app:is([data-theme='light'], [data-color-mode='light']) .replybox { background: linear-gradient(160deg, #f9fbfd, #f0f5fa); border-color: #d5dee8; }
+.app:is([data-theme='light'], [data-color-mode='light']) .replytabs { border-color: #dfe6ed; }
+.app:is([data-theme='light'], [data-color-mode='light']) .replytabs button, .app:is([data-theme='light'], [data-color-mode='light']) .replyControlGroup > span { color: #5d6d80; }
+.app:is([data-theme='light'], [data-color-mode='light']) .replytabs .active { color: #086783; }
+.app:is([data-theme='light'], [data-color-mode='light']) .replyPills button { color: #475569; background: #fff; border-color: #d4dde7; }
+.app:is([data-theme='light'], [data-color-mode='light']) .replyPills button.active { color: #463480; background: #f1edff; }
+.app:is([data-theme='light'], [data-color-mode='light']) .replybox .draft { background: #fff; color: #1f2937; border-color: #cbd5e1; }
+.app:is([data-theme='light'], [data-color-mode='light']) .replybox .draft::placeholder { color: #64748b; }
+.app:is([data-theme='light'], [data-color-mode='light']) .aihead b, .app:is([data-theme='light'], [data-color-mode='light']) .aitabs .active { color: #26374a; }
+.app:is([data-theme='light'], [data-color-mode='light']) .aitabs button, .app:is([data-theme='light'], [data-color-mode='light']) .insight > h3, .app:is([data-theme='light'], [data-color-mode='light']) .insight small { color: #5d6d80; }
+.app:is([data-theme='light'], [data-color-mode='light']) .insight p, .app:is([data-theme='light'], [data-color-mode='light']) .aiTabContent > p { color: #3f4f62; }
+.app:is([data-theme='light'], [data-color-mode='light']) .score { color: #087da3; }
+.app:is([data-theme='light'], [data-color-mode='light']) .signal span { color: #59697c; }
+.app:is([data-theme='light'], [data-color-mode='light']) .signal strong { color: #176178; }
+.app:is([data-theme='light'], [data-color-mode='light']) .contextChip { color: #37566a; background: #eef7fa; }
+.app:is([data-theme='light'], [data-color-mode='light']) .rail a { color: #53677c; }
+.app:is([data-theme='light'], [data-color-mode='light']) .rail a:hover, .app:is([data-theme='light'], [data-color-mode='light']) .rail a.active { color: #16475c; background: rgba(15, 23, 42, .06); }
+.app:is([data-theme='light'], [data-color-mode='light']) .featureHero h1, .app:is([data-theme='light'], [data-color-mode='light']) .connectedHead h2 { color: #17212b; }
+.app:is([data-theme='light'], [data-color-mode='light']) .featureHero p, .app:is([data-theme='light'], [data-color-mode='light']) .connectedHead p { color: #526173; }
+.app:is([data-theme='light'], [data-color-mode='light']) .appearanceSettings, .app:is([data-theme='light'], [data-color-mode='light']) .connectedAccounts { border-color: #d6dfe9; background: rgba(255, 255, 255, .7); }
+.app:is([data-theme='light'], [data-color-mode='light']) .providerGrid > button { background: #f8fafc; border-color: #d7e0e9; }
+.app:is([data-theme='light'], [data-color-mode='light']) .providerGrid button > span small { color: #526173; }
+.app:is([data-theme='light'], [data-color-mode='light']) .providerGrid em { color: #086783; }
+.app:is([data-theme='light'], [data-color-mode='light']) .featureStats > div { background: rgba(255, 255, 255, .72); border-color: #d7e0e9; }
+.app:is([data-theme='light'], [data-color-mode='light']) .profileMenu { background: #fff; border-color: #d7e0e9; }
+.app:is([data-theme='light'], [data-color-mode='light']) .profileMenu button { color: #334155; }
 
 /* The composer is an opaque, high-contrast writing surface in both modes. */
 .app .composeModal {
@@ -681,8 +678,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 .composeModal.is-minimized .composeRestore > span { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .composeModal.is-minimized .composeRestore b { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .composeModal.is-minimized .composeRestore small { color: #aabbd0; font-size: 10px; }
-.app[data-theme='light'] .composeModal.is-minimized .composeRestore { color: #1f2937; background: #f1f5f9; border-color: #d3dce6; }
-.app[data-theme='light'] .composeModal.is-minimized .composeRestore small { color: #526173; }
+.app:is([data-theme='light'], [data-color-mode='light']) .composeModal.is-minimized .composeRestore { color: #1f2937; background: #f1f5f9; border-color: #d3dce6; }
+.app:is([data-theme='light'], [data-color-mode='light']) .composeModal.is-minimized .composeRestore small { color: #526173; }
 @media (max-width: 700px) {
   .composeModal.is-minimized { width: calc(100vw - 24px); right: 12px; bottom: 12px; }
 }
@@ -725,14 +722,14 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 .darkPaletteIntensity strong { font-variant-numeric: tabular-nums; }
 .darkPaletteIntensity input[type='range'] { width: 100%; height: 4px; margin: 0; accent-color: var(--theme-accent); cursor: pointer; }
 .darkPaletteIntensity > small { display: flex; justify-content: space-between; color: #657b93; font-size: 7px; }
-.app[data-theme='light'] .appearanceMode { border-color: #d6dfe9; background: #f8fafc; }
-.app[data-theme='light'] .appearanceMode > span:nth-child(2) small { color: #526173; }
-.app[data-theme='light'] .appearanceMode.selected { border-color: #087da3; background: #fff; box-shadow: 0 0 0 2px rgba(8, 125, 163, .1), 0 14px 34px rgba(42, 63, 85, .1); }
-.app[data-theme='light'] .modeCheck { color: #fff; border-color: #bdc9d5; }
-.app[data-theme='light'] .darkPaletteSection { border-color: #dce3eb; }
-.app[data-theme='light'] .darkPaletteSection > div:first-child small { color: #59697c; }
-.app[data-theme='light'] .darkPaletteGrid button { color: #273548; border-color: #d6dfe9; background: #f3f6f9; }
-.app[data-theme='light'] .darkPaletteGrid button small { color: #59697c; }
+.app:is([data-theme='light'], [data-color-mode='light']) .appearanceMode { border-color: #d6dfe9; background: #f8fafc; }
+.app:is([data-theme='light'], [data-color-mode='light']) .appearanceMode > span:nth-child(2) small { color: #526173; }
+.app:is([data-theme='light'], [data-color-mode='light']) .appearanceMode.selected { border-color: var(--theme-accent); background: #fff; box-shadow: 0 0 0 2px rgba(var(--theme-accent-rgb), .1), 0 14px 34px rgba(42, 63, 85, .1); }
+.app:is([data-theme='light'], [data-color-mode='light']) .modeCheck { color: #fff; border-color: #bdc9d5; }
+.app:is([data-theme='light'], [data-color-mode='light']) .darkPaletteSection { border-color: #dce3eb; }
+.app:is([data-theme='light'], [data-color-mode='light']) .darkPaletteSection > div:first-child small { color: #59697c; }
+.app:is([data-theme='light'], [data-color-mode='light']) .darkPaletteGrid button { color: #273548; border-color: #d6dfe9; background: #f3f6f9; }
+.app:is([data-theme='light'], [data-color-mode='light']) .darkPaletteGrid button small { color: #59697c; }
 @media (max-width: 900px) {
   .appearanceMode { grid-template-columns: 110px minmax(0, 1fr); }
   .darkPaletteGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }

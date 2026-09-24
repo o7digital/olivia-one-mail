@@ -89,8 +89,8 @@ function AppearanceSettings({ colorTheme, onColorThemeChange, colorIntensity = D
         </button>
       </div>
       <div className="darkPaletteSection">
-        <div><b>Dark palette</b><small>Used when Dark mode is selected</small></div>
-        <div className="darkPaletteGrid" aria-label="Dark color palette">
+        <div><b>Color palette</b><small>Choose a color, then move it from dark to white</small></div>
+        <div className="darkPaletteGrid" aria-label="Color palette">
           {darkThemes.map((theme) => {
             const selected = colorTheme !== 'light' && theme.id === activeTheme.id
             return (
@@ -116,11 +116,11 @@ function AppearanceSettings({ colorTheme, onColorThemeChange, colorIntensity = D
               aria-valuetext={`${colorIntensity}%`}
               onChange={(event) => onColorIntensityChange?.(Number(event.target.value))}
             />
-            <small><span>Darker</span><span>Original</span><span>Lighter</span></small>
+            <small><span>Darker</span><span>Original</span><span>White</span></small>
           </label>
         ) : null}
       </div>
-      <p className="themeStatus" role="status">{colorTheme === 'light' ? 'Light mode active' : `Dark mode · ${activeTheme.name} palette`}</p>
+      <p className="themeStatus" role="status">{colorTheme === 'light' ? 'Light mode active' : colorIntensity >= 140 ? `${activeTheme.name} palette · Light appearance` : `Dark mode · ${activeTheme.name} palette`}</p>
     </section>
   )
 }
