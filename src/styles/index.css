@@ -719,6 +719,12 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 .darkPaletteGrid button b { overflow: hidden; padding-right: 15px; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .darkPaletteGrid button small { overflow: hidden; color: #7f93aa; font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
 .darkPaletteGrid button > svg { position: absolute; top: 8px; right: 8px; color: var(--theme-accent); }
+.darkPaletteIntensity { display: grid; gap: 8px; margin-top: 14px; border: 1px solid rgba(var(--theme-accent-rgb), .16); border-radius: 11px; padding: 12px 14px; background: rgba(var(--theme-accent-rgb), .035); color: #8a9db2; }
+.darkPaletteIntensity > span { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 9px; }
+.darkPaletteIntensity > span b, .darkPaletteIntensity strong { color: var(--theme-accent); font-weight: 750; }
+.darkPaletteIntensity strong { font-variant-numeric: tabular-nums; }
+.darkPaletteIntensity input[type='range'] { width: 100%; height: 4px; margin: 0; accent-color: var(--theme-accent); cursor: pointer; }
+.darkPaletteIntensity > small { display: flex; justify-content: space-between; color: #657b93; font-size: 7px; }
 .app[data-theme='light'] .appearanceMode { border-color: #d6dfe9; background: #f8fafc; }
 .app[data-theme='light'] .appearanceMode > span:nth-child(2) small { color: #526173; }
 .app[data-theme='light'] .appearanceMode.selected { border-color: #087da3; background: #fff; box-shadow: 0 0 0 2px rgba(8, 125, 163, .1), 0 14px 34px rgba(42, 63, 85, .1); }

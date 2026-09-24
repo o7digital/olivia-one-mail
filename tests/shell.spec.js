@@ -364,6 +364,62 @@ test('color themes can be changed in settings and persist for the account', asyn
   await expect(page.getByRole('button', { name: /Green/ })).toHaveAttribute('aria-pressed', 'true')
 })
 
+test('color intensity is stored separately for each dark palette', async ({ page }) => {
+  await signIn(page)
+  await page.goto('/settings')
+
+  const app = page.locator('.app')
+  const greenTheme = page.getByRole('button', { name: /Green/ })
+  const orangeTheme = page.getByRole('button', { name: /Orange/ })
+
+  await greenTheme.click()
+  const greenIntensity = page.getByRole('slider', { name: 'Green color intensity' })
+  await expect(greenIntensity).toHaveAttribute('min', '40')
+  await expect(greenIntensity).toHaveAttribute('max', '160')
+  await expect(greenIntensity).toHaveAttribute('step', '5')
+  await expect(greenIntensity).toHaveValue('100')
+
+  const originalGreenAccent = await app.evaluate((element) => element.style.getPropertyValue('--theme-accent'))
+  const originalGreenBackground = await app.evaluate((element) => element.style.getPropertyValue('--theme-bg-start'))
+  await greenIntensity.fill('120')
+  await expect(greenIntensity).toHaveValue('120')
+  await expect(greenIntensity).toHaveAttribute('aria-valuetext', '120%')
+  await expect(page.getByText('120%', { exact: true })).toBeVisible()
+  await expect(page.getByRole('status')).toContainText('Green palette')
+  const adjustedGreenAccent = await app.evaluate((element) => element.style.getPropertyValue('--theme-accent'))
+  const adjustedGreenBackground = await app.evaluate((element) => element.style.getPropertyValue('--theme-bg-start'))
+  expect(adjustedGreenAccent).not.toBe(originalGreenAccent)
+  expect(adjustedGreenBackground).not.toBe(originalGreenBackground)
+
+  await orangeTheme.click()
+  const orangeIntensity = page.getByRole('slider', { name: 'Orange color intensity' })
+  await expect(app).toHaveAttribute('data-theme', 'orange')
+  await expect(orangeIntensity).toHaveValue('100')
+  await orangeIntensity.fill('80')
+  await expect(orangeIntensity).toHaveValue('80')
+  await expect(page.getByRole('status')).toContainText('Orange palette')
+
+  await greenTheme.click()
+  await expect(page.getByRole('slider', { name: 'Green color intensity' })).toHaveValue('120')
+  await expect(app).toHaveAttribute('data-theme', 'green')
+  await expect(app).toHaveCSS('--theme-accent', adjustedGreenAccent)
+
+  await page.getByRole('radio', { name: /Light White surfaces/ }).click()
+  await expect(app).toHaveAttribute('data-theme', 'light')
+  await expect(app).toHaveCSS('--theme-bg-start', '#f8fafc')
+  await expect(page.getByRole('slider')).toHaveCount(0)
+  await page.getByRole('radio', { name: /Dark Midnight surfaces/ }).click()
+  await expect(app).toHaveAttribute('data-theme', 'green')
+  await expect(page.getByRole('slider', { name: 'Green color intensity' })).toHaveValue('120')
+
+  await page.reload()
+  await expect(app).toHaveAttribute('data-theme', 'green')
+  await expect(page.getByRole('slider', { name: 'Green color intensity' })).toHaveValue('120')
+  await expect(app).toHaveCSS('--theme-accent', adjustedGreenAccent)
+  await orangeTheme.click()
+  await expect(page.getByRole('slider', { name: 'Orange color intensity' })).toHaveValue('80')
+})
+
 test('tablet layout and application routes', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 })
   await signIn(page)

@@ -3,7 +3,7 @@ import { useClerk } from '@clerk/react'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { peopleService } from '../../services/peopleService'
-import { COLOR_THEMES } from '../../theme'
+import { COLOR_THEMES, DEFAULT_COLOR_INTENSITY, MAX_COLOR_INTENSITY, MIN_COLOR_INTENSITY } from '../../theme'
 
 const pageDetails = {
   calendar: { eyebrow: 'Schedule', title: 'Calendar', copy: 'Your connected calendar experience will arrive in Phase 2.', icon: CalendarDays, stats: ['3 meetings today', 'Next: 2:30 PM', 'Focus time protected'] },
@@ -13,7 +13,7 @@ const pageDetails = {
   settings: { eyebrow: 'Workspace', title: 'Settings', copy: 'Account, provider, intelligence, and security preferences.', icon: Settings2, stats: ['O7 Mail protected', 'AI assistance on', 'Mock provider active'] },
 }
 
-export function FeaturePage({ page, colorTheme = 'default', onColorThemeChange }) {
+export function FeaturePage({ page, colorTheme = 'default', onColorThemeChange, colorIntensity = DEFAULT_COLOR_INTENSITY, onColorIntensityChange }) {
   const [dynamicStats, setDynamicStats] = useState(null)
   const detail = pageDetails[page]
   const Icon = detail.icon
@@ -48,7 +48,7 @@ export function FeaturePage({ page, colorTheme = 'default', onColorThemeChange }
   return (
     <section className="featurePage card">
       <div className="featureHero"><span className="featureIcon"><Icon size={24} /></span><small>{detail.eyebrow}</small><h1>{detail.title}</h1><p>{detail.copy}</p></div>
-      {page === 'settings' ? <AppearanceSettings colorTheme={colorTheme} onColorThemeChange={onColorThemeChange} /> : null}
+      {page === 'settings' ? <AppearanceSettings colorTheme={colorTheme} onColorThemeChange={onColorThemeChange} colorIntensity={colorIntensity} onColorIntensityChange={onColorIntensityChange} /> : null}
       {page === 'settings' ? <ConnectedAccounts /> : null}
       <div className="featureStats">{(dynamicStats ?? detail.stats).map((stat) => <div key={stat}><span /><b>{stat}</b></div>)}</div>
       <div className="phaseNote"><Sparkles size={17} /><div><b>Phase 2 gateway ready</b><p>This route now has a server-side boundary. Live provider adapters can replace the mock gateway without redesigning the UI.</p></div></div>
@@ -56,7 +56,7 @@ export function FeaturePage({ page, colorTheme = 'default', onColorThemeChange }
   )
 }
 
-function AppearanceSettings({ colorTheme, onColorThemeChange }) {
+function AppearanceSettings({ colorTheme, onColorThemeChange, colorIntensity = DEFAULT_COLOR_INTENSITY, onColorIntensityChange }) {
   const activeTheme = COLOR_THEMES.find((theme) => theme.id === colorTheme) ?? COLOR_THEMES[0]
   const darkThemes = COLOR_THEMES.filter((theme) => theme.id !== 'light')
   const [preferredDarkTheme, setPreferredDarkTheme] = useState(colorTheme === 'light' ? 'default' : colorTheme)
@@ -103,6 +103,22 @@ function AppearanceSettings({ colorTheme, onColorThemeChange }) {
             )
           })}
         </div>
+        {colorTheme !== 'light' ? (
+          <label className="darkPaletteIntensity">
+            <span><span>Intensity · <b>{activeTheme.name}</b></span><strong>{colorIntensity}%</strong></span>
+            <input
+              type="range"
+              min={MIN_COLOR_INTENSITY}
+              max={MAX_COLOR_INTENSITY}
+              step={5}
+              value={colorIntensity}
+              aria-label={`${activeTheme.name} color intensity`}
+              aria-valuetext={`${colorIntensity}%`}
+              onChange={(event) => onColorIntensityChange?.(Number(event.target.value))}
+            />
+            <small><span>Darker</span><span>Original</span><span>Lighter</span></small>
+          </label>
+        ) : null}
       </div>
       <p className="themeStatus" role="status">{colorTheme === 'light' ? 'Light mode active' : `Dark mode · ${activeTheme.name} palette`}</p>
     </section>
