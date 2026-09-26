@@ -22,6 +22,18 @@ function formatFileSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+function splitRecipients(value) {
+  return value.split(/[;,]/).map((recipient) => recipient.trim()).filter(Boolean)
+}
+
+function isValidRecipient(recipient) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)
+}
+
+function formatRecipients(value) {
+  return `${splitRecipients(value).join('; ')}; `
+}
+
 async function serializeAttachment(file) {
   const bytes = new Uint8Array(await file.arrayBuffer())
   let binary = ''
@@ -214,6 +226,33 @@ export function ComposeModal({ colorTheme = 'default', mailboxEmail = '', mode =
     setError('')
   }
 
+  function handleRecipientKeyDown(event) {
+    if (!['Enter', ',', ';'].includes(event.key)) return
+    event.preventDefault()
+
+    const recipients = splitRecipients(event.currentTarget.value)
+    if (!recipients.length) return
+    if (recipients.some((recipient) => !isValidRecipient(recipient))) {
+      setError('Enter a valid email address before adding it.')
+      return
+    }
+
+    const nextDraft = { ...draftRef.current, [event.currentTarget.name]: formatRecipients(event.currentTarget.value) }
+    draftRef.current = nextDraft
+    setDraft(nextDraft)
+    queueDraftSave(nextDraft)
+    setError('')
+  }
+
+  function handleRecipientChange(event) {
+    const nextValue = event.target.value.replace(/,/g, ';')
+    const nextDraft = { ...draftRef.current, [event.target.name]: nextValue }
+    draftRef.current = nextDraft
+    setDraft(nextDraft)
+    queueDraftSave(nextDraft)
+    setError('')
+  }
+
   function updateBodyFromEditor() {
     if (!editorRef.current) return
     editorDirtyRef.current = true
@@ -339,14 +378,15 @@ export function ComposeModal({ colorTheme = 'default', mailboxEmail = '', mode =
           ) : <b id="compose-title">{config.title}</b>}
         </div>
         <div className="composeRecipients">
-          <input autoFocus name="to" value={draft.to} onChange={updateField} placeholder="To" aria-label="Recipient" disabled={config.toDisabled} />
+          <input autoFocus name="to" value={draft.to} onChange={handleRecipientChange} onKeyDown={handleRecipientKeyDown} placeholder="To" aria-label="Recipient" aria-describedby="recipient-hint" disabled={config.toDisabled} />
           {!config.toDisabled ? <div className="composeRecipientToggles">
             <button type="button" onClick={() => setShowCc(true)} aria-expanded={showCc}>CC</button>
             <button type="button" onClick={() => setShowBcc(true)} aria-expanded={showBcc}>CCI</button>
           </div> : null}
         </div>
-        {showCc ? <input name="cc" value={draft.cc} onChange={updateField} placeholder="CC" aria-label="Carbon copy recipients" /> : null}
-        {showBcc ? <input name="bcc" value={draft.bcc} onChange={updateField} placeholder="CCI" aria-label="Blind carbon copy recipients" /> : null}
+        {showCc ? <input name="cc" value={draft.cc} onChange={handleRecipientChange} onKeyDown={handleRecipientKeyDown} placeholder="CC" aria-label="Carbon copy recipients" aria-describedby="recipient-hint" /> : null}
+        {showBcc ? <input name="bcc" value={draft.bcc} onChange={handleRecipientChange} onKeyDown={handleRecipientKeyDown} placeholder="CCI" aria-label="Blind carbon copy recipients" aria-describedby="recipient-hint" /> : null}
+        <span id="recipient-hint" className="composeAccessibleHint">Press Enter, comma, or semicolon to add another recipient.</span>
         <input name="subject" value={draft.subject} onChange={updateField} placeholder="Subject" aria-label="Subject" disabled={config.subjectDisabled} />
         <div className={`composeEditorFrame${isReplyMode ? ' has-history' : ''}`}>
           <div ref={editorRef} className="composeEditor" contentEditable role="textbox" aria-label="Message body" aria-multiline="true" data-placeholder={mode === 'forward' ? 'Add a note…' : 'Write something brilliant…'} onInput={updateBodyFromEditor} onPaste={pastePlainText} />
