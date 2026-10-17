@@ -311,7 +311,7 @@ export class MailcowImapProvider implements MailProvider {
     return (await this.listMessagePage(folder, 1, 25)).messages
   }
 
-  async listMessagePage(folder: string, page: number, pageSize: number): Promise<MailPage> {
+  async listMessagePage(folder: string, page: number, pageSize: number, starredOnly = false): Promise<MailPage> {
     const client = this.createImapClient()
     await client.connect()
     try {
@@ -320,7 +320,8 @@ export class MailcowImapProvider implements MailProvider {
       if (!selected) return { messages: [], pagination: { page, pageSize, total: 0, totalPages: 0 } }
       const mailbox = selected.path
       await client.mailboxOpen(mailbox)
-      const total = client.mailbox.exists || 0
+      const flaggedUids = starredOnly ? (await client.search({ flagged: true }, { uid: true }) || []) : null
+      const total = flaggedUids ? flaggedUids.length : client.mailbox.exists || 0
       if (!total) return { messages: [], pagination: { page, pageSize, total, totalPages: 0 } }
 
       const end = Math.max(total - (page - 1) * pageSize, 0)
@@ -328,13 +329,13 @@ export class MailcowImapProvider implements MailProvider {
       const start = Math.max(end - pageSize + 1, 1)
       const rows: MailMessage[] = []
 
-      for await (const message of client.fetch(`${start}:${end}`, {
+      for await (const message of client.fetch(flaggedUids ? flaggedUids.slice(start - 1, end).join(',') : `${start}:${end}`, {
         uid: true,
         envelope: true,
         flags: true,
         internalDate: true,
         source: { maxLength: 1024 * 1024 * 3 },
-      })) {
+      }, { uid: Boolean(flaggedUids) })) {
         const parsed = message.source ? await simpleParser(message.source) : null
         const from = message.envelope?.from?.[0]
         const email = from?.address || this.credentials.email

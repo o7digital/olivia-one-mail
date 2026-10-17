@@ -141,3 +141,37 @@ test('successful SMTP delivery does not wait for the Sent-folder IMAP copy', asy
     nodemailer.createTransport = originalCreateTransport
   }
 })
+
+test('favorites are searched across the mailbox before pagination and fetched by UID', async () => {
+  const provider = new MailcowImapProvider({ email: 'sender@example.com', password: 'secret' },
+    { imapHost: 'imap', imapPort: 993, imapSecure: true, smtpHost: 'smtp', smtpPort: 587, smtpSecure: false, fromName: 'Sender', fromNameMap: {} })
+  let flagged: number[] | false = [2, 50, ...Array.from({ length: 25 }, (_, i) => 100 + i)]
+  const fetches: Array<{ range: string; uid: boolean }> = []
+  const client = {
+    connect: async () => {}, logout: async () => {},
+    list: async () => [{ path: 'INBOX', specialUse: '\\Inbox' }],
+    mailboxOpen: async () => {}, mailbox: { exists: 723 },
+    search: async (query: unknown, options: unknown) => {
+      assert.deepEqual(query, { flagged: true })
+      assert.deepEqual(options, { uid: true })
+      return flagged
+    },
+    async *fetch(range: string, _query: unknown, options: { uid: boolean }) {
+      fetches.push({ range, uid: options.uid })
+      for (const uid of options.uid ? range.split(',').map(Number) : [674, 698]) {
+        yield { uid, flags: new Set(['\\Flagged']), envelope: { subject: `Mail ${uid}` }, internalDate: new Date('2026-10-17T12:00:00Z') }
+      }
+    },
+  }
+  ;(provider as unknown as { createImapClient: () => typeof client }).createImapClient = () => client
+  const page = await provider.listMessagePage('Inbox', 2, 25, true)
+  assert.deepEqual(page.pagination, { page: 2, pageSize: 25, total: 27, totalPages: 2 })
+  assert.deepEqual(fetches[0], { range: '2,50', uid: true })
+  assert.deepEqual(page.messages.map((message) => message.subject), ['Mail 50', 'Mail 2'])
+  flagged = false
+  assert.deepEqual((await provider.listMessagePage('Inbox', 1, 25, true)).messages, [])
+  assert.equal(fetches.length, 1)
+  const ordinary = await provider.listMessagePage('Inbox', 2, 25)
+  assert.equal(ordinary.pagination.total, 723)
+  assert.deepEqual(fetches[1], { range: '674:698', uid: false })
+})

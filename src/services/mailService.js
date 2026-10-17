@@ -3,7 +3,7 @@ import { apiClient } from './apiClient'
 export const mailService = {
   ensureSession: () => apiClient.ensureSession(),
   listFolders: () => apiClient.get('/api/mail/folders'),
-  listMessages: (folder = 'Inbox', page = 1, pageSize = 25) => apiClient.get('/api/mail/messages', { folder, page, pageSize }),
+  listMessages: (folder = 'Inbox', page = 1, pageSize = 25, starredOnly = false) => apiClient.get('/api/mail/messages', { folder, page, pageSize, starred: starredOnly || undefined }),
   getMessage: (id) => apiClient.get(`/api/mail/messages/${id}`),
   getAttachmentUrl: (id, index) => `/api/mail/messages/${encodeURIComponent(id)}/attachments/${index}`,
   markRead: (id) => apiClient.post(`/api/mail/messages/${id}/read`, {}),

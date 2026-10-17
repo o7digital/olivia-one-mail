@@ -740,3 +740,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
   .appearanceMode { grid-template-columns: 120px minmax(0, 1fr); }
   .darkPaletteGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+.rowtop .rowStar { color: #f5c45c; fill: rgba(245, 196, 92, .3); margin-right: 4px; vertical-align: middle; }
+.loadMore { padding: 14px 6px; text-align: center; color: #8fa6bf; font-size: 11px; }
+.loadMore button { display: block; margin: 6px auto; padding: 8px 12px; border: 1px solid rgba(145, 181, 224, .25); border-radius: 8px; background: transparent; color: inherit; cursor: pointer; }

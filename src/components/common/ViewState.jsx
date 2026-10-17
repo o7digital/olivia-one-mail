@@ -13,12 +13,12 @@ export function MailListSkeleton() {
   )
 }
 
-export function EmptyState({ query }) {
+export function EmptyState({ query, starredOnly = false }) {
   return (
     <div className="viewState">
       <InboxIcon size={22} />
-      <b>{query ? 'No matching messages' : 'Nothing here yet'}</b>
-      <small>{query ? 'Try a different person, subject, or keyword.' : 'This folder is refreshingly quiet.'}</small>
+      <b>{query ? 'No matching messages' : starredOnly ? 'No favorites yet' : 'Nothing here yet'}</b>
+      <small>{query ? 'Try a different person, subject, or keyword.' : starredOnly ? 'Star a message to find it here.' : 'This folder is refreshingly quiet.'}</small>
     </div>
   )
 }

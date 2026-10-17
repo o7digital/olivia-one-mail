@@ -255,7 +255,11 @@ function App() {
               onCategoryChange={inbox.setCategory}
               onRetry={inbox.reload}
               onCheckMail={inbox.checkMail}
-              onPageChange={inbox.setPage}
+              onLoadMore={inbox.loadMore}
+              loadingMore={inbox.loadingMore}
+              loadMoreError={inbox.loadMoreError}
+              starredOnly={inbox.starredOnly}
+              onStarredOnlyChange={inbox.setStarredOnly}
               onSelect={inbox.selectMessage}
               onSortChange={inbox.setSortBy}
               pagination={inbox.pagination}

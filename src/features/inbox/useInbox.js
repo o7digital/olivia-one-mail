@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { mailService } from '../../services/mailService'
 
 export const DEFAULT_LABELS = ['Clients', 'Partnerships', 'Projects', 'Personal']
 
-function inboxCacheKey(mailboxEmail, folder, page) {
+function inboxCacheKey(mailboxEmail, folder, page, starredOnly = false) {
   const mailbox = String(mailboxEmail || '').trim().toLowerCase()
-  return mailbox ? `olivia-one:inbox-cache:v1:${encodeURIComponent(mailbox)}:${encodeURIComponent(folder)}:${page}` : ''
+  return mailbox ? `olivia-one:inbox-cache:v1:${encodeURIComponent(mailbox)}:${encodeURIComponent(folder)}:${page}:${starredOnly ? 'starred' : 'all'}` : ''
 }
 
-function readInboxCache(mailboxEmail, folder, page) {
-  const key = inboxCacheKey(mailboxEmail, folder, page)
+function readInboxCache(mailboxEmail, folder, page, starredOnly) {
+  const key = inboxCacheKey(mailboxEmail, folder, page, starredOnly)
   if (!key) return null
   try {
     const cached = JSON.parse(window.localStorage.getItem(key) || 'null')
@@ -20,8 +20,8 @@ function readInboxCache(mailboxEmail, folder, page) {
   }
 }
 
-function writeInboxCache(mailboxEmail, folder, page, messages, pagination) {
-  const key = inboxCacheKey(mailboxEmail, folder, page)
+function writeInboxCache(mailboxEmail, folder, page, messages, pagination, starredOnly) {
+  const key = inboxCacheKey(mailboxEmail, folder, page, starredOnly)
   if (!key) return
   const cachedMessages = messages.map((message, index) => index === 0
     ? {
@@ -83,7 +83,11 @@ export function useInbox(folder, query, enabled = true, mailboxEmail = '') {
   const [labelFilter, setLabelFilter] = useState(null)
   const [category, setCategory] = useState('focused')
   const [sortBy, setSortBy] = useState('date-desc')
-  const [page, setPage] = useState(1)
+  const [starredOnly, setStarredOnly] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [loadMoreError, setLoadMoreError] = useState(null)
+  const requestGeneration = useRef(0)
+  const busy = useRef(false)
   const [pagination, setPagination] = useState({ page: 1, pageSize: 25, total: 0, totalPages: 0 })
 
   const loadLabels = useCallback(async () => {
@@ -107,43 +111,81 @@ export function useInbox(folder, query, enabled = true, mailboxEmail = '') {
       setError(null)
       return
     }
-    const cached = readInboxCache(mailboxEmail, folder, page)
+    const generation = ++requestGeneration.current
+    busy.current = true
+    setLoadingMore(false)
+    setLoadMoreError(null)
+    const cached = readInboxCache(mailboxEmail, folder, 1, starredOnly)
     if (cached) {
       setMessages(cached.messages)
       setPagination(cached.pagination)
       setSelectedId((current) => cached.messages.some(({ id }) => id === current) ? current : cached.messages[0]?.id ?? null)
       setStatus('ready')
-    } else if (!silent) {
+    } else {
+      setMessages([])
+      setSelectedId(null)
       setStatus('loading')
     }
     if (!silent) setRefreshing(true)
     setError(null)
     try {
-      const response = await mailService.listMessages(folder, page)
+      const response = await mailService.listMessages(folder, 1, 25, starredOnly)
+      if (generation !== requestGeneration.current) return
       const nextMessages = Array.isArray(response) ? response : response.messages
       const nextPagination = Array.isArray(response)
         ? { page: 1, pageSize: nextMessages.length || 25, total: nextMessages.length, totalPages: nextMessages.length ? 1 : 0 }
         : response.pagination
       setMessages(nextMessages)
       setPagination(nextPagination)
-      writeInboxCache(mailboxEmail, folder, page, nextMessages, nextPagination)
+      writeInboxCache(mailboxEmail, folder, 1, nextMessages, nextPagination, starredOnly)
       setSelectedId((current) => nextMessages.some(({ id }) => id === current) ? current : nextMessages[0]?.id ?? null)
       setStatus('ready')
     } catch (loadError) {
+      if (generation !== requestGeneration.current) return
       setError(loadError)
       if (!cached) setStatus('error')
     } finally {
-      if (!silent) setRefreshing(false)
+      if (generation === requestGeneration.current) {
+        busy.current = false
+        setRefreshing(false)
+      }
     }
-  }, [enabled, folder, mailboxEmail, page])
+  }, [enabled, folder, mailboxEmail, starredOnly])
+
+  const loadMore = useCallback(async () => {
+    if (!enabled || busy.current || status !== 'ready' || pagination.page >= pagination.totalPages) return
+    const generation = requestGeneration.current
+    busy.current = true
+    setLoadingMore(true)
+    setLoadMoreError(null)
+    try {
+      const response = await mailService.listMessages(folder, pagination.page + 1, 25, starredOnly)
+      if (generation !== requestGeneration.current) return
+      setMessages((current) => {
+        const ids = new Set(current.map(({ id }) => id))
+        return [...current, ...response.messages.filter(({ id }) => !ids.has(id))]
+      })
+      setPagination(response.pagination)
+    } catch (nextError) {
+      if (generation === requestGeneration.current) setLoadMoreError(nextError)
+    } finally {
+      if (generation === requestGeneration.current) {
+        busy.current = false
+        setLoadingMore(false)
+      }
+    }
+  }, [enabled, folder, pagination, starredOnly, status])
 
   useEffect(() => {
     load(true)
-    setLabelFilter(null)
+    return () => {
+      requestGeneration.current += 1
+      busy.current = false
+    }
   }, [load])
 
   useEffect(() => {
-    setPage(1)
+    setLabelFilter(null)
   }, [folder])
 
   useEffect(() => {
@@ -166,7 +208,8 @@ export function useInbox(folder, query, enabled = true, mailboxEmail = '') {
 
     // Providers that do not classify mail yet keep their messages in Focused.
     // Unlike read/unread, this value is stable when a message is opened.
-    if (folder === 'Inbox') {
+    if (starredOnly) next = next.filter((message) => message.starred)
+    if (folder === 'Inbox' && !starredOnly) {
       next = next.filter((message) => (message.category ?? 'focused') === category)
     }
 
@@ -186,10 +229,13 @@ export function useInbox(folder, query, enabled = true, mailboxEmail = '') {
     }
 
     return next
-  }, [category, folder, labelFilter, messages, query, sortBy])
+  }, [category, folder, labelFilter, messages, query, sortBy, starredOnly])
 
   useEffect(() => {
-    if (!filteredMessages.length) return
+    if (!filteredMessages.length) {
+      setSelectedId(null)
+      return
+    }
     if (!filteredMessages.some(({ id }) => id === selectedId)) {
       setSelectedId(filteredMessages[0].id)
     }
@@ -237,8 +283,9 @@ export function useInbox(folder, query, enabled = true, mailboxEmail = '') {
   const toggleStarMessage = useCallback(async (id) => {
     const result = await mailService.toggleStar(id)
     setMessages((current) => current.map((message) => message.id === id ? { ...message, starred: result.starred } : message))
+    if (starredOnly && !result.starred) await load(true)
     return result
-  }, [])
+  }, [load, starredOnly])
 
   const updateMessageLabels = useCallback(async (id, labels) => {
     const result = await mailService.setMessageLabels(id, labels)
@@ -252,10 +299,7 @@ export function useInbox(folder, query, enabled = true, mailboxEmail = '') {
   return {
     archiveMessage,
     category,
-      checkMail: () => {
-        if (page !== 1) setPage(1)
-        else load()
-      },
+    checkMail: () => load(),
     deleteMessage,
     error,
     filteredMessages,
@@ -263,7 +307,11 @@ export function useInbox(folder, query, enabled = true, mailboxEmail = '') {
     labelFilter,
     messages,
     moveMessage,
-    page,
+    loadMore,
+    loadingMore,
+    loadMoreError,
+    starredOnly,
+    setStarredOnly,
     pagination,
     reload: () => load(),
     selected: messages.find(({ id }) => id === selectedId) ?? null,
@@ -271,7 +319,6 @@ export function useInbox(folder, query, enabled = true, mailboxEmail = '') {
     selectMessage,
     setCategory,
     setLabelFilter,
-    setPage,
     setSortBy,
     sortBy,
     status,

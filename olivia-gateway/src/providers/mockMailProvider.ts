@@ -1,6 +1,6 @@
 import { folders, messages } from '../data/mockData.js'
 import { computeReplyAllRecipients } from '../services/mailRecipients.js'
-import type { Folder, MailMessage } from '../types/domain.js'
+import type { Folder, MailMessage, MailPage } from '../types/domain.js'
 import type { MailProvider, OutgoingAttachment } from './mailProvider.js'
 
 const MOCK_MAILBOX_EMAIL = 'olivier.steineur@o7digitalgroup.com'
@@ -21,6 +21,14 @@ export class MockMailProvider implements MailProvider {
 
   async listMessages(folder: string): Promise<MailMessage[]> {
     return state.messages.filter((message) => message.folder === folder)
+  }
+
+  async listMessagePage(folder: string, page: number, pageSize: number, starredOnly = false): Promise<MailPage> {
+    const messages = (await this.listMessages(folder)).filter((message) => !starredOnly || message.starred)
+    return {
+      messages: messages.slice((page - 1) * pageSize, page * pageSize),
+      pagination: { page, pageSize, total: messages.length, totalPages: Math.ceil(messages.length / pageSize) },
+    }
   }
 
   async getMessage(id: string): Promise<MailMessage | null> {

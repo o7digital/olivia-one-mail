@@ -10,7 +10,7 @@ export interface OutgoingAttachment {
 export interface MailProvider {
   listFolders(): Promise<Folder[]>
   listMessages(folder: string): Promise<MailMessage[]>
-  listMessagePage?(folder: string, page: number, pageSize: number): Promise<MailPage>
+  listMessagePage?(folder: string, page: number, pageSize: number, starredOnly?: boolean): Promise<MailPage>
   getMessage(id: string): Promise<MailMessage | null>
   getAttachment?(id: string, index: number): Promise<{ filename: string; contentType: string; content: Buffer } | null>
   sendMessage(input: { to: string; cc?: string; bcc?: string; subject: string; body: string; html?: string; attachments?: OutgoingAttachment[] }): Promise<{ id: string; status: string }>
