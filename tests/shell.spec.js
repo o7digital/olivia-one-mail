@@ -461,6 +461,36 @@ test('tablet layout and application routes', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible()
 })
 
+test('subject star persists after reload and reports save failures', async ({ page }) => {
+  await signIn(page)
+  await page.getByRole('button', { name: /Liam Chen/ }).click()
+  const star = page.locator('.titleline').getByRole('button', { name: /star/ })
+  await expect(star).toHaveAttribute('aria-pressed', 'false')
+  await star.click()
+  await expect(star).toHaveAttribute('aria-pressed', 'true')
+
+  await page.reload()
+  await page.getByRole('button', { name: /Liam Chen/ }).click()
+  await expect(star).toHaveAttribute('aria-pressed', 'true')
+
+  await page.route('**/api/mail/messages/*/star', (route) => route.fulfill({
+    status: 500,
+    contentType: 'application/json',
+    body: JSON.stringify({ message: 'Unable to save star' }),
+  }))
+  await star.click()
+  await expect(page.getByRole('status')).toContainText('Unable to save star')
+  await expect(star).toHaveAttribute('aria-pressed', 'true')
+  await expect(star).toBeEnabled()
+  await page.unroute('**/api/mail/messages/*/star')
+
+  await star.click()
+  await expect(star).toHaveAttribute('aria-pressed', 'false')
+  await page.reload()
+  await page.getByRole('button', { name: /Liam Chen/ }).click()
+  await expect(star).toHaveAttribute('aria-pressed', 'false')
+})
+
 test('message toolbar actions update the mailbox and expose the More menu', async ({ page }) => {
   await signIn(page)
 

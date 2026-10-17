@@ -167,7 +167,12 @@ export function MailReader({
       </div>
       <article>
         <div className="titleline">
-          <div><h1>{message.subject}</h1><span className="important">Important</span><Star size={16} className={message.starred ? 'starred' : ''} /></div>
+          <div><h1>{message.subject}</h1><span className="important">Important</span><IconButton
+            label={message.starred ? 'Remove star' : 'Add star'}
+            aria-pressed={Boolean(message.starred)}
+            disabled={Boolean(pendingAction)}
+            onClick={() => handleMoreAction('star')}
+          ><Star size={16} className={message.starred ? 'starred' : ''} /></IconButton></div>
           <div><IconButton label="Reply" onClick={onReply}><Reply size={16} /></IconButton><IconButton label="Reply all" onClick={onReplyAll}><ReplyAll size={16} /></IconButton><IconButton label="Forward" onClick={onForward}><Forward size={16} /></IconButton></div>
         </div>
         <div className="sender"><Avatar initials={message.initials} tone={message.tone} /><div><b>{message.sender}</b><small>{message.email}</small>{message.to?.length ? <small>To: {message.to.join(', ')}</small> : null}</div><time>Today, {message.time}</time></div>
