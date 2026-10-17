@@ -94,9 +94,9 @@ function AppearanceSettings({ colorTheme, onColorThemeChange, colorIntensity = D
             const selected = colorTheme !== 'light' && theme.id === activeTheme.id
             return (
               <button key={theme.id} className={selected ? 'selected' : ''} type="button" aria-pressed={selected} onClick={() => selectDarkTheme(theme.id)}>
-                <span style={{ '--palette-accent': theme.colors[0], '--palette-surface': theme.colors[1], '--palette-secondary': theme.colors[2] }} aria-hidden="true" />
+                <span style={{ '--palette-accent': theme.colors[0], '--palette-surface': lightAppearance ? `color-mix(in srgb, ${theme.colors[0]} 16%, white)` : theme.colors[1], '--palette-secondary': lightAppearance ? `color-mix(in srgb, ${theme.colors[2]} 18%, white)` : theme.colors[2] }} aria-hidden="true" />
                 <b>{theme.name}</b>
-                <small>{theme.description}</small>
+                <small>{lightAppearance ? { default: 'Soft sky blue.', green: 'Fresh mint.', gray: 'Soft silver.', orange: 'Warm peach.', violet: 'Soft lavender.' }[theme.id] : theme.description}</small>
                 {selected ? <Check size={14} /> : null}
               </button>
             )

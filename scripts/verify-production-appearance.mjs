@@ -39,6 +39,22 @@ try {
       await expect(page.getByRole('radio', { name: /Light White surfaces/ })).toBeChecked()
       await expect(page.locator('.featurePage')).toHaveCSS('background-color', 'rgb(245, 247, 250)')
       await expect(page.locator('.sidebar')).toHaveCSS('background-color', 'rgb(255, 255, 255)')
+      for (const swatch of await page.locator('.darkPaletteGrid button > span').all()) {
+        const darkestChannel = await swatch.evaluate((element) => {
+          const sample = document.createElement('i')
+          sample.style.backgroundColor = 'var(--palette-surface)'
+          element.append(sample)
+          const canvas = document.createElement('canvas')
+          canvas.width = canvas.height = 1
+          const context = canvas.getContext('2d')
+          context.fillStyle = getComputedStyle(sample).backgroundColor
+          context.fillRect(0, 0, 1, 1)
+          sample.remove()
+          return Math.min(...context.getImageData(0, 0, 1, 1).data.slice(0, 3))
+        })
+        expect(darkestChannel).toBeGreaterThan(180)
+      }
+      await expect(page.getByText('Fresh mint.', { exact: true })).toBeVisible()
       if (process.env.APPEARANCE_SCREENSHOT) await page.screenshot({ path: process.env.APPEARANCE_SCREENSHOT })
       await page.getByRole('radio', { name: /Dark Midnight surfaces/ }).click()
       await expect(slider).toHaveValue('100')
