@@ -137,10 +137,13 @@ function App() {
     notify(`Opportunity created in O7 Pulse (deal ${opportunity.dealId})`)
   }
 
-  function changeColorTheme(theme) {
+  function changeColorTheme(theme, preferDark = false) {
     const nextTheme = saveColorTheme(session.session?.user?.email, theme)
     setColorTheme(nextTheme)
-    setColorIntensity(nextTheme === 'light' ? DEFAULT_COLOR_INTENSITY : loadColorIntensity(session.session?.user?.email, nextTheme))
+    const savedIntensity = nextTheme === 'light' ? DEFAULT_COLOR_INTENSITY : loadColorIntensity(session.session?.user?.email, nextTheme)
+    setColorIntensity(preferDark && savedIntensity >= 140
+      ? saveColorIntensity(session.session?.user?.email, nextTheme, DEFAULT_COLOR_INTENSITY)
+      : savedIntensity)
   }
 
   function changeColorIntensity(value) {

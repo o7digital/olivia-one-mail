@@ -413,6 +413,10 @@ test('color intensity is stored separately for each dark palette', async ({ page
   await expect(app).toHaveCSS('--theme-bg-end', '#ffffff')
   await expect(page.locator('.featureHero h1')).toHaveCSS('color', 'rgb(23, 33, 43)')
   await expect(page.getByRole('status')).toContainText('Green palette · Light appearance')
+  await expect(page.getByRole('radio', { name: /Light White surfaces/ })).toBeChecked()
+  await page.getByRole('radio', { name: /Dark Midnight surfaces/ }).click()
+  await expect(greenIntensityAtMaximum).toHaveValue('100')
+  await expect(app).toHaveAttribute('data-color-mode', 'dark')
 
   await greenIntensityAtMaximum.fill('120')
   await expect(app).toHaveAttribute('data-color-mode', 'dark')

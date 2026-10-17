@@ -744,3 +744,53 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 .rowtop .rowStar { color: #f5c45c; fill: rgba(245, 196, 92, .3); margin-right: 4px; vertical-align: middle; }
 .loadMore { padding: 14px 6px; text-align: center; color: #8fa6bf; font-size: 11px; }
 .loadMore button { display: block; margin: 6px auto; padding: 8px 12px; border: 1px solid rgba(145, 181, 224, .25); border-radius: 8px; background: transparent; color: inherit; cursor: pointer; }
+
+/* Light surfaces use a quiet canvas, distinct white cards and readable controls. */
+.app:is([data-theme='light'], [data-color-mode='light']) { background: #eef2f6; }
+.app:is([data-theme='light'], [data-color-mode='light']) .glow { display: none; }
+.app:is([data-theme='light'], [data-color-mode='light']) .topbar { background: #fff; }
+.app:is([data-theme='light'], [data-color-mode='light']) .card { background: #fff; box-shadow: 0 2px 8px rgba(30, 50, 75, .035); border-color: #dce3eb; }
+.app:is([data-theme='light'], [data-color-mode='light']) .featurePage { background: #f5f7fa; padding: clamp(24px, 3vw, 44px); }
+.app:is([data-theme='light'], [data-color-mode='light']) .featurePage::after { display: none; }
+.app:is([data-theme='light'], [data-color-mode='light']) .featurePage .featureHero { margin-bottom: 26px; }
+.app:is([data-theme='light'], [data-color-mode='light']) .featurePage .featureHero h1 { font-size: clamp(30px, 3vw, 42px); letter-spacing: -1.3px; margin: 12px 0; }
+.app:is([data-theme='light'], [data-color-mode='light']) .featurePage .featureHero p { font-size: 14px; line-height: 1.6; }
+.app:is([data-theme='light'], [data-color-mode='light']) .featurePage .featureIcon { width: 42px; height: 42px; margin-bottom: 16px; background: #e8f1f7; border-color: #cfdee9; }
+.app:is([data-theme='light'], [data-color-mode='light']) .appearanceSettings, .app:is([data-theme='light'], [data-color-mode='light']) .connectedAccounts { background: #fff; border-color: #dce3eb; padding: clamp(18px, 2vw, 28px); box-shadow: 0 2px 6px rgba(30, 50, 75, .025); }
+.app:is([data-theme='light'], [data-color-mode='light']) .connectedHead h2 { font-size: 21px; }
+.app:is([data-theme='light'], [data-color-mode='light']) .connectedHead p { font-size: 13px; line-height: 1.6; max-width: 640px; }
+.app:is([data-theme='light'], [data-color-mode='light']) .connectedHead small, .app:is([data-theme='light'], [data-color-mode='light']) .connectedHead > span { font-size: 10px; }
+.app:is([data-theme='light'], [data-color-mode='light']) .appearanceMode { min-height: 120px; padding: 16px; box-shadow: none; }
+.app:is([data-theme='light'], [data-color-mode='light']) .appearanceMode.selected { background: #f0f7fb; box-shadow: inset 0 0 0 1px var(--theme-accent); }
+.app:is([data-theme='light'], [data-color-mode='light']) .appearanceMode > span:nth-child(2) b { font-size: 16px; }
+.app:is([data-theme='light'], [data-color-mode='light']) .appearanceMode > span:nth-child(2) small { font-size: 12px; line-height: 1.5; }
+.app:is([data-theme='light'], [data-color-mode='light']) .modePreview { box-shadow: none; }
+.app:is([data-theme='light'], [data-color-mode='light']) .darkPaletteSection > div:first-child { align-items: start; flex-wrap: wrap; gap: 6px; }
+.app:is([data-theme='light'], [data-color-mode='light']) .darkPaletteSection > div:first-child b { font-size: 14px; }
+.app:is([data-theme='light'], [data-color-mode='light']) .darkPaletteSection > div:first-child small { font-size: 12px; }
+.app:is([data-theme='light'], [data-color-mode='light']) .darkPaletteGrid { gap: 10px; }
+.app:is([data-theme='light'], [data-color-mode='light']) .darkPaletteGrid button { min-height: 88px; background: #f8fafc; }
+.app:is([data-theme='light'], [data-color-mode='light']) .darkPaletteGrid button b { font-size: 12px; }
+.app:is([data-theme='light'], [data-color-mode='light']) .darkPaletteGrid button small { font-size: 10px; white-space: normal; line-height: 1.4; }
+.app:is([data-theme='light'], [data-color-mode='light']) .darkPaletteGrid button.selected { border-color: var(--theme-accent); background: #edf5fa; }
+.app:is([data-theme='light'], [data-color-mode='light']) .darkPaletteIntensity { background: #f8fafc; border-color: #dce3eb; padding: 16px; gap: 14px; color: #475569; }
+.app:is([data-theme='light'], [data-color-mode='light']) .darkPaletteIntensity > span { font-size: 13px; }
+.app:is([data-theme='light'], [data-color-mode='light']) .darkPaletteIntensity > small { font-size: 11px; color: #526173; }
+.app:is([data-theme='light'], [data-color-mode='light']) .darkPaletteIntensity input[type='range'] { height: 6px; }
+.app:is([data-theme='light'], [data-color-mode='light']) .themeStatus { font-size: 12px; margin-top: 16px; }
+.app:is([data-theme='light'], [data-color-mode='light']) .compose { color: #fff; background: #16769a; border-color: #16769a; box-shadow: 0 2px 4px rgba(20, 85, 115, .12); }
+.app:is([data-theme='light'], [data-color-mode='light']) .compose:hover { background: #126483; }
+.app:is([data-theme='light'], [data-color-mode='light']) .navitem { font-size: 12px; }
+.app:is([data-theme='light'], [data-color-mode='light']) .section > button { font-size: 11px; }
+.app:is([data-theme='light'], [data-color-mode='light']) .avatar, .app:is([data-theme='light'], [data-color-mode='light']) .spaceicon { box-shadow: none; }
+.app:is([data-theme='light'], [data-color-mode='light']) .summary { background: #eff7fb; border-color: #cfdfeb; }
+.app:is([data-theme='light'], [data-color-mode='light']) .insight, .app:is([data-theme='light'], [data-color-mode='light']) .aiTabContent { background: #f8fafc; border-color: #dce3eb; }
+.app:is([data-theme='light'], [data-color-mode='light']) .sortMenuPanel, .app:is([data-theme='light'], [data-color-mode='light']) .toolbarMenuPanel, .app:is([data-theme='light'], [data-color-mode='light']) .labelAddPanel { background: #fff; color: #334155; border-color: #dce3eb; box-shadow: 0 8px 24px rgba(30, 50, 75, .12); }
+.app:is([data-theme='light'], [data-color-mode='light']) .loadMore { color: #526173; }
+@media (max-width: 1100px) {
+  .app:is([data-theme='light'], [data-color-mode='light']) .darkPaletteGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  .app:is([data-theme='light'], [data-color-mode='light']) .darkPaletteGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .app:is([data-theme='light'], [data-color-mode='light']) .appearanceMode { grid-template-columns: 82px minmax(0, 1fr); }
+}

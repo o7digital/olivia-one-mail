@@ -56,6 +56,7 @@ export function FeaturePage({ page, colorTheme = 'default', onColorThemeChange, 
 
 function AppearanceSettings({ colorTheme, onColorThemeChange, colorIntensity = DEFAULT_COLOR_INTENSITY, onColorIntensityChange }) {
   const activeTheme = COLOR_THEMES.find((theme) => theme.id === colorTheme) ?? COLOR_THEMES[0]
+  const lightAppearance = colorTheme === 'light' || colorIntensity >= 140
   const darkThemes = COLOR_THEMES.filter((theme) => theme.id !== 'light')
   const [preferredDarkTheme, setPreferredDarkTheme] = useState(colorTheme === 'light' ? 'default' : colorTheme)
 
@@ -63,9 +64,9 @@ function AppearanceSettings({ colorTheme, onColorThemeChange, colorIntensity = D
     if (colorTheme !== 'light') setPreferredDarkTheme(colorTheme)
   }, [colorTheme])
 
-  function selectDarkTheme(themeId) {
+  function selectDarkTheme(themeId, preferDark = false) {
     setPreferredDarkTheme(themeId)
-    onColorThemeChange?.(themeId)
+    onColorThemeChange?.(themeId, preferDark)
   }
 
   return (
@@ -75,15 +76,15 @@ function AppearanceSettings({ colorTheme, onColorThemeChange, colorIntensity = D
         <span><Palette size={16} />Personalize</span>
       </div>
       <div className="appearanceModeGrid" role="radiogroup" aria-label="Appearance mode">
-        <button className={`appearanceMode light ${colorTheme === 'light' ? 'selected' : ''}`} type="button" role="radio" aria-checked={colorTheme === 'light'} onClick={() => onColorThemeChange?.('light')}>
+        <button className={`appearanceMode light ${lightAppearance ? 'selected' : ''}`} type="button" role="radio" aria-checked={lightAppearance} onClick={() => onColorThemeChange?.('light')}>
           <span className="modePreview" aria-hidden="true"><i /><i /><i /></span>
           <span><b>Light</b><small>White surfaces · dark text</small></span>
-          <i className="modeCheck" aria-hidden="true">{colorTheme === 'light' ? <Check size={16} /> : null}</i>
+          <i className="modeCheck" aria-hidden="true">{lightAppearance ? <Check size={16} /> : null}</i>
         </button>
-        <button className={`appearanceMode dark ${colorTheme !== 'light' ? 'selected' : ''}`} type="button" role="radio" aria-checked={colorTheme !== 'light'} onClick={() => selectDarkTheme(preferredDarkTheme)}>
+        <button className={`appearanceMode dark ${!lightAppearance ? 'selected' : ''}`} type="button" role="radio" aria-checked={!lightAppearance} onClick={() => selectDarkTheme(preferredDarkTheme, true)}>
           <span className="modePreview" aria-hidden="true"><i /><i /><i /></span>
           <span><b>Dark</b><small>Midnight surfaces · white text</small></span>
-          <i className="modeCheck" aria-hidden="true">{colorTheme !== 'light' ? <Check size={16} /> : null}</i>
+          <i className="modeCheck" aria-hidden="true">{!lightAppearance ? <Check size={16} /> : null}</i>
         </button>
       </div>
       <div className="darkPaletteSection">
