@@ -342,10 +342,7 @@ function App() {
           forwardedMessage={composeState.forwardedMessage}
           repliedMessage={composeState.repliedMessage}
           onClose={() => setComposeState(null)}
-          onSent={(message) => {
-            notify(message)
-            if (composeState.mode !== 'new') inbox.reload()
-          }}
+          onSent={notify}
         />
       ) : null}
       {opportunityOpen && inbox.selected && aiWorkspace.analysis ? <OpportunityDialog analysis={aiWorkspace.analysis} message={inbox.selected} onCancel={() => setOpportunityOpen(false)} onConfirm={confirmOpportunity} /> : null}

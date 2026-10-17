@@ -45,6 +45,7 @@ function writeInboxCache(mailboxEmail, folder, page, messages, pagination, starr
 }
 
 export function useMailFolders(enabled = true) {
+  const [revision, setRevision] = useState(0)
   const [folders, setFolders] = useState([])
   const [status, setStatus] = useState('loading')
 
@@ -65,10 +66,17 @@ export function useMailFolders(enabled = true) {
     load().catch(() => {
       if (active) setStatus('error')
     })
+    const reload = () => setRevision((value) => value + 1)
+    if (enabled) window.addEventListener('olivia:mail-sent', reload)
+    const timer = enabled ? window.setInterval(() => {
+      if (document.visibilityState === 'visible') setRevision((value) => value + 1)
+    }, 15000) : null
     return () => {
       active = false
+      window.clearInterval(timer)
+      window.removeEventListener('olivia:mail-sent', reload)
     }
-  }, [enabled])
+  }, [enabled, revision])
 
   return { folders, status }
 }
@@ -88,6 +96,8 @@ export function useInbox(folder, query, enabled = true, mailboxEmail = '') {
   const [loadMoreError, setLoadMoreError] = useState(null)
   const requestGeneration = useRef(0)
   const busy = useRef(false)
+  const loadedPages = useRef(1)
+  const hasLoaded = useRef(false)
   const [pagination, setPagination] = useState({ page: 1, pageSize: 25, total: 0, totalPages: 0 })
 
   const loadLabels = useCallback(async () => {
@@ -103,7 +113,8 @@ export function useInbox(folder, query, enabled = true, mailboxEmail = '') {
     }
   }, [enabled, folder])
 
-  const load = useCallback(async (silent = false) => {
+  const load = useCallback(async (silent = false, background = false) => {
+    if (background && busy.current) return
     if (!enabled) {
       setMessages([])
       setSelectedId(null)
@@ -116,12 +127,12 @@ export function useInbox(folder, query, enabled = true, mailboxEmail = '') {
     setLoadingMore(false)
     setLoadMoreError(null)
     const cached = readInboxCache(mailboxEmail, folder, 1, starredOnly)
-    if (cached) {
+    if (!background && cached) {
       setMessages(cached.messages)
       setPagination(cached.pagination)
       setSelectedId((current) => cached.messages.some(({ id }) => id === current) ? current : cached.messages[0]?.id ?? null)
       setStatus('ready')
-    } else {
+    } else if (!background) {
       setMessages([])
       setSelectedId(null)
       setStatus('loading')
@@ -129,21 +140,25 @@ export function useInbox(folder, query, enabled = true, mailboxEmail = '') {
     if (!silent) setRefreshing(true)
     setError(null)
     try {
-      const response = await mailService.listMessages(folder, 1, 25, starredOnly)
+      const pageCount = background ? loadedPages.current : 1
+      const responses = await Promise.all(Array.from({ length: pageCount }, (_, index) => mailService.listMessages(folder, index + 1, 25, starredOnly)))
+      const response = responses[0]
       if (generation !== requestGeneration.current) return
-      const nextMessages = Array.isArray(response) ? response : response.messages
+      const nextMessages = responses.flatMap((page) => Array.isArray(page) ? page : page.messages)
       const nextPagination = Array.isArray(response)
         ? { page: 1, pageSize: nextMessages.length || 25, total: nextMessages.length, totalPages: nextMessages.length ? 1 : 0 }
-        : response.pagination
+        : { ...response.pagination, page: Math.min(pageCount, response.pagination.totalPages || 1) }
+      loadedPages.current = nextPagination.page
+      hasLoaded.current = true
       setMessages(nextMessages)
       setPagination(nextPagination)
-      writeInboxCache(mailboxEmail, folder, 1, nextMessages, nextPagination, starredOnly)
+      writeInboxCache(mailboxEmail, folder, 1, Array.isArray(response) ? response : response.messages, Array.isArray(response) ? nextPagination : response.pagination, starredOnly)
       setSelectedId((current) => nextMessages.some(({ id }) => id === current) ? current : nextMessages[0]?.id ?? null)
       setStatus('ready')
     } catch (loadError) {
       if (generation !== requestGeneration.current) return
       setError(loadError)
-      if (!cached) setStatus('error')
+      if (!background || (!cached && !hasLoaded.current)) setStatus('error')
     } finally {
       if (generation === requestGeneration.current) {
         busy.current = false
@@ -165,6 +180,7 @@ export function useInbox(folder, query, enabled = true, mailboxEmail = '') {
         const ids = new Set(current.map(({ id }) => id))
         return [...current, ...response.messages.filter(({ id }) => !ids.has(id))]
       })
+      loadedPages.current = response.pagination.page
       setPagination(response.pagination)
     } catch (nextError) {
       if (generation === requestGeneration.current) setLoadMoreError(nextError)
@@ -177,12 +193,33 @@ export function useInbox(folder, query, enabled = true, mailboxEmail = '') {
   }, [enabled, folder, pagination, starredOnly, status])
 
   useEffect(() => {
+    loadedPages.current = 1
+    hasLoaded.current = false
     load(true)
     return () => {
       requestGeneration.current += 1
       busy.current = false
     }
   }, [load])
+
+  useEffect(() => {
+    if (!enabled) return
+    const synchronize = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) load(true, true)
+    }
+    const timer = window.setInterval(synchronize, folder === 'Sent' ? 3000 : 15000)
+    window.addEventListener('olivia:mail-sent', synchronize)
+    window.addEventListener('focus', synchronize)
+    window.addEventListener('online', synchronize)
+    document.addEventListener('visibilitychange', synchronize)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('olivia:mail-sent', synchronize)
+      window.removeEventListener('focus', synchronize)
+      window.removeEventListener('online', synchronize)
+      document.removeEventListener('visibilitychange', synchronize)
+    }
+  }, [enabled, folder, load])
 
   useEffect(() => {
     setLabelFilter(null)
