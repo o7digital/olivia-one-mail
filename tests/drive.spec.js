@@ -97,3 +97,56 @@ test('quota errors in the inbox can be retried without blocking access to Drive'
   await page.getByRole('button', { name: 'Drive', exact: true }).click()
   await expect(page).toHaveURL(/\/drive$/)
 })
+
+test('dropping files uploads their bytes and shows an active drop target', async ({ page }) => {
+  let files = []
+  const uploads = []
+  await page.route('**/api/**', async (route) => {
+    const request = route.request()
+    const path = new URL(request.url()).pathname
+    if (path === '/api/drive' && request.method() === 'POST') {
+      const file = request.postDataJSON()
+      uploads.push(file)
+      files.push({ id: `7-${uploads.length}`, name: file.name, size: 1024, createdAt: '2026-10-17T00:00:00Z' })
+      return route.fulfill({ status: 201, json: { uploaded: true } })
+    }
+    return route.fulfill({ json: path === '/api/me' ? { authenticated: true, user: { email: 'drop@example.com' } }
+      : path === '/api/drive' ? { files, storage: { used: 1024, limit: 102400 }, maxFileBytes: 20971520 }
+      : path === '/api/drive/storage' ? { storage: { used: 1024, limit: 102400 } }
+      : path === '/api/mail/messages' ? { messages: [], pagination: {} } : [] })
+  })
+  await page.goto('/drive')
+  await expect(page.getByRole('button', { name: 'Upload files' })).toBeEnabled()
+  const transfer = await page.evaluateHandle(() => {
+    const data = new DataTransfer()
+    data.items.add(new File(['first dropped content'], 'first.txt', { type: 'text/plain' }))
+    data.items.add(new File(['second dropped content'], 'second.txt', { type: 'text/plain' }))
+    return data
+  })
+  const zone = page.getByRole('region', { name: 'File upload' })
+  await zone.dispatchEvent('dragenter', { dataTransfer: transfer })
+  await expect(zone).toContainText('Release to upload your files')
+  await zone.dispatchEvent('dragover', { dataTransfer: transfer })
+  await zone.dispatchEvent('drop', { dataTransfer: transfer })
+  await expect(page.getByText('first.txt', { exact: true })).toBeVisible()
+  await expect(page.getByText('second.txt', { exact: true })).toBeVisible()
+  expect(uploads.map((file) => Buffer.from(file.contentBase64, 'base64').toString())).toEqual(['first dropped content', 'second dropped content'])
+  await expect(zone).toContainText('Drop files here')
+})
+
+test('a drop with no usable quota shows a reason instead of doing nothing', async ({ page }) => {
+  await page.route('**/api/**', (route) => {
+    const path = new URL(route.request().url()).pathname
+    return route.fulfill({ json: path === '/api/me' ? { authenticated: true, user: { email: 'drop@example.com' } }
+      : path === '/api/drive' ? { files: [], storage: null, maxFileBytes: 20971520 }
+      : path === '/api/drive/storage' ? { storage: null }
+      : path === '/api/mail/messages' ? { messages: [], pagination: {} } : [] })
+  })
+  await page.goto('/drive')
+  await expect(page.getByText('Storage quota unavailable')).toBeVisible()
+  const transfer = await page.evaluateHandle(() => {
+    const data = new DataTransfer(); data.items.add(new File(['hello'], 'hello.txt')); return data
+  })
+  await page.getByRole('region', { name: 'File upload' }).dispatchEvent('drop', { dataTransfer: transfer })
+  await expect(page.getByRole('alert')).toContainText('Your storage quota is unavailable')
+})

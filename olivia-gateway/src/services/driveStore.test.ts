@@ -9,7 +9,7 @@ function fixture() {
     connect: async () => {}, logout: async () => {},
     list: async () => state.exists ? [{ path: DRIVE_FOLDER }] : [],
     mailboxCreate: async () => { state.exists = true }, mailboxOpen: async () => {},
-    getQuota: async () => state.quotaAvailable ? { storage: { used: state.used, limit: state.limit } } : false,
+    getQuota: async () => state.quotaAvailable ? { storage: { usage: state.used, limit: state.limit } } : false,
     append: async (_folder: string, raw: Buffer) => {
       if (state.serverFull) throw Object.assign(new Error('Append rejected'), { responseText: 'NO [OVERQUOTA] Quota exceeded' })
       state.raw = raw; return { uid: 42 }

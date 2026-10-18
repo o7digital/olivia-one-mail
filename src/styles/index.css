@@ -857,3 +857,4 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 .driveTop:hover, .driveTop.active { background: rgba(var(--theme-accent-rgb), .18); border-color: var(--theme-accent); }
 @media (min-width: 1181px) and (max-width: 1500px) { .topbar { grid-template-columns: 205px minmax(220px, 1fr) auto; } }
 @media (max-width: 700px) { .driveTop { height: 34px; padding: 0 8px; gap: 5px; font-size: 11px; } }
+.driveDropzone.isDragging { border: 2px solid var(--theme-accent); background: rgba(var(--theme-accent-rgb), .14); box-shadow: inset 0 0 30px rgba(var(--theme-accent-rgb), .08); }

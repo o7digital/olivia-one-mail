@@ -41,8 +41,10 @@ export function createDriveStore(credentials: MailboxCredentials, makeClient?: (
   async function quota(client: any) {
     const result = await client.getQuota('INBOX')
     const storage = result && result.storage
-    if (!storage || !Number.isFinite(storage.limit) || storage.limit <= 0 || !Number.isFinite(storage.used)) return null
-    return { used: storage.used, limit: storage.limit }
+    // ImapFlow's runtime returns `usage`; some published typings say `used`.
+    const used = storage?.usage ?? storage?.used
+    if (!storage || !Number.isFinite(storage.limit) || storage.limit <= 0 || !Number.isFinite(used) || used < 0) return null
+    return { used, limit: storage.limit }
   }
   async function select(client: any, id: string) {
     const match = /^(\d+)-(\d+)$/.exec(id)

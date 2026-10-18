@@ -11,6 +11,9 @@ export function DrivePage() {
   const [query, setQuery] = useState('')
   const [pendingDelete, setPendingDelete] = useState(null)
   const [notice, setNotice] = useState('')
+  const [dragActive, setDragActive] = useState(false)
+  const dragDepth = useRef(0)
+  const uploadLock = useRef(false)
   const input = useRef(null)
   const load = useCallback(async () => {
     setLoading(true)
@@ -20,7 +23,12 @@ export function DrivePage() {
   }, [])
   useEffect(() => { load() }, [load])
   async function upload(files) {
-    if (busy || loading || !data?.storage) return
+    if (uploadLock.current || busy) { setError('An operation is already in progress. Please wait before adding more files.'); return }
+    if (loading) { setError('Your Drive is still loading. Please try dropping your files again in a moment.'); return }
+    if (!data?.storage) { setError('Your storage quota is unavailable. Refresh your Drive before uploading files.'); return }
+    if (!files.length) { setError('No files were received. Drop files from your computer or use Upload files. Folders are not supported.'); return }
+    if (data.storage.used >= data.storage.limit) { setError('Your shared mail and Drive storage is full. Delete files or emails to free up space.'); return }
+    uploadLock.current = true
     setBusy(true); setError(''); setNotice('')
     try {
       for (const file of files) {
@@ -36,7 +44,20 @@ export function DrivePage() {
       }
       setNotice('Upload complete.')
     } catch (err) { setError(err.message); setNotice('') }
-    finally { setBusy(false); if (input.current) input.current.value = ''; await loadAfterMutation() }
+    finally { await loadAfterMutation(); uploadLock.current = false; setBusy(false); if (input.current) input.current.value = '' }
+  }
+  function dropFiles(event) {
+    event.preventDefault()
+    event.stopPropagation()
+    dragDepth.current = 0
+    setDragActive(false)
+    const items = Array.from(event.dataTransfer.items ?? [])
+    if (items.some((item) => item.webkitGetAsEntry?.()?.isDirectory)) {
+      setError('Folders are not supported. Open the folder and drop its files instead.')
+      return
+    }
+    const files = Array.from(event.dataTransfer.files ?? [])
+    upload(files.length ? files : items.filter((item) => item.kind === 'file').map((item) => item.getAsFile()).filter(Boolean))
   }
   async function loadAfterMutation() {
     try { setData(await apiClient.get('/api/drive')); window.dispatchEvent(new Event('olivia:storage-changed')) } catch (err) { setError(err.message) }
@@ -60,8 +81,11 @@ export function DrivePage() {
     <section className="featurePage card drivePage">
       <div className="driveHeader"><div className="featureHero"><span className="featureIcon"><HardDrive size={24} /></span><small>Your workspace</small><h1>Drive</h1><p>Your files, together with your mail.</p></div><button type="button" className="driveButton" disabled={busy || loading} onClick={load}><RefreshCw size={15} />Refresh</button></div>
       <div className="driveQuota"><b>Shared mail & Drive storage</b><span>{storage ? `${bytes(storage.used)} of ${bytes(storage.limit)} used` : 'Storage quota unavailable'}</span><progress aria-label="Shared storage used" value={percent} max="100" />{storage ? <b>{bytes(Math.max(0, storage.limit - storage.used))} available</b> : null}<small>Your emails and files use the same plan allowance. File storage includes encoding overhead.</small></div>
-      <div className="driveDropzone" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); upload(Array.from(event.dataTransfer.files)) }}>
-        <CloudUpload size={30} /><b>Drop files here</b><span>Up to 20 MB per file</span><button className="driveButton" type="button" disabled={busy || loading || !storage || percent >= 100} onClick={() => input.current?.click()}>{busy ? 'Working…' : 'Upload files'}</button><input ref={input} type="file" multiple aria-label="Choose files" hidden onChange={(event) => upload(Array.from(event.target.files))} />
+      <div className={`driveDropzone ${dragActive ? 'isDragging' : ''}`} role="region" aria-label="File upload" aria-busy={busy}
+        onDragEnter={(event) => { event.preventDefault(); dragDepth.current += 1; setDragActive(true) }}
+        onDragLeave={(event) => { event.preventDefault(); dragDepth.current = Math.max(0, dragDepth.current - 1); if (!dragDepth.current) setDragActive(false) }}
+        onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy' }} onDrop={dropFiles}>
+        <CloudUpload size={30} /><b>{dragActive ? 'Release to upload your files' : 'Drop files here'}</b><span>Up to 20 MB per file</span><button className="driveButton" type="button" disabled={busy || loading || !storage || percent >= 100} onClick={() => input.current?.click()}>{busy ? 'Working…' : 'Upload files'}</button><input ref={input} type="file" multiple aria-label="Choose files" hidden onChange={(event) => upload(Array.from(event.target.files))} />
       </div>
       {error ? <div className="driveError" role="alert">{error}</div> : null}
       <p role="status" className="driveStatus">{loading ? 'Loading your Drive…' : notice}</p>
