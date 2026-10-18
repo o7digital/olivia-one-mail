@@ -12,7 +12,7 @@ test('all Drive endpoints require authentication and uploads validate names and 
     request.session = { id: 'session', email: 'alice@example.com', password: 'secret', createdAt: 0, expiresAt: Date.now() + 10000 }
   })
   try {
-    for (const [method, url] of [['GET', '/api/drive'], ['POST', '/api/drive'], ['GET', '/api/drive/7-42'], ['DELETE', '/api/drive/7-42']] as const) {
+    for (const [method, url] of [['GET', '/api/drive/storage'], ['GET', '/api/drive'], ['POST', '/api/drive'], ['GET', '/api/drive/7-42'], ['DELETE', '/api/drive/7-42']] as const) {
       assert.equal((await app.inject({ method, url, ...(method === 'POST' ? { payload: {} } : {}) })).statusCode, 401)
     }
     for (const payload of [{ name: '../secret', contentBase64: 'aGVsbG8=' }, { name: 'bad\r\nheader', contentBase64: '' }, { name: 'hello', contentBase64: '???' }, { name: 'hello', contentBase64: 'aaaa=' }, { name: 'hello', contentBase64: 'ab==' }]) {

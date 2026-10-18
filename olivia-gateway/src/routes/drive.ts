@@ -6,6 +6,10 @@ export async function registerDriveRoutes(app: FastifyInstance) {
     if (process.env.MAIL_PROVIDER !== 'mailcow-imap') throw new DriveError(503, 'Drive requires a connected Mailcow mailbox.')
     return createDriveStore(request.session)
   }
+  app.get('/api/drive/storage', async (request, reply) => {
+    reply.header('Cache-Control', 'private, no-store')
+    return store(request).storage()
+  })
   app.get('/api/drive', async (request, reply) => {
     reply.header('Cache-Control', 'private, no-store')
     return store(request).list()

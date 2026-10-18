@@ -833,3 +833,27 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 .driveConfirm { padding: 18px; border: 1px solid #e6919170; border-radius: 12px; margin-top: 18px; }
 .driveConfirm .driveButton { margin: 4px 8px 0 0; }
 @media (max-width: 600px) { .driveFile { gap: 8px; } .driveFile .driveButton { padding: 9px; } }
+
+/* Keep Drive and the shared allowance visible without leaving the inbox. */
+.storageShortcut { margin-top: 14px; border: 1px solid rgba(var(--theme-accent-rgb), .28); border-radius: 12px; background: rgba(var(--theme-accent-rgb), .055); overflow: hidden; }
+.storageShortcut.isActive { border-color: rgba(var(--theme-accent-rgb), .65); }
+.storageShortcutLink { display: flex; align-items: center; gap: 9px; width: 100%; padding: 12px 10px; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.storageShortcutLink:hover { background: rgba(var(--theme-accent-rgb), .08); }
+.storageShortcutIcon { display: grid; place-items: center; width: 31px; height: 31px; flex-shrink: 0; border-radius: 9px; background: rgba(var(--theme-accent-rgb), .12); color: var(--theme-accent); }
+.storageShortcutLink > span:nth-child(2) { display: grid; gap: 3px; flex: 1; }
+.storageShortcutLink b { font-size: 12px; }
+.storageShortcutLink small { font-size: 10px; opacity: .6; }
+.storageShortcutLink > svg { opacity: .65; flex-shrink: 0; }
+.storageShortcutDetails { display: grid; gap: 7px; padding: 0 11px 12px; font-size: 10px; }
+.storageUsage { opacity: .85; line-height: 1.5; }
+.storageShortcutDetails progress { width: 100%; height: 6px; border: 0; border-radius: 99px; overflow: hidden; appearance: none; background: rgba(var(--theme-accent-rgb), .12); }
+.storageShortcutDetails progress::-webkit-progress-bar { background: rgba(var(--theme-accent-rgb), .12); border-radius: 99px; }
+.storageShortcutDetails progress::-webkit-progress-value { background: var(--theme-accent); border-radius: 99px; min-width: 3px; }
+.storageShortcutDetails progress::-moz-progress-bar { background: var(--theme-accent); border-radius: 99px; }
+.storageShortcutDetails > small { font-size: 10px; opacity: .65; }
+.storageShortcutDetails .storageWarning { color: #e0a545; opacity: 1; }
+.storageRetry { display: flex; align-items: center; gap: 5px; justify-self: start; border: 0; padding: 0; background: none; color: var(--theme-accent); font-size: 10px; cursor: pointer; }
+.driveTop { display: flex; align-items: center; justify-content: center; gap: 7px; flex-shrink: 0; height: 38px; padding: 0 12px; border: 1px solid rgba(var(--theme-accent-rgb), .3); border-radius: 10px; color: inherit; background: rgba(var(--theme-accent-rgb), .08); font-size: 12px; font-weight: 650; cursor: pointer; }
+.driveTop:hover, .driveTop.active { background: rgba(var(--theme-accent-rgb), .18); border-color: var(--theme-accent); }
+@media (min-width: 1181px) and (max-width: 1500px) { .topbar { grid-template-columns: 205px minmax(220px, 1fr) auto; } }
+@media (max-width: 700px) { .driveTop { height: 34px; padding: 0 8px; gap: 5px; font-size: 11px; } }

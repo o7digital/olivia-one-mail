@@ -1,14 +1,15 @@
 import {
-  CalendarDays, CheckSquare2, ChevronDown, Command, LayoutGrid, LogOut, Menu, Search, Sparkles,
+  CalendarDays, CheckSquare2, ChevronDown, Command, HardDrive, LayoutGrid, LogOut, Menu, Search, Sparkles,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Avatar } from '../common/Avatar'
 import { IconButton } from '../common/IconButton'
 import { getWorkspaceIdentity } from '../../utils/workspaceIdentity'
 
 export function TopBar({ aiOpen, onAiToggle, onAsk, onLogout, onMenuToggle, query, searchRef, setQuery, user }) {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const [profileOpen, setProfileOpen] = useState(false)
   const [logoutPending, setLogoutPending] = useState(false)
   const profileRef = useRef(null)
@@ -47,6 +48,7 @@ export function TopBar({ aiOpen, onAiToggle, onAsk, onLogout, onMenuToggle, quer
         {query ? <><button type="submit" className="askSearch">Ask Olivia</button><button type="button" onClick={() => setQuery('')} aria-label="Clear search">Clear</button></> : <span className="shortcut"><Command size={12} />K</span>}
       </form>
       <div className="topright">
+        <button className={`driveTop ${pathname === '/drive' ? 'active' : ''}`} type="button" aria-current={pathname === '/drive' ? 'page' : undefined} onClick={() => navigate('/drive')}><HardDrive size={17} /><span>Drive</span></button>
         <button className={`aiTop ${aiOpen ? 'active' : ''}`} type="button" onClick={onAiToggle} aria-pressed={aiOpen}>
           <Sparkles size={16} />AI Workspace<span />
         </button>

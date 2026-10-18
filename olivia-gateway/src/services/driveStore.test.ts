@@ -69,3 +69,13 @@ test('deletion refuses servers without targeted UID expunge', async () => {
   client.capabilities.clear()
   await assert.rejects(store.delete('7-42'), /Safe file deletion/)
 })
+
+test('the inbox quota can be read without listing or creating the Drive folder', async () => {
+  const { client, state, store } = fixture()
+  client.list = async () => { throw new Error('Storage must not list files') }
+  state.used = 12345
+  assert.deepEqual(await store.storage(), { storage: { used: 12345, limit: state.limit } })
+  assert.equal(state.exists, false)
+  state.quotaAvailable = false
+  assert.deepEqual(await store.storage(), { storage: null })
+})

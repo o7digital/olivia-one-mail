@@ -1,12 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { CloudUpload, Download, File, HardDrive, RefreshCw, Trash2 } from 'lucide-react'
 import { apiClient } from '../../services/apiClient'
-
-function bytes(value) {
-  if (!value) return '0 B'
-  const unit = Math.min(3, Math.floor(Math.log(value) / Math.log(1024)))
-  return `${(value / 1024 ** unit).toFixed(unit ? 1 : 0)} ${['B', 'KB', 'MB', 'GB'][unit]}`
-}
+import { formatStorageBytes as bytes } from '../../utils/storage'
 
 export function DrivePage() {
   const [data, setData] = useState(null)
@@ -44,7 +39,7 @@ export function DrivePage() {
     finally { setBusy(false); if (input.current) input.current.value = ''; await loadAfterMutation() }
   }
   async function loadAfterMutation() {
-    try { setData(await apiClient.get('/api/drive')) } catch (err) { setError(err.message) }
+    try { setData(await apiClient.get('/api/drive')); window.dispatchEvent(new Event('olivia:storage-changed')) } catch (err) { setError(err.message) }
   }
   async function download(file) {
     setBusy(true); setError('')
@@ -64,7 +59,7 @@ export function DrivePage() {
   return (
     <section className="featurePage card drivePage">
       <div className="driveHeader"><div className="featureHero"><span className="featureIcon"><HardDrive size={24} /></span><small>Your workspace</small><h1>Drive</h1><p>Your files, together with your mail.</p></div><button type="button" className="driveButton" disabled={busy || loading} onClick={load}><RefreshCw size={15} />Refresh</button></div>
-      <div className="driveQuota"><b>Shared mail & Drive storage</b><span>{storage ? `${bytes(storage.used)} of ${bytes(storage.limit)} used` : 'Storage quota unavailable'}</span><progress aria-label="Shared storage used" value={percent} max="100" /><small>Your emails and files use the same plan allowance. File storage includes encoding overhead.</small></div>
+      <div className="driveQuota"><b>Shared mail & Drive storage</b><span>{storage ? `${bytes(storage.used)} of ${bytes(storage.limit)} used` : 'Storage quota unavailable'}</span><progress aria-label="Shared storage used" value={percent} max="100" />{storage ? <b>{bytes(Math.max(0, storage.limit - storage.used))} available</b> : null}<small>Your emails and files use the same plan allowance. File storage includes encoding overhead.</small></div>
       <div className="driveDropzone" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); upload(Array.from(event.dataTransfer.files)) }}>
         <CloudUpload size={30} /><b>Drop files here</b><span>Up to 20 MB per file</span><button className="driveButton" type="button" disabled={busy || loading || !storage || percent >= 100} onClick={() => input.current?.click()}>{busy ? 'Working…' : 'Upload files'}</button><input ref={input} type="file" multiple aria-label="Choose files" hidden onChange={(event) => upload(Array.from(event.target.files))} />
       </div>

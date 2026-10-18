@@ -1,8 +1,9 @@
 import {
-  Archive, HardDrive, CalendarDays, ChevronDown, Clock3, FileText, Inbox, PenLine, Send, ShieldCheck,
+  Archive, CalendarDays, ChevronDown, Clock3, FileText, Folder, Inbox, PenLine, Send, ShieldCheck,
   Settings2, Sparkles, Trash2, X,
 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { StorageShortcut } from '../drive/StorageShortcut'
 import { Avatar } from '../common/Avatar'
 import { getWorkspaceIdentity } from '../../utils/workspaceIdentity'
 
@@ -42,12 +43,14 @@ function LabelsSection({ activeLabel, labels = [], onLabelSelect = () => {} }) {
   )
 }
 
-export function Sidebar({ activeFolder, activeLabel, folders, knownLabels, mobileOpen, onClose, onCompose, onFolderChange, onLabelSelect, user }) {
+export function Sidebar({ activeFolder, activeLabel, folders, knownLabels, mobileOpen, onClose, onCompose, onFolderChange, onLabelSelect, user, storageQuota }) {
   const navigate = useNavigate()
   const location = useLocation()
   const workspace = getWorkspaceIdentity(user)
 
   return (
+    <>
+      {mobileOpen ? <button type="button" className="navScrim" onClick={onClose} aria-label="Close navigation" /> : null}
     <aside className={`sidebar card ${mobileOpen ? 'mobileOpen' : ''}`}>
       <button type="button" className="closeSidebar" onClick={onClose} aria-label="Close navigation"><X size={18} /></button>
       <div className="account">
@@ -56,9 +59,10 @@ export function Sidebar({ activeFolder, activeLabel, folders, knownLabels, mobil
         <button type="button" className="accountSetup" aria-label="Setup connected accounts" onClick={() => { navigate('/settings'); onClose() }} title="Setup connected accounts"><Settings2 size={16} /></button>
       </div>
       <button className="compose" type="button" onClick={onCompose}><PenLine size={18} /><span>Compose</span><ChevronDown size={15} /></button>
+      <StorageShortcut quota={storageQuota} onClose={onClose} />
       <nav aria-label="Mail folders">
-        {folders.map(({ label, count }) => {
-          const Icon = folderIcons[label]
+        {folders.filter(({ label }) => label !== 'Olivia Drive').map(({ label, count }) => {
+          const Icon = folderIcons[label] ?? Folder
           return (
             <button key={label} type="button" className={`navitem ${label === activeFolder ? 'active' : ''}`} onClick={() => onFolderChange(label)}>
               <span><Icon size={16} />{label}</span>{count ? <em>{count}</em> : null}
@@ -68,11 +72,11 @@ export function Sidebar({ activeFolder, activeLabel, folders, knownLabels, mobil
         <button type="button" className={`navitem ${location.pathname === '/waiting' ? 'active' : ''}`} onClick={() => { navigate('/waiting'); onClose() }}>
           <span><Clock3 size={16} />Waiting</span>
         </button>
-        <button type="button" className={`navitem ${location.pathname === '/drive' ? 'active' : ''}`} onClick={() => { navigate('/drive'); onClose() }}><span><HardDrive size={16} />Drive</span></button>
       </nav>
       <SidebarSection title="Spaces" items={workspace.spaces} />
       <LabelsSection activeLabel={activeLabel} labels={knownLabels ?? []} onLabelSelect={onLabelSelect} />
       <div className="secure"><ShieldCheck size={15} />Protected by O7 Mail</div>
     </aside>
+    </>
   )
 }

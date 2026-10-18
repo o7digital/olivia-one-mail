@@ -6,6 +6,7 @@ test('Drive upload, quota, search, download and confirmed deletion', async ({ pa
   await page.route('**/api/**', async (route) => {
     const request = route.request()
     const path = new URL(request.url()).pathname
+    if (path === '/api/drive/storage') return route.fulfill({ json: { storage: { used: files.length ? 2048 : 1024, limit: 10240 } } })
     if (path === '/api/drive') {
       if (request.method() === 'POST') { uploaded = request.postDataJSON(); files = [{ id: '7-42', name: uploaded.name, size: 1024, createdAt: '2026-10-17T00:00:00Z' }]; return route.fulfill({ status: 201, json: { uploaded: true } }) }
       return route.fulfill({ json: { files, storage: { used: files.length ? 2048 : 1024, limit: 10240 }, maxFileBytes: 20971520 } })
@@ -18,7 +19,7 @@ test('Drive upload, quota, search, download and confirmed deletion', async ({ pa
   })
   await page.goto('/drive')
   await expect(page.getByRole('heading', { name: 'Drive', exact: true })).toBeVisible()
-  await expect(page.getByText('1.0 KB of 10.0 KB used')).toBeVisible()
+  await expect(page.locator('.driveQuota')).toContainText('1.0 KB of 10.0 KB used')
   await page.getByLabel('Choose files').setInputFiles({ name: 'hello.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') })
   await expect(page.getByText('hello.txt', { exact: true })).toBeVisible()
   expect(uploaded.contentBase64).toBe(Buffer.from('hello').toString('base64'))
@@ -39,9 +40,60 @@ test('Drive upload, quota, search, download and confirmed deletion', async ({ pa
 test('Drive keeps upload disabled when shared quota cannot be verified', async ({ page }) => {
   await page.route('**/api/**', (route) => {
     const path = new URL(route.request().url()).pathname
-    return route.fulfill({ json: path === '/api/me' ? { authenticated: true, user: { email: 'drive@example.com' } } : path === '/api/drive' ? { files: [], storage: null, maxFileBytes: 20971520 } : path === '/api/mail/messages' ? { messages: [], pagination: {} } : [] })
+    return route.fulfill({ json: path === '/api/me' ? { authenticated: true, user: { email: 'drive@example.com' } } : path === '/api/drive/storage' ? { storage: null } : path === '/api/drive' ? { files: [], storage: null, maxFileBytes: 20971520 } : path === '/api/mail/messages' ? { messages: [], pagination: {} } : [] })
   })
   await page.goto('/drive')
   await expect(page.getByText('Storage quota unavailable')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Upload files' })).toBeDisabled()
+})
+
+for (const viewport of [{ width: 1728, height: 1080 }, { width: 1440, height: 900 }, { width: 1024, height: 768 }, { width: 390, height: 844 }]) {
+  test(`Drive and shared storage are discoverable from the inbox at ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport)
+    let used = 80 * 1024 ** 2
+    await page.route('**/api/**', (route) => {
+      const path = new URL(route.request().url()).pathname
+      const json = path === '/api/me' ? { authenticated: true, user: { email: 'drive@example.com', name: 'Drive test' } }
+        : path === '/api/drive/storage' ? { storage: { used, limit: 5 * 1024 ** 3 } }
+        : path === '/api/drive' ? { files: [], storage: { used, limit: 5 * 1024 ** 3 }, maxFileBytes: 20971520 }
+        : path === '/api/mail/folders' ? [{ label: 'Inbox', count: 3 }, { label: 'Olivia Drive', count: 1 }, { label: 'Custom folder', count: 1 }]
+        : path === '/api/mail/messages' ? { messages: [], pagination: { page: 1, total: 0, totalPages: 0 } }
+        : path === '/api/mail/labels' ? { labels: [] } : []
+      return route.fulfill({ json })
+    })
+    await page.goto('/mail')
+    await expect(page.getByRole('button', { name: 'Drive', exact: true })).toBeVisible()
+    if (viewport.width < 901) await page.getByRole('button', { name: 'Open navigation' }).click()
+    const shortcut = page.getByRole('region', { name: 'Drive and storage' })
+    await expect(shortcut).toBeInViewport()
+    await expect(shortcut).toContainText('80.0 MB of 5.0 GB used')
+    await expect(shortcut).toContainText('4.9 GB available')
+    await expect(page.getByRole('button', { name: 'Olivia Drive', exact: true })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Open Drive and storage' }).click()
+    await expect(page).toHaveURL(/\/drive$/)
+    await expect(page.getByRole('heading', { name: 'Drive', exact: true })).toBeVisible()
+    used = 120 * 1024 ** 2
+    await page.evaluate(() => window.dispatchEvent(new Event('olivia:storage-changed')))
+    if (viewport.width < 901) await page.getByRole('button', { name: 'Open navigation' }).click()
+    await expect(shortcut).toContainText('120.0 MB of 5.0 GB used')
+    if (viewport.width < 901) await page.locator('.sidebar').getByRole('button', { name: 'Close navigation', exact: true }).click()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  })
+}
+
+test('quota errors in the inbox can be retried without blocking access to Drive', async ({ page }) => {
+  let failed = true
+  await page.route('**/api/**', (route) => {
+    const path = new URL(route.request().url()).pathname
+    if (path === '/api/drive/storage') return route.fulfill(failed ? { status: 503, json: { message: 'Unavailable' } } : { json: { storage: { used: 1024, limit: 10240 } } })
+    return route.fulfill({ json: path === '/api/me' ? { authenticated: true, user: { email: 'drive@example.com' } } : path === '/api/mail/messages' ? { messages: [], pagination: {} } : [] })
+  })
+  await page.goto('/mail')
+  const shortcut = page.getByRole('region', { name: 'Drive and storage' })
+  await expect(shortcut).toContainText('Storage unavailable')
+  failed = false
+  await shortcut.getByRole('button', { name: 'Retry' }).click()
+  await expect(shortcut).toContainText('1.0 KB of 10.0 KB used')
+  await page.getByRole('button', { name: 'Drive', exact: true }).click()
+  await expect(page).toHaveURL(/\/drive$/)
 })

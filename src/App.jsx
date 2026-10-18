@@ -18,6 +18,7 @@ import { ComposeModal } from './features/composer/ComposeModal'
 import { PrivacyNotice, PRIVACY_VERSION } from './components/legal/PrivacyNotice'
 import { useAIWorkspace } from './hooks/useAIWorkspace'
 import { useSession } from './hooks/useSession'
+import { useStorageQuota } from './hooks/useStorageQuota'
 import { pulseService } from './services/pulseService'
 import { intelligenceService } from './services/intelligenceService'
 import { useInbox, useMailFolders } from './features/inbox/useInbox'
@@ -45,6 +46,7 @@ function App() {
   const lightAppearance = colorTheme === 'light' || colorIntensity >= 140
   const session = useSession()
   const isAuthenticated = session.isAuthenticated
+  const storageQuota = useStorageQuota(isAuthenticated, session.session?.user?.email)
   const folders = useMailFolders(isAuthenticated)
   const inbox = useInbox(activeFolder, query, isAuthenticated, session.session?.user?.email)
   const aiWorkspace = useAIWorkspace(inbox.selected?.id, isAuthenticated)
@@ -230,8 +232,6 @@ function App() {
         user={session.session?.user}
       />
 
-      {mobileNavOpen ? <button type="button" className="navScrim" onClick={() => setMobileNavOpen(false)} aria-label="Close navigation" /> : null}
-
       <Routes>
         <Route path="/sso-callback" element={(
           <div className="authShell">
@@ -248,7 +248,7 @@ function App() {
         <Route path="/" element={<Navigate to="/mail" replace />} />
         <Route path="/mail" element={(
           <main className={`grid ${aiOpen ? 'aiOn' : 'aiOff'}`}>
-            <Sidebar activeFolder={activeFolder} activeLabel={inbox.labelFilter} folders={folders.folders} knownLabels={inbox.knownLabels} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} onLabelSelect={inbox.setLabelFilter} user={session.session?.user} />
+            <Sidebar activeFolder={activeFolder} activeLabel={inbox.labelFilter} folders={folders.folders} knownLabels={inbox.knownLabels} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} onLabelSelect={inbox.setLabelFilter} user={session.session?.user} storageQuota={storageQuota} />
             <MailList
               activeFolder={activeFolder}
               category={inbox.category}
@@ -300,28 +300,28 @@ function App() {
         )} />
         <Route path="/drive" element={(
           <main className="grid pageGrid">
-            <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} user={session.session?.user} />
+            <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} user={session.session?.user} storageQuota={storageQuota} />
             <DrivePage key={session.session?.user?.email} />
             <AppRail />
           </main>
         )} />
         <Route path="/tasks" element={(
           <main className="grid pageGrid">
-            <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} user={session.session?.user} />
+            <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} user={session.session?.user} storageQuota={storageQuota} />
             <TasksPage onNotify={notify} />
             <AppRail />
           </main>
         )} />
         <Route path="/calendar" element={(
           <main className="grid pageGrid">
-            <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} user={session.session?.user} />
+            <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} user={session.session?.user} storageQuota={storageQuota} />
             <CalendarPage />
             <AppRail />
           </main>
         )} />
         <Route path="/waiting" element={(
           <main className="grid pageGrid">
-            <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} user={session.session?.user} />
+            <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} user={session.session?.user} storageQuota={storageQuota} />
             <WaitingPage onNotify={notify} onOpenMessage={(item) => { setActiveFolder(item.folder || 'Inbox'); setQuery(item.subject); navigate('/mail') }} />
             <AppRail />
           </main>
@@ -329,7 +329,7 @@ function App() {
         {['contacts', 'pulse', 'settings'].map((page) => (
           <Route key={page} path={`/${page}`} element={(
             <main className="grid pageGrid">
-              <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} user={session.session?.user} />
+              <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} user={session.session?.user} storageQuota={storageQuota} />
               <FeaturePage page={page} colorTheme={colorTheme} onColorThemeChange={changeColorTheme} colorIntensity={colorIntensity} onColorIntensityChange={changeColorIntensity} />
               <AppRail />
             </main>

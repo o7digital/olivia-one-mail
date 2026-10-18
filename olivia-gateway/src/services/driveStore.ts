@@ -50,6 +50,7 @@ export function createDriveStore(credentials: MailboxCredentials, makeClient?: (
     return match[2]
   }
   return {
+    storage: () => run(async (client) => ({ storage: await quota(client) })),
     list: () => run(async (client) => {
       const storage = await quota(client)
       const files: DriveFile[] = []
