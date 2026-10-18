@@ -1,5 +1,5 @@
 import {
-  Archive, CalendarDays, ChevronDown, Clock3, FileText, Inbox, PenLine, Send, ShieldCheck,
+  Archive, HardDrive, CalendarDays, ChevronDown, Clock3, FileText, Inbox, PenLine, Send, ShieldCheck,
   Settings2, Sparkles, Trash2, X,
 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -68,6 +68,7 @@ export function Sidebar({ activeFolder, activeLabel, folders, knownLabels, mobil
         <button type="button" className={`navitem ${location.pathname === '/waiting' ? 'active' : ''}`} onClick={() => { navigate('/waiting'); onClose() }}>
           <span><Clock3 size={16} />Waiting</span>
         </button>
+        <button type="button" className={`navitem ${location.pathname === '/drive' ? 'active' : ''}`} onClick={() => { navigate('/drive'); onClose() }}><span><HardDrive size={16} />Drive</span></button>
       </nav>
       <SidebarSection title="Spaces" items={workspace.spaces} />
       <LabelsSection activeLabel={activeLabel} labels={knownLabels ?? []} onLabelSelect={onLabelSelect} />

@@ -35,7 +35,7 @@ async function request(path, options = {}) {
     .some((prefix) => path.startsWith(prefix))
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), path.startsWith('/api/ai/') || isOutgoingMail ? 120000 : 20000)
+    const timeout = setTimeout(() => controller.abort(), path.startsWith('/api/ai/') || path.startsWith('/api/drive') || isOutgoingMail ? 120000 : 20000)
     try {
       const token = currentCsrfToken()
       const response = await fetch(buildUrl(path, options.params), {
@@ -66,6 +66,18 @@ async function request(path, options = {}) {
 }
 
 export const apiClient = {
+  async download(path, name) {
+    const response = await fetch(buildUrl(path), { credentials: 'include', cache: 'no-store' })
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}))
+      throw new Error(payload.message || 'Download failed')
+    }
+    const url = URL.createObjectURL(await response.blob())
+    const link = document.createElement('a')
+    link.href = url; link.download = name
+    document.body.appendChild(link); link.click(); link.remove()
+    window.setTimeout(() => URL.revokeObjectURL(url), 60000)
+  },
   get: (path, params) => request(path, { params }),
   post: (path, body) => request(path, { method: 'POST', body }),
   put: (path, body) => request(path, { method: 'PUT', body }),

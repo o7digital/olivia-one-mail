@@ -1,9 +1,10 @@
-import { CheckSquare2, ContactRound, Link2, Mail, Settings2, Sparkles } from 'lucide-react'
+import { CheckSquare2, ContactRound, HardDrive, Link2, Mail, Settings2, Sparkles } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 
 const items = [
   ['/contacts', ContactRound, 'Contacts'],
   ['/mail', Mail, 'Mail'],
+  ['/drive', HardDrive, 'Drive'],
   ['/tasks', CheckSquare2, 'Tasks'],
   ['/calendar', Link2, 'Calendar'],
 ]

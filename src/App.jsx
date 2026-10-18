@@ -10,6 +10,7 @@ import { Sidebar } from './components/layout/Sidebar'
 import { TopBar } from './components/layout/TopBar'
 import { MailList } from './components/mail/MailList'
 import { MailReader } from './components/mail/MailReader'
+import { DrivePage } from './components/drive/DrivePage'
 import { TasksPage } from './components/tasks/TasksPage'
 import { WaitingPage } from './components/followups/WaitingPage'
 import { OpportunityDialog } from './features/ai-workspace/OpportunityDialog'
@@ -294,6 +295,13 @@ function App() {
               onToggleStar={() => inbox.toggleStarMessage(inbox.selected.id)}
             />
             {aiOpen ? <AIWorkspace analysis={aiWorkspace.analysis} error={aiWorkspace.error} message={inbox.selected} onArchive={() => inbox.archiveMessage(inbox.selected.id)} onCreateOpportunity={() => setOpportunityOpen(true)} onNotify={notify} onReply={() => openCompose('reply', inbox.selected)} onReplyAll={() => openCompose('reply-all', inbox.selected)} onRetry={aiWorkspace.retry} status={aiWorkspace.status} /> : null}
+            <AppRail />
+          </main>
+        )} />
+        <Route path="/drive" element={(
+          <main className="grid pageGrid">
+            <Sidebar activeFolder={activeFolder} folders={folders.folders} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onCompose={() => openCompose('new')} onFolderChange={changeFolder} user={session.session?.user} />
+            <DrivePage key={session.session?.user?.email} />
             <AppRail />
           </main>
         )} />

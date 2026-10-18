@@ -1,0 +1,79 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { CloudUpload, Download, File, HardDrive, RefreshCw, Trash2 } from 'lucide-react'
+import { apiClient } from '../../services/apiClient'
+
+function bytes(value) {
+  if (!value) return '0 B'
+  const unit = Math.min(3, Math.floor(Math.log(value) / Math.log(1024)))
+  return `${(value / 1024 ** unit).toFixed(unit ? 1 : 0)} ${['B', 'KB', 'MB', 'GB'][unit]}`
+}
+
+export function DrivePage() {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [query, setQuery] = useState('')
+  const [pendingDelete, setPendingDelete] = useState(null)
+  const [notice, setNotice] = useState('')
+  const input = useRef(null)
+  const load = useCallback(async () => {
+    setLoading(true)
+    try { setData(await apiClient.get('/api/drive')); setError('') }
+    catch (err) { setError(err.message) }
+    finally { setLoading(false) }
+  }, [])
+  useEffect(() => { load() }, [load])
+  async function upload(files) {
+    if (busy || loading || !data?.storage) return
+    setBusy(true); setError(''); setNotice('')
+    try {
+      for (const file of files) {
+        if (file.size > data.maxFileBytes) throw new Error(`${file.name}: files must be 20 MB or smaller.`)
+        const contentBase64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(String(reader.result).split(',')[1])
+          reader.onerror = () => reject(new Error('File could not be read.'))
+          reader.readAsDataURL(file)
+        })
+        setNotice(`Uploading ${file.name}…`)
+        await apiClient.post('/api/drive', { name: file.name, contentBase64 })
+      }
+      setNotice('Upload complete.')
+    } catch (err) { setError(err.message); setNotice('') }
+    finally { setBusy(false); if (input.current) input.current.value = ''; await loadAfterMutation() }
+  }
+  async function loadAfterMutation() {
+    try { setData(await apiClient.get('/api/drive')) } catch (err) { setError(err.message) }
+  }
+  async function download(file) {
+    setBusy(true); setError('')
+    try { await apiClient.download(`/api/drive/${file.id}`, file.name) }
+    catch (err) { setError(err.message) }
+    finally { setBusy(false) }
+  }
+  async function remove(file) {
+    setBusy(true); setError('')
+    try { await apiClient.delete(`/api/drive/${file.id}`); setPendingDelete(null); setNotice('File deleted.'); await loadAfterMutation() }
+    catch (err) { setError(err.message) }
+    finally { setBusy(false) }
+  }
+  const storage = data?.storage
+  const percent = storage ? Math.min(100, 100 * storage.used / storage.limit) : 0
+  const files = data?.files.filter((file) => file.name.toLowerCase().includes(query.toLowerCase())) ?? []
+  return (
+    <section className="featurePage card drivePage">
+      <div className="driveHeader"><div className="featureHero"><span className="featureIcon"><HardDrive size={24} /></span><small>Your workspace</small><h1>Drive</h1><p>Your files, together with your mail.</p></div><button type="button" className="driveButton" disabled={busy || loading} onClick={load}><RefreshCw size={15} />Refresh</button></div>
+      <div className="driveQuota"><b>Shared mail & Drive storage</b><span>{storage ? `${bytes(storage.used)} of ${bytes(storage.limit)} used` : 'Storage quota unavailable'}</span><progress aria-label="Shared storage used" value={percent} max="100" /><small>Your emails and files use the same plan allowance. File storage includes encoding overhead.</small></div>
+      <div className="driveDropzone" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); upload(Array.from(event.dataTransfer.files)) }}>
+        <CloudUpload size={30} /><b>Drop files here</b><span>Up to 20 MB per file</span><button className="driveButton" type="button" disabled={busy || loading || !storage || percent >= 100} onClick={() => input.current?.click()}>{busy ? 'Working…' : 'Upload files'}</button><input ref={input} type="file" multiple aria-label="Choose files" hidden onChange={(event) => upload(Array.from(event.target.files))} />
+      </div>
+      {error ? <div className="driveError" role="alert">{error}</div> : null}
+      <p role="status" className="driveStatus">{loading ? 'Loading your Drive…' : notice}</p>
+      <div className="driveListHeader"><h2>My files</h2><input aria-label="Search files" placeholder="Search files…" value={query} onChange={(event) => setQuery(event.target.value)} /></div>
+      {!loading && data && !files.length ? <div className="tasksEmpty"><File size={24} /><b>{query ? 'No matching files' : 'Your Drive is ready'}</b><small>{query ? 'Try another filename.' : 'Upload your first file to keep it here.'}</small></div> : null}
+      <div className="driveFiles">{files.map((file) => <article className="driveFile" key={file.id}><File size={20} /><div><b>{file.name}</b><small>{bytes(file.size)} stored · {new Date(file.createdAt).toLocaleDateString()}</small></div><button className="driveButton" type="button" disabled={busy} aria-label={`Download ${file.name}`} onClick={() => download(file)}><Download size={16} /></button><button className="driveButton" type="button" disabled={busy} aria-label={`Delete ${file.name}`} onClick={() => setPendingDelete(file)}><Trash2 size={16} /></button></article>)}</div>
+      {pendingDelete ? <div className="driveConfirm" role="alertdialog" aria-label="Delete file" aria-describedby="driveDeleteDescription"><p id="driveDeleteDescription">Permanently delete <b>{pendingDelete.name}</b>? This frees shared storage.</p><button className="driveButton" type="button" disabled={busy} onClick={() => setPendingDelete(null)}>Cancel</button><button className="driveButton" type="button" disabled={busy} onClick={() => remove(pendingDelete)}>Delete permanently</button></div> : null}
+    </section>
+  )
+}
