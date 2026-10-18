@@ -24,15 +24,16 @@ export function DrivePage() {
   useEffect(() => { load() }, [load])
   async function upload(files) {
     if (uploadLock.current || busy) { setError('An operation is already in progress. Please wait before adding more files.'); return }
-    if (loading) { setError('Your Drive is still loading. Please try dropping your files again in a moment.'); return }
-    if (!data?.storage) { setError('Your storage quota is unavailable. Refresh your Drive before uploading files.'); return }
     if (!files.length) { setError('No files were received. Drop files from your computer or use Upload files. Folders are not supported.'); return }
-    if (data.storage.used >= data.storage.limit) { setError('Your shared mail and Drive storage is full. Delete files or emails to free up space.'); return }
     uploadLock.current = true
-    setBusy(true); setError(''); setNotice('')
+    setBusy(true); setError(''); setNotice('Checking storage…')
     try {
+      const { storage: currentStorage } = await apiClient.get('/api/drive/storage')
+      if (!currentStorage) throw new Error('Your storage quota is unavailable. Please refresh and try again. No files were uploaded.')
+      setData((current) => current ? { ...current, storage: currentStorage } : current)
+      if (currentStorage.used >= currentStorage.limit) throw new Error('Your shared mail and Drive storage is full. Delete files or emails to free up space.')
       for (const file of files) {
-        if (file.size > data.maxFileBytes) throw new Error(`${file.name}: files must be 20 MB or smaller.`)
+        if (file.size > (data?.maxFileBytes ?? 20 * 1024 * 1024)) throw new Error(`${file.name}: files must be 20 MB or smaller.`)
         const contentBase64 = await new Promise((resolve, reject) => {
           const reader = new FileReader()
           reader.onload = () => resolve(String(reader.result).split(',')[1])
@@ -85,7 +86,7 @@ export function DrivePage() {
         onDragEnter={(event) => { event.preventDefault(); dragDepth.current += 1; setDragActive(true) }}
         onDragLeave={(event) => { event.preventDefault(); dragDepth.current = Math.max(0, dragDepth.current - 1); if (!dragDepth.current) setDragActive(false) }}
         onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy' }} onDrop={dropFiles}>
-        <CloudUpload size={30} /><b>{dragActive ? 'Release to upload your files' : 'Drop files here'}</b><span>Up to 20 MB per file</span><button className="driveButton" type="button" disabled={busy || loading || !storage || percent >= 100} onClick={() => input.current?.click()}>{busy ? 'Working…' : 'Upload files'}</button><input ref={input} type="file" multiple aria-label="Choose files" hidden onChange={(event) => upload(Array.from(event.target.files))} />
+        <CloudUpload size={30} /><b>{dragActive ? 'Release to upload your files' : 'Drop files here'}</b><span>Up to 20 MB per file</span><button className="driveButton" type="button" disabled={busy} onClick={() => input.current?.click()}>{busy ? 'Working…' : 'Upload files'}</button><input ref={input} type="file" multiple aria-label="Choose files" hidden onChange={(event) => upload(Array.from(event.target.files))} />
       </div>
       {error ? <div className="driveError" role="alert">{error}</div> : null}
       <p role="status" className="driveStatus">{loading ? 'Loading your Drive…' : notice}</p>

@@ -20,7 +20,10 @@ test('Drive upload, quota, search, download and confirmed deletion', async ({ pa
   await page.goto('/drive')
   await expect(page.getByRole('heading', { name: 'Drive', exact: true })).toBeVisible()
   await expect(page.locator('.driveQuota')).toContainText('1.0 KB of 10.0 KB used')
-  await page.getByLabel('Choose files').setInputFiles({ name: 'hello.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') })
+  const chooserPromise = page.waitForEvent('filechooser')
+  await page.getByRole('button', { name: 'Upload files' }).click()
+  const chooser = await chooserPromise
+  await chooser.setFiles({ name: 'hello.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') })
   await expect(page.getByText('hello.txt', { exact: true })).toBeVisible()
   expect(uploaded.contentBase64).toBe(Buffer.from('hello').toString('base64'))
   await page.getByLabel('Search files').fill('missing')
@@ -37,14 +40,18 @@ test('Drive upload, quota, search, download and confirmed deletion', async ({ pa
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 })
 
-test('Drive keeps upload disabled when shared quota cannot be verified', async ({ page }) => {
+test('Drive explains an unavailable quota after file selection', async ({ page }) => {
   await page.route('**/api/**', (route) => {
     const path = new URL(route.request().url()).pathname
     return route.fulfill({ json: path === '/api/me' ? { authenticated: true, user: { email: 'drive@example.com' } } : path === '/api/drive/storage' ? { storage: null } : path === '/api/drive' ? { files: [], storage: null, maxFileBytes: 20971520 } : path === '/api/mail/messages' ? { messages: [], pagination: {} } : [] })
   })
   await page.goto('/drive')
   await expect(page.getByText('Storage quota unavailable')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Upload files' })).toBeDisabled()
+  const chooserPromise = page.waitForEvent('filechooser')
+  await page.getByRole('button', { name: 'Upload files' }).click()
+  const chooser = await chooserPromise
+  await chooser.setFiles({ name: 'hello.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') })
+  await expect(page.getByRole('alert')).toContainText('Your storage quota is unavailable')
 })
 
 for (const viewport of [{ width: 1728, height: 1080 }, { width: 1440, height: 900 }, { width: 1024, height: 768 }, { width: 390, height: 844 }]) {
@@ -149,4 +156,30 @@ test('a drop with no usable quota shows a reason instead of doing nothing', asyn
   })
   await page.getByRole('region', { name: 'File upload' }).dispatchEvent('drop', { dataTransfer: transfer })
   await expect(page.getByRole('alert')).toContainText('Your storage quota is unavailable')
+})
+
+test('Upload files recovers when the page has an old unavailable quota', async ({ page }) => {
+  const files = []
+  let uploaded = false
+  await page.route('**/api/**', async (route) => {
+    const path = new URL(route.request().url()).pathname
+    if (path === '/api/drive' && route.request().method() === 'POST') {
+      uploaded = true
+      files.push({ id: '7-42', name: 'recovered.txt', size: 1024, createdAt: '2026-10-17T00:00:00Z' })
+      return route.fulfill({ status: 201, json: { uploaded: true } })
+    }
+    return route.fulfill({ json: path === '/api/me' ? { authenticated: true, user: { email: 'picker@example.com' } }
+      : path === '/api/drive/storage' ? { storage: { used: 1024, limit: 102400 } }
+      : path === '/api/drive' ? { files, storage: uploaded ? { used: 2048, limit: 102400 } : null, maxFileBytes: 20971520 }
+      : path === '/api/mail/messages' ? { messages: [], pagination: {} } : [] })
+  })
+  await page.goto('/drive')
+  await expect(page.getByText('Storage quota unavailable')).toBeVisible()
+  const chooserPromise = page.waitForEvent('filechooser')
+  await page.getByRole('button', { name: 'Upload files' }).click()
+  const chooser = await chooserPromise
+  await chooser.setFiles({ name: 'recovered.txt', mimeType: 'text/plain', buffer: Buffer.from('recovered content') })
+  await expect(page.getByText('recovered.txt', { exact: true })).toBeVisible()
+  await expect(page.getByRole('status')).toHaveText('Upload complete.')
+  expect(uploaded).toBe(true)
 })

@@ -35,7 +35,7 @@ async function request(path, options = {}) {
     .some((prefix) => path.startsWith(prefix))
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), path.startsWith('/api/ai/') || path.startsWith('/api/drive') || isOutgoingMail ? 120000 : 20000)
+    const timeout = setTimeout(() => controller.abort(), path.startsWith('/api/ai/') || (path.startsWith('/api/drive') && path !== '/api/drive/storage') || isOutgoingMail ? 120000 : 20000)
     try {
       const token = currentCsrfToken()
       const response = await fetch(buildUrl(path, options.params), {
