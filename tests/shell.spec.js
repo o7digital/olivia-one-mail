@@ -71,7 +71,7 @@ test('mail shell interactions and desktop screenshots', async ({ page }) => {
   expect(quotedBodyHtml).toContain('Please find attached the Q3 performance review and recommendations')
   expect(quotedBodyHtml).not.toContain('<style')
   const replyEditor = replyAllComposer.getByRole('textbox', { name: 'Message body' })
-  await expect(replyEditor).toHaveCSS('color', 'rgb(244, 247, 251)')
+  await expect(replyEditor).toHaveCSS('color', 'rgb(236, 236, 236)')
   expect(await replyEditor.evaluate((editor) => editor.contains(document.querySelector('[data-quoted-content="true"]')))).toBe(false)
   await replyEditor.fill('This reply stays above the original message.')
   const editorBox = await replyEditor.boundingBox()
@@ -250,8 +250,8 @@ test('light theme keeps composer text readable and minimized composer restores f
   await page.getByRole('button', { name: 'Compose', exact: true }).click()
   const darkComposer = page.getByRole('dialog', { name: 'New Message' })
   const darkEditor = darkComposer.getByRole('textbox', { name: 'Message body' })
-  await expect(darkEditor).toHaveCSS('color', 'rgb(244, 247, 251)')
-  await expect(darkEditor.getByText('Theme-aware pasted text.')).toHaveCSS('color', 'rgb(244, 247, 251)')
+  await expect(darkEditor).toHaveCSS('color', 'rgb(236, 236, 236)')
+  await expect(darkEditor.getByText('Theme-aware pasted text.')).toHaveCSS('color', 'rgb(236, 236, 236)')
 })
 
 test('labels can be created, filtered, and cleared; sort reorders the list', async ({ page }) => {
@@ -411,7 +411,7 @@ test('color intensity is stored separately for each dark palette', async ({ page
   await expect(app).toHaveCSS('--theme-bg-start', '#ffffff')
   await expect(app).toHaveCSS('--theme-bg-mid', '#ffffff')
   await expect(app).toHaveCSS('--theme-bg-end', '#ffffff')
-  await expect(page.locator('.featureHero h1')).toHaveCSS('color', 'rgb(23, 33, 43)')
+  await expect(page.locator('.featureHero h1')).toHaveCSS('color', 'rgb(23, 23, 23)')
   await expect(page.getByRole('status')).toContainText('Green palette · Light appearance')
   await expect(page.getByRole('radio', { name: /Light White surfaces/ })).toBeChecked()
   await page.getByRole('radio', { name: /Dark Midnight surfaces/ }).click()

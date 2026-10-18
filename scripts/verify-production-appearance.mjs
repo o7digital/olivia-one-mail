@@ -37,8 +37,8 @@ try {
       await expect(app).toHaveCSS('--theme-bg-start', '#ffffff')
       await expect(slider).toBeVisible()
       await expect(page.getByRole('radio', { name: /Light White surfaces/ })).toBeChecked()
-      await expect(page.locator('.featurePage')).toHaveCSS('background-color', 'rgb(245, 247, 250)')
-      await expect(page.locator('.sidebar')).toHaveCSS('background-color', 'rgb(255, 255, 255)')
+      await expect(page.locator('.featurePage')).toHaveCSS('background-color', 'rgb(255, 255, 255)')
+      await expect(page.locator('.sidebar')).toHaveCSS('background-color', 'rgb(249, 249, 249)')
       for (const swatch of await page.locator('.darkPaletteGrid button > span').all()) {
         const darkestChannel = await swatch.evaluate((element) => {
           const sample = document.createElement('i')

@@ -865,64 +865,69 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, [contentedita
 .driveFilePicker:disabled { opacity: .5; }
 .driveFilePicker:disabled::file-selector-button { cursor: progress; }
 
-/* Matte charcoal and white, with the same restrained hierarchy in both modes. */
-.app:is([data-theme='gray'], [data-theme='light']) { background: var(--neutral-bg); color: var(--neutral-text); --stroke: var(--neutral-border); --muted: var(--neutral-muted); }
-.app:is([data-theme='gray'], [data-theme='light']) .glow,
-.app:is([data-theme='gray'], [data-theme='light']) .featurePage::after { display: none; }
-.app:is([data-theme='gray'], [data-theme='light']) :is(.card, .topbar, .featurePage) { background: var(--neutral-bg); border-color: var(--neutral-border); box-shadow: none; color: var(--neutral-text); }
-.app:is([data-theme='gray'], [data-theme='light']) :is(.sidebar, .rail) { background: var(--neutral-sidebar); }
-.app:is([data-theme='gray'], [data-theme='light']) .featurePage { padding: clamp(24px, 3vw, 44px); }
-.app:is([data-theme='gray'], [data-theme='light']) .featurePage .featureHero h1 { color: var(--neutral-text); font-size: clamp(30px, 3vw, 42px); letter-spacing: -1.3px; margin: 12px 0; }
-.app:is([data-theme='gray'], [data-theme='light']) .featureHero { margin-bottom: 26px; }
-.app:is([data-theme='gray'], [data-theme='light']) :is(.featureIcon, .accountSetup, .shortcut, .appearanceSettings, .connectedAccounts, .appearanceMode, .darkPaletteIntensity, .storageShortcut, .driveQuota, .attachment, .summary, .replybox, .insight, .aiTabContent, .providerGrid > button, .driveConfirm) { background: var(--neutral-bg); border-color: var(--neutral-border); box-shadow: none; color: var(--neutral-text); }
-.app:is([data-theme='gray'], [data-theme='light']) :is(.appearanceSettings, .connectedAccounts) { padding: clamp(18px, 2vw, 28px); }
-.app:is([data-theme='gray'], [data-theme='light']) :is(.searchbox, .replybox .draft, .taskComposer, .taskBoard, .taskRow, .dayAgenda, .driveListHeader input) { background: var(--neutral-raised); border-color: var(--neutral-border); color: var(--neutral-text); box-shadow: none; }
-.app:is([data-theme='gray'], [data-theme='light']) :is(.searchbox input, .titleline h1, .sender b, .mailrow, .body p, .summary p, .insight p, .aiTabContent > p, .aihead b, .featureHero h1, .connectedHead h2) { color: var(--neutral-text); }
-.app:is([data-theme='gray'], [data-theme='light']) :is(.account small, .sectiontitle, .labelsEmpty, .profile small, .featureHero p, .connectedHead p, .appearanceMode > span:nth-child(2) small, .darkPaletteGrid button small, .darkPaletteSection small, .darkPaletteIntensity, .themeStatus, .rowtop span, .mailrow small, .listfoot, .day, .sender small, .sender time, .insight small, .replyControlGroup > span, .signal span) { color: var(--neutral-muted); }
-.app:is([data-theme='gray'], [data-theme='light']) .searchbox input::placeholder { color: var(--neutral-muted); }
-.app:is([data-theme='gray'], [data-theme='light']) :is(.navitem, .section > button, .rail a, .icon, .profile, .tabs button, .toolbar > button, .replytabs button, .aitabs button, .classifyLabel, .insight > h3, .phaseNote) { color: var(--neutral-muted); }
-.app:is([data-theme='gray'], [data-theme='light']) :is(.navitem:hover, .navitem.active, .section > button:hover, .mailrow:hover, .mailrow.selected, .rail a:hover, .rail a.active, .appearanceMode.selected, .darkPaletteGrid button.selected, .replyPills button.active, .taskBoardHead button[aria-selected='true']) { color: var(--neutral-text); background: var(--neutral-selected); border-color: var(--neutral-border); box-shadow: none; }
-.app:is([data-theme='gray'], [data-theme='light']) :is(.appearanceMode.selected, .darkPaletteGrid button.selected) { outline: 1px solid var(--neutral-muted); outline-offset: -1px; }
-.app:is([data-theme='gray'], [data-theme='light']) :is(.aiTop, .checkMail, .driveTop, .driveButton, .rail .pulseRail, .replyPills button, .replytools button, .connectedHead > span, .storageShortcutIcon, .contextChip) { background: var(--neutral-raised); color: var(--neutral-text); border-color: var(--neutral-border); box-shadow: none; }
-.app:is([data-theme='gray'], [data-theme='light']) :is(.compose, .replytools .send, .sendAi, .taskComposer > button, .privacyAccept, .modeCheck:has(svg)) { background: var(--neutral-action); color: var(--neutral-action-text); border-color: var(--neutral-action); box-shadow: none; }
-.app:is([data-theme='gray'], [data-theme='light']) .compose:hover { background: var(--neutral-action); filter: brightness(.92); }
-.app:is([data-theme='gray'], [data-theme='light']) :is(.navitem em, .avatar, .spaceicon) { background: var(--neutral-selected); color: var(--neutral-text); border-color: var(--neutral-border); box-shadow: none; }
-.app:is([data-theme='gray'], [data-theme='light']) :is(.brandmark, .summary label, .summary label button, .score, .listhead small, .featureHero > small, .connectedHead small, .tabs .active, .aitabs .active, .replytabs .active) { color: var(--neutral-text); border-color: var(--neutral-muted); box-shadow: none; }
-.app:is([data-theme='gray'], [data-theme='light']) :is(.listhead, .tabs, .toolbar, .sender, .replytabs, .darkPaletteSection, .section, .driveFile, .aitabs) { border-color: var(--neutral-border); }
-.app:is([data-theme='gray'], [data-theme='light']) :is(.profileMenu, .sortMenuPanel, .toolbarMenuPanel, .labelAddPanel, .modal, .accountSetupDialog) { background: var(--neutral-raised); color: var(--neutral-text); border-color: var(--neutral-border); box-shadow: 0 12px 36px #00000018; }
-.app:is([data-theme='gray'], [data-theme='light']) :is(.profileMenu button, .toolbarMenuPanel button, .sortMenuPanel button) { color: var(--neutral-text); }
-.app:is([data-theme='gray'], [data-theme='light']) .driveDropzone { background: var(--neutral-raised); border-color: var(--neutral-muted); }
-.app:is([data-theme='gray'], [data-theme='light']) .driveDropzone.isDragging { background: var(--neutral-selected); box-shadow: none; }
-.app:is([data-theme='gray'], [data-theme='light']) .driveFilePicker::file-selector-button { background: var(--neutral-raised); color: var(--neutral-text); border-color: var(--neutral-border); }
-.app:is([data-theme='gray'], [data-theme='light']) .darkPaletteGrid button { background: var(--neutral-bg); color: var(--neutral-text); border-color: var(--neutral-border); }
-.app:is([data-theme='gray'], [data-theme='light']) .modePreview { box-shadow: none; }
-.app:is([data-theme='gray'], [data-theme='light']) .appearanceMode.dark .modePreview { background: #212121; border-color: #383838; box-shadow: inset 0 16px #171717; }
-.app:is([data-theme='gray'], [data-theme='light']) .appearanceMode.light .modePreview { background: #fff; border-color: #e5e5e5; box-shadow: inset 0 16px #f5f5f5; }
-.app:is([data-theme='gray'], [data-theme='light']) .modePreview i { background: #a3a3a3; box-shadow: none; }
-.app:is([data-theme='gray'], [data-theme='light']) .modePreview i:last-child { background: #737373; box-shadow: none; }
-.app:is([data-theme='gray'], [data-theme='light']) .secure { background: transparent; }
-.app:is([data-theme='gray'], [data-theme='light']) .composeModal { --compose-shell: var(--neutral-bg); --compose-editor: var(--neutral-bg); --compose-surface: var(--neutral-raised); --compose-border: var(--neutral-border); --compose-text: var(--neutral-text); --compose-muted: var(--neutral-muted); background: var(--neutral-bg); color: var(--neutral-text); }
+/* Shared matte surfaces and restrained hierarchy for every palette. */
+.app[data-theme] { background: var(--neutral-bg); color: var(--neutral-text); --stroke: var(--neutral-border); --muted: var(--neutral-muted); }
+.app[data-theme] .glow,
+.app[data-theme] .featurePage::after { display: none; }
+.app[data-theme] :is(.card, .topbar, .featurePage) { background: var(--neutral-bg); border-color: var(--neutral-border); box-shadow: none; color: var(--neutral-text); }
+.app[data-theme] :is(.sidebar, .rail) { background: var(--neutral-sidebar); }
+.app[data-theme] .featurePage { padding: clamp(24px, 3vw, 44px); }
+.app[data-theme] .featurePage .featureHero h1 { color: var(--neutral-text); font-size: clamp(30px, 3vw, 42px); letter-spacing: -1.3px; margin: 12px 0; }
+.app[data-theme] .featureHero { margin-bottom: 26px; }
+.app[data-theme] :is(.featureIcon, .accountSetup, .shortcut, .appearanceSettings, .connectedAccounts, .appearanceMode, .darkPaletteIntensity, .storageShortcut, .driveQuota, .attachment, .summary, .replybox, .insight, .aiTabContent, .providerGrid > button, .driveConfirm) { background: var(--neutral-bg); border-color: var(--neutral-border); box-shadow: none; color: var(--neutral-text); }
+.app[data-theme] :is(.appearanceSettings, .connectedAccounts) { padding: clamp(18px, 2vw, 28px); }
+.app[data-theme] :is(.searchbox, .replybox .draft, .taskComposer, .taskBoard, .taskRow, .dayAgenda, .driveListHeader input) { background: var(--neutral-raised); border-color: var(--neutral-border); color: var(--neutral-text); box-shadow: none; }
+.app[data-theme] :is(.searchbox input, .titleline h1, .sender b, .mailrow, .body p, .summary p, .insight p, .aiTabContent > p, .aihead b, .featureHero h1, .connectedHead h2) { color: var(--neutral-text); }
+.app[data-theme] :is(.account small, .sectiontitle, .labelsEmpty, .profile small, .featureHero p, .connectedHead p, .appearanceMode > span:nth-child(2) small, .darkPaletteGrid button small, .darkPaletteSection small, .darkPaletteIntensity, .themeStatus, .rowtop span, .mailrow small, .listfoot, .day, .sender small, .sender time, .insight small, .replyControlGroup > span, .signal span) { color: var(--neutral-muted); }
+.app[data-theme] .searchbox input::placeholder { color: var(--neutral-muted); }
+.app[data-theme] :is(.navitem, .section > button, .rail a, .icon, .profile, .tabs button, .toolbar > button, .replytabs button, .aitabs button, .classifyLabel, .insight > h3, .phaseNote) { color: var(--neutral-muted); }
+.app[data-theme] :is(.navitem:hover, .navitem.active, .section > button:hover, .mailrow:hover, .mailrow.selected, .rail a:hover, .rail a.active, .appearanceMode.selected, .darkPaletteGrid button.selected, .replyPills button.active, .taskBoardHead button[aria-selected='true']) { color: var(--neutral-text); background: var(--neutral-selected); border-color: var(--neutral-border); box-shadow: none; }
+.app[data-theme] :is(.appearanceMode.selected, .darkPaletteGrid button.selected) { outline: 1px solid var(--neutral-muted); outline-offset: -1px; }
+.app[data-theme] :is(.aiTop, .checkMail, .driveTop, .driveButton, .rail .pulseRail, .replyPills button, .replytools button, .connectedHead > span, .storageShortcutIcon, .contextChip) { background: var(--neutral-raised); color: var(--neutral-text); border-color: var(--neutral-border); box-shadow: none; }
+.app[data-theme] :is(.compose, .replytools .send, .sendAi, .taskComposer > button, .privacyAccept, .modeCheck:has(svg)) { background: var(--neutral-action); color: var(--neutral-action-text); border-color: var(--neutral-action); box-shadow: none; }
+.app[data-theme] .compose:hover { background: var(--neutral-action); filter: brightness(.92); }
+.app[data-theme] :is(.navitem em, .avatar, .spaceicon) { background: var(--neutral-selected); color: var(--neutral-text); border-color: var(--neutral-border); box-shadow: none; }
+.app[data-theme] :is(.brandmark, .summary label, .summary label button, .score, .listhead small, .featureHero > small, .connectedHead small, .tabs .active, .aitabs .active, .replytabs .active) { color: var(--neutral-text); border-color: var(--neutral-muted); box-shadow: none; }
+.app[data-theme] :is(.listhead, .tabs, .toolbar, .sender, .replytabs, .darkPaletteSection, .section, .driveFile, .aitabs) { border-color: var(--neutral-border); }
+.app[data-theme] :is(.profileMenu, .sortMenuPanel, .toolbarMenuPanel, .labelAddPanel, .modal, .accountSetupDialog) { background: var(--neutral-raised); color: var(--neutral-text); border-color: var(--neutral-border); box-shadow: 0 12px 36px #00000018; }
+.app[data-theme] :is(.profileMenu button, .toolbarMenuPanel button, .sortMenuPanel button) { color: var(--neutral-text); }
+.app[data-theme] .driveDropzone { background: var(--neutral-raised); border-color: var(--neutral-muted); }
+.app[data-theme] .driveDropzone.isDragging { background: var(--neutral-selected); box-shadow: none; }
+.app[data-theme] .driveFilePicker::file-selector-button { background: var(--neutral-raised); color: var(--neutral-text); border-color: var(--neutral-border); }
+.app[data-theme] .darkPaletteGrid button { background: var(--neutral-bg); color: var(--neutral-text); border-color: var(--neutral-border); }
+.app[data-theme] .modePreview { box-shadow: none; }
+.app[data-theme] .appearanceMode.dark .modePreview { background: #212121; border-color: #383838; box-shadow: inset 0 16px #171717; }
+.app[data-theme] .appearanceMode.light .modePreview { background: #fff; border-color: #e5e5e5; box-shadow: inset 0 16px #f5f5f5; }
+.app[data-theme] .modePreview i { background: #a3a3a3; box-shadow: none; }
+.app[data-theme] .modePreview i:last-child { background: #737373; box-shadow: none; }
+.app[data-theme] .secure { background: transparent; }
+.app[data-theme] .composeModal { --compose-shell: var(--neutral-bg); --compose-editor: var(--neutral-bg); --compose-surface: var(--neutral-raised); --compose-border: var(--neutral-border); --compose-text: var(--neutral-text); --compose-muted: var(--neutral-muted); background: var(--neutral-bg); color: var(--neutral-text); }
 
-.app:is([data-theme='gray'], [data-theme='light']) .appearanceMode .modePreview i:nth-child(n) { background: #a3a3a3; box-shadow: none; }
-.app:is([data-theme='gray'], [data-theme='light']) :is(.aiTop span, .featureStats span) { background: var(--neutral-muted); box-shadow: none; }
-.app:is([data-theme='gray'], [data-theme='light']) .featurePage .featureIcon { width: 42px; height: 42px; background: var(--neutral-raised); color: var(--neutral-text); border-color: var(--neutral-border); box-shadow: none; }
-.app:is([data-theme='gray'], [data-theme='light']) :is(.pulse, .recommendedActions button, .waitingActions button, .regenerateReply, .replytabs .active, .opp em, .important, .rowlabels em, .summary label button) { background: var(--neutral-raised); color: var(--neutral-text); border-color: var(--neutral-border); box-shadow: none; }
-.app:is([data-theme='gray'], [data-theme='light']) .pulse button { background: var(--neutral-action); color: var(--neutral-action-text); border-color: var(--neutral-action); }
-.app:is([data-theme='gray'], [data-theme='light']) .pulse > strong { text-shadow: none; }
-.app:is([data-theme='gray'], [data-theme='light']) :is(.pulse p, .recommendedActions button small, .attachment small, .attachment span span, .loadMore, .contact > div:last-child) { color: var(--neutral-muted); }
-.app:is([data-theme='gray'], [data-theme='light']) :is(.spark i, .mailrow > i) { background: var(--neutral-muted); box-shadow: none; }
-.app:is([data-theme='gray'], [data-theme='light']) .attachment svg { color: #fff; }
-.app:is([data-theme='gray'], [data-theme='light'])[data-color-mode='light'] .urgency { color: #8a5700; }
-.app:is([data-theme='gray'], [data-theme='light'])[data-color-mode='light'] .good { color: #18794e !important; }
-.app:is([data-theme='gray'], [data-theme='light'])[data-color-mode='light'] .engage { color: #397151 !important; }
-.app:is([data-theme='gray'], [data-theme='light']) .connectedHead h2 { font-size: 21px; }
-.app:is([data-theme='gray'], [data-theme='light']) .connectedHead p { font-size: 13px; line-height: 1.6; }
-.app:is([data-theme='gray'], [data-theme='light']) .appearanceMode > span:nth-child(2) b { font-size: 16px; }
-.app:is([data-theme='gray'], [data-theme='light']) .appearanceMode > span:nth-child(2) small { font-size: 12px; line-height: 1.5; }
-.app:is([data-theme='gray'], [data-theme='light']) .darkPaletteGrid button { min-height: 88px; }
-.app:is([data-theme='gray'], [data-theme='light']) .darkPaletteGrid button b { font-size: 12px; }
-.app:is([data-theme='gray'], [data-theme='light']) .darkPaletteGrid button small { font-size: 10px; line-height: 1.4; }
-.app:is([data-theme='gray'], [data-theme='light']) .darkPaletteIntensity > span { font-size: 13px; }
-.app:is([data-theme='gray'], [data-theme='light']) .darkPaletteIntensity > small { font-size: 11px; }
-.app:is([data-theme='gray'], [data-theme='light']) .navitem { font-size: 12px; }
-.app:is([data-theme='gray'], [data-theme='light']) .section > button { font-size: 11px; }
+.app[data-theme] .appearanceMode .modePreview i:nth-child(n) { background: #a3a3a3; box-shadow: none; }
+.app[data-theme] :is(.aiTop span, .featureStats span) { background: var(--neutral-muted); box-shadow: none; }
+.app[data-theme] .featurePage .featureIcon { width: 42px; height: 42px; background: var(--neutral-raised); color: var(--neutral-text); border-color: var(--neutral-border); box-shadow: none; }
+.app[data-theme] :is(.pulse, .recommendedActions button, .waitingActions button, .regenerateReply, .replytabs .active, .opp em, .important, .rowlabels em, .summary label button) { background: var(--neutral-raised); color: var(--neutral-text); border-color: var(--neutral-border); box-shadow: none; }
+.app[data-theme] .pulse button { background: var(--neutral-action); color: var(--neutral-action-text); border-color: var(--neutral-action); }
+.app[data-theme] .pulse > strong { text-shadow: none; }
+.app[data-theme] :is(.pulse p, .recommendedActions button small, .attachment small, .attachment span span, .loadMore, .contact > div:last-child) { color: var(--neutral-muted); }
+.app[data-theme] :is(.spark i, .mailrow > i) { background: var(--neutral-muted); box-shadow: none; }
+.app[data-theme] .attachment svg { color: #fff; }
+.app[data-theme][data-color-mode='light'] .urgency { color: #8a5700; }
+.app[data-theme][data-color-mode='light'] .good { color: #18794e !important; }
+.app[data-theme][data-color-mode='light'] .engage { color: #397151 !important; }
+.app[data-theme] .connectedHead h2 { font-size: 21px; }
+.app[data-theme] .connectedHead p { font-size: 13px; line-height: 1.6; }
+.app[data-theme] .appearanceMode > span:nth-child(2) b { font-size: 16px; }
+.app[data-theme] .appearanceMode > span:nth-child(2) small { font-size: 12px; line-height: 1.5; }
+.app[data-theme] .darkPaletteGrid button { min-height: 88px; }
+.app[data-theme] .darkPaletteGrid button b { font-size: 12px; }
+.app[data-theme] .darkPaletteGrid button small { font-size: 10px; line-height: 1.4; }
+.app[data-theme] .darkPaletteIntensity > span { font-size: 13px; }
+.app[data-theme] .darkPaletteIntensity > small { font-size: 11px; }
+.app[data-theme] .navitem { font-size: 12px; }
+.app[data-theme] .section > button { font-size: 11px; }
+
+/* Palette identity stays in small highlights rather than large colored surfaces. */
+.app:is([data-theme='default'], [data-theme='green'], [data-theme='orange'], [data-theme='violet']) .navitem.active { box-shadow: inset 2px 0 var(--theme-accent); }
+.app:is([data-theme='default'], [data-theme='green'], [data-theme='orange'], [data-theme='violet']) .featurePage .featureIcon { color: var(--theme-accent); }
+.app:is([data-theme='default'], [data-theme='green'], [data-theme='orange'], [data-theme='violet']) :is(.storageShortcut .storageShortcutIcon, .list .listhead small) { color: var(--theme-accent); }

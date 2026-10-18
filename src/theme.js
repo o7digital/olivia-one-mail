@@ -186,25 +186,29 @@ function buildColorThemeCssVars(themeId, intensityPercent = DEFAULT_COLOR_INTENS
 }
 
 
-// Neutral modes use opaque, matte surfaces throughout the workspace.
+// All palettes share matte surfaces; color is reserved for subtle accents.
 export function buildThemeCssVars(themeId, intensityPercent = DEFAULT_COLOR_INTENSITY) {
   const vars = buildColorThemeCssVars(themeId, intensityPercent)
-  if (themeId !== 'gray' && themeId !== 'light') return vars
+  const neutral = themeId === 'gray' || themeId === 'light'
+  const palette = THEME_PALETTES[themeId] ?? THEME_PALETTES.default
   const light = themeId === 'light' || clampIntensity(intensityPercent) >= 140
   const offset = Math.round((clampIntensity(intensityPercent) - 100) * .1)
   const gray = (value) => `#${Math.max(0, Math.min(255, value + offset)).toString(16).padStart(2, '0').repeat(3)}`
   const background = light ? '#ffffff' : gray(33)
   const sidebar = light ? '#f9f9f9' : gray(23)
   const raised = light ? '#f5f5f5' : gray(47)
-  const selected = light ? '#ececec' : gray(52)
+  const accent = neutral ? (light ? '#353535' : '#e5e5e5') : light ? palette.lightAccent : vars['--theme-accent']
+  const accentRgb = hexToRgb(accent)
+  const selectedBase = light ? '#ececec' : gray(52)
+  const selected = neutral ? selectedBase : mixHex(selectedBase, accent, .08).hex
   const text = light ? '#171717' : '#ececec'
   const muted = light ? '#626262' : '#b4b4b4'
   const border = light ? '#e5e5e5' : '#383838'
   const action = light ? '#171717' : '#ececec'
   return {
     ...vars,
-    '--theme-accent': light ? '#353535' : '#e5e5e5',
-    '--theme-accent-rgb': light ? '53, 53, 53' : '229, 229, 229',
+    '--theme-accent': accent,
+    '--theme-accent-rgb': `${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}`,
     '--theme-secondary-rgb': '128, 128, 128',
     '--theme-bg-start': background, '--theme-bg-mid': background, '--theme-bg-end': background,
     '--theme-topbar': background, '--theme-card-start': background, '--theme-card-end': background,
