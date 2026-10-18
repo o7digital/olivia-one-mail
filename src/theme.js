@@ -1,8 +1,8 @@
 export const COLOR_THEMES = [
-  { id: 'light', name: 'Light', description: 'A bright workspace with dark, readable text.', colors: ['#087da3', '#f8fafc', '#7652d5'] },
+  { id: 'light', name: 'Light', description: 'A bright workspace with dark, readable text.', colors: ['#353535', '#ffffff', '#737373'] },
   { id: 'default', name: 'Olivia', description: 'Cyan and midnight.', colors: ['#39d9ff', '#0d2035', '#8b5cf6'] },
   { id: 'green', name: 'Green', description: 'Deep emerald.', colors: ['#59e59b', '#10291f', '#22c55e'] },
-  { id: 'gray', name: 'Graphite', description: 'Neutral charcoal.', colors: ['#c7d0da', '#252b33', '#7f8fa4'] },
+  { id: 'gray', name: 'Graphite', description: 'Neutral charcoal.', colors: ['#e5e5e5', '#212121', '#737373'] },
   { id: 'orange', name: 'Orange', description: 'Amber and copper.', colors: ['#ffb454', '#2c1e14', '#f97316'] },
   { id: 'violet', name: 'Violet', description: 'Rich purple.', colors: ['#b69cff', '#241a3d', '#8b5cf6'] },
 ]
@@ -136,7 +136,7 @@ const WHITE_SURFACES = {
   selectedStart: [232, 242, 247, .92], selectedEnd: [240, 244, 249, .96],
 }
 
-export function buildThemeCssVars(themeId, intensityPercent = DEFAULT_COLOR_INTENSITY) {
+function buildColorThemeCssVars(themeId, intensityPercent = DEFAULT_COLOR_INTENSITY) {
   const base = THEME_PALETTES[themeId] ?? THEME_PALETTES.default
   const intensity = themeId === 'light' ? DEFAULT_COLOR_INTENSITY : clampIntensity(intensityPercent)
   if (themeId !== 'light' && intensity > DEFAULT_COLOR_INTENSITY) {
@@ -182,5 +182,36 @@ export function buildThemeCssVars(themeId, intensityPercent = DEFAULT_COLOR_INTE
     '--theme-action-end': actionEnd.hex,
     '--theme-selected-start': adjustRgbaIntensity(base.selectedStart, intensity),
     '--theme-selected-end': adjustRgbaIntensity(base.selectedEnd, intensity),
+  }
+}
+
+
+// Neutral modes use opaque, matte surfaces throughout the workspace.
+export function buildThemeCssVars(themeId, intensityPercent = DEFAULT_COLOR_INTENSITY) {
+  const vars = buildColorThemeCssVars(themeId, intensityPercent)
+  if (themeId !== 'gray' && themeId !== 'light') return vars
+  const light = themeId === 'light' || clampIntensity(intensityPercent) >= 140
+  const offset = Math.round((clampIntensity(intensityPercent) - 100) * .1)
+  const gray = (value) => `#${Math.max(0, Math.min(255, value + offset)).toString(16).padStart(2, '0').repeat(3)}`
+  const background = light ? '#ffffff' : gray(33)
+  const sidebar = light ? '#f9f9f9' : gray(23)
+  const raised = light ? '#f5f5f5' : gray(47)
+  const selected = light ? '#ececec' : gray(52)
+  const text = light ? '#171717' : '#ececec'
+  const muted = light ? '#626262' : '#b4b4b4'
+  const border = light ? '#e5e5e5' : '#383838'
+  const action = light ? '#171717' : '#ececec'
+  return {
+    ...vars,
+    '--theme-accent': light ? '#353535' : '#e5e5e5',
+    '--theme-accent-rgb': light ? '53, 53, 53' : '229, 229, 229',
+    '--theme-secondary-rgb': '128, 128, 128',
+    '--theme-bg-start': background, '--theme-bg-mid': background, '--theme-bg-end': background,
+    '--theme-topbar': background, '--theme-card-start': background, '--theme-card-end': background,
+    '--theme-action-start': action, '--theme-action-end': action,
+    '--theme-selected-start': selected, '--theme-selected-end': selected,
+    '--neutral-bg': background, '--neutral-sidebar': sidebar, '--neutral-raised': raised,
+    '--neutral-selected': selected, '--neutral-text': text, '--neutral-muted': muted,
+    '--neutral-border': border, '--neutral-action': action, '--neutral-action-text': light ? '#ffffff' : '#171717',
   }
 }

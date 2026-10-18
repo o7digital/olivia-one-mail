@@ -223,7 +223,7 @@ test('light theme keeps composer text readable and minimized composer restores f
   await page.getByRole('button', { name: 'Compose', exact: true }).click()
   const lightComposer = page.getByRole('dialog', { name: 'New Message' })
   const lightEditor = lightComposer.getByRole('textbox', { name: 'Message body' })
-  await expect(lightEditor).toHaveCSS('color', 'rgb(23, 33, 43)')
+  await expect(lightEditor).toHaveCSS('color', 'rgb(23, 23, 23)')
   await lightEditor.evaluate((element) => {
     element.focus()
     const clipboardData = new DataTransfer()
@@ -238,7 +238,7 @@ test('light theme keeps composer text readable and minimized composer restores f
     element.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste' }))
   })
   const pastedText = lightEditor.getByText('Theme-aware pasted text.')
-  await expect(pastedText).toHaveCSS('color', 'rgb(23, 33, 43)')
+  await expect(pastedText).toHaveCSS('color', 'rgb(23, 23, 23)')
   await lightComposer.getByRole('button', { name: 'Minimize composer' }).click()
   await expect(lightComposer.getByRole('button', { name: 'Restore composer' })).toBeVisible()
   await lightComposer.getByRole('button', { name: 'Restore composer' }).click()
@@ -423,7 +423,7 @@ test('color intensity is stored separately for each dark palette', async ({ page
 
   await page.getByRole('radio', { name: /Light White surfaces/ }).click()
   await expect(app).toHaveAttribute('data-theme', 'light')
-  await expect(app).toHaveCSS('--theme-bg-start', '#f8fafc')
+  await expect(app).toHaveCSS('--theme-bg-start', '#ffffff')
   await expect(page.getByRole('slider')).toHaveCount(0)
   await page.getByRole('radio', { name: /Dark Midnight surfaces/ }).click()
   await expect(app).toHaveAttribute('data-theme', 'green')
