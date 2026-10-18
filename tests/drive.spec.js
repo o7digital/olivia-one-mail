@@ -21,7 +21,7 @@ test('Drive upload, quota, search, download and confirmed deletion', async ({ pa
   await expect(page.getByRole('heading', { name: 'Drive', exact: true })).toBeVisible()
   await expect(page.locator('.driveQuota')).toContainText('1.0 KB of 10.0 KB used')
   const chooserPromise = page.waitForEvent('filechooser')
-  await page.getByRole('button', { name: 'Upload files' }).click()
+  await page.getByLabel('Upload files', { exact: true }).click({ position: { x: 30, y: 16 } })
   const chooser = await chooserPromise
   await chooser.setFiles({ name: 'hello.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') })
   await expect(page.getByText('hello.txt', { exact: true })).toBeVisible()
@@ -48,7 +48,7 @@ test('Drive explains an unavailable quota after file selection', async ({ page }
   await page.goto('/drive')
   await expect(page.getByText('Storage quota unavailable')).toBeVisible()
   const chooserPromise = page.waitForEvent('filechooser')
-  await page.getByRole('button', { name: 'Upload files' }).click()
+  await page.getByLabel('Upload files', { exact: true }).click({ position: { x: 30, y: 16 } })
   const chooser = await chooserPromise
   await chooser.setFiles({ name: 'hello.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') })
   await expect(page.getByRole('alert')).toContainText('Your storage quota is unavailable')
@@ -123,7 +123,7 @@ test('dropping files uploads their bytes and shows an active drop target', async
       : path === '/api/mail/messages' ? { messages: [], pagination: {} } : [] })
   })
   await page.goto('/drive')
-  await expect(page.getByRole('button', { name: 'Upload files' })).toBeEnabled()
+  await expect(page.getByLabel('Upload files', { exact: true })).toBeEnabled()
   const transfer = await page.evaluateHandle(() => {
     const data = new DataTransfer()
     data.items.add(new File(['first dropped content'], 'first.txt', { type: 'text/plain' }))
@@ -176,7 +176,7 @@ test('Upload files recovers when the page has an old unavailable quota', async (
   await page.goto('/drive')
   await expect(page.getByText('Storage quota unavailable')).toBeVisible()
   const chooserPromise = page.waitForEvent('filechooser')
-  await page.getByRole('button', { name: 'Upload files' }).click()
+  await page.getByLabel('Upload files', { exact: true }).click({ position: { x: 30, y: 16 } })
   const chooser = await chooserPromise
   await chooser.setFiles({ name: 'recovered.txt', mimeType: 'text/plain', buffer: Buffer.from('recovered content') })
   await expect(page.getByText('recovered.txt', { exact: true })).toBeVisible()

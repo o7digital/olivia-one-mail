@@ -86,7 +86,7 @@ export function DrivePage() {
         onDragEnter={(event) => { event.preventDefault(); dragDepth.current += 1; setDragActive(true) }}
         onDragLeave={(event) => { event.preventDefault(); dragDepth.current = Math.max(0, dragDepth.current - 1); if (!dragDepth.current) setDragActive(false) }}
         onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy' }} onDrop={dropFiles}>
-        <CloudUpload size={30} /><b>{dragActive ? 'Release to upload your files' : 'Drop files here'}</b><span>Up to 20 MB per file</span><button className="driveButton" type="button" disabled={busy} onClick={() => input.current?.click()}>{busy ? 'Working…' : 'Upload files'}</button><input ref={input} type="file" multiple aria-label="Choose files" hidden onChange={(event) => upload(Array.from(event.target.files))} />
+        <CloudUpload size={30} /><b>{dragActive ? 'Release to upload your files' : 'Drop files here'}</b><span>Up to 20 MB per file</span><label className="driveFilePickerLabel"><span>Upload files</span><input className="driveFilePicker" ref={input} type="file" multiple aria-label="Upload files" disabled={busy} onChange={(event) => upload(Array.from(event.target.files))} /></label>
       </div>
       {error ? <div className="driveError" role="alert">{error}</div> : null}
       <p role="status" className="driveStatus">{loading ? 'Loading your Drive…' : notice}</p>
