@@ -309,8 +309,8 @@ export function ComposeModal({ colorTheme = 'default', mailboxEmail = '', mode =
     setSending(true)
     try {
       const serializedAttachments = await Promise.all(attachments.map(({ file }) => serializeAttachment(file)))
-      if (mode === 'reply') await mailService.replyToMessage(messageId, draft.body, draft.html, serializedAttachments)
-      else if (mode === 'reply-all') await mailService.replyAllMessage(messageId, draft.body, draft.html, serializedAttachments)
+      if (mode === 'reply') await mailService.replyToMessage(messageId, draft.body, draft.html, serializedAttachments, { cc: draft.cc, bcc: draft.bcc })
+      else if (mode === 'reply-all') await mailService.replyAllMessage(messageId, draft.body, draft.html, serializedAttachments, { cc: draft.cc, bcc: draft.bcc })
       else if (mode === 'forward') await mailService.forwardMessage(messageId, { to: draft.to, cc: draft.cc, bcc: draft.bcc, body: draft.body, html: draft.html, forwardedContentIncluded: draft.body.includes('---------- Forwarded message ---------'), attachments: serializedAttachments })
       else await mailService.sendMessage({ ...draft, attachments: serializedAttachments })
     } catch (sendError) {
@@ -379,10 +379,10 @@ export function ComposeModal({ colorTheme = 'default', mailboxEmail = '', mode =
         </div>
         <div className="composeRecipients">
           <input autoFocus name="to" value={draft.to} onChange={handleRecipientChange} onKeyDown={handleRecipientKeyDown} placeholder="To" aria-label="Recipient" aria-describedby="recipient-hint" disabled={config.toDisabled} />
-          {!config.toDisabled ? <div className="composeRecipientToggles">
+          <div className="composeRecipientToggles">
             <button type="button" onClick={() => setShowCc(true)} aria-expanded={showCc}>CC</button>
             <button type="button" onClick={() => setShowBcc(true)} aria-expanded={showBcc}>CCI</button>
-          </div> : null}
+          </div>
         </div>
         {showCc ? <input name="cc" value={draft.cc} onChange={handleRecipientChange} onKeyDown={handleRecipientKeyDown} placeholder="CC" aria-label="Carbon copy recipients" aria-describedby="recipient-hint" /> : null}
         {showBcc ? <input name="bcc" value={draft.bcc} onChange={handleRecipientChange} onKeyDown={handleRecipientKeyDown} placeholder="CCI" aria-label="Blind carbon copy recipients" aria-describedby="recipient-hint" /> : null}

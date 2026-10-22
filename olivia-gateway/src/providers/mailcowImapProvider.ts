@@ -476,12 +476,14 @@ export class MailcowImapProvider implements MailProvider {
     return { id: info.messageId, status: 'sent' }
   }
 
-  async reply(id: string, input: { body: string; html?: string; attachments?: OutgoingAttachment[] }) {
+  async reply(id: string, input: { cc?: string; bcc?: string; body: string; html?: string; attachments?: OutgoingAttachment[] }) {
     const original = await this.getMessage(id)
     if (!original) throw new Error('Message not found')
     const info = await this.sendAndArchive({
       from: this.fromAddress,
       to: original.email,
+      cc: input.cc?.trim() || undefined,
+      bcc: input.bcc?.trim() || undefined,
       subject: original.subject.startsWith('Re:') ? original.subject : `Re: ${original.subject}`,
       text: buildReplyText(original, input.body),
       html: input.html?.trim() ? buildReplyHtml(original, input.html, input.body) : undefined,
@@ -490,7 +492,7 @@ export class MailcowImapProvider implements MailProvider {
     return { id: info.messageId, status: 'sent' }
   }
 
-  async replyAll(id: string, input: { body: string; html?: string; attachments?: OutgoingAttachment[] }) {
+  async replyAll(id: string, input: { cc?: string; bcc?: string; body: string; html?: string; attachments?: OutgoingAttachment[] }) {
     const original = await this.getMessage(id)
     if (!original) throw new Error('Message not found')
     const recipients = computeReplyAllRecipients({
@@ -502,7 +504,8 @@ export class MailcowImapProvider implements MailProvider {
     const info = await this.sendAndArchive({
       from: this.fromAddress,
       to: recipients.to,
-      cc: recipients.cc.length ? recipients.cc : undefined,
+      cc: [...recipients.cc, ...(input.cc || '').split(/[;,]/).map(value => value.trim()).filter(Boolean)],
+      bcc: input.bcc?.trim() || undefined,
       subject: original.subject.startsWith('Re:') ? original.subject : `Re: ${original.subject}`,
       text: buildReplyText(original, input.body),
       html: input.html?.trim() ? buildReplyHtml(original, input.html, input.body) : undefined,

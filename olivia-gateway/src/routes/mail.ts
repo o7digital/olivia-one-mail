@@ -33,7 +33,7 @@ const sendSchema = z.object({
   html: z.string().max(500_000).optional().default(''),
   attachments: attachmentsSchema,
 })
-const replySchema = z.object({ body: z.string().min(1), html: z.string().max(500_000).optional().default(''), attachments: attachmentsSchema })
+const replySchema = z.object({ cc: z.string().max(4000).optional(), bcc: z.string().max(4000).optional(), body: z.string().min(1), html: z.string().max(500_000).optional().default(''), attachments: attachmentsSchema })
 const forwardSchema = z.object({
   to: z.string().min(1),
   cc: z.string().max(4000).optional().default(''),

@@ -175,3 +175,22 @@ test('favorites are searched across the mailbox before pagination and fetched by
   assert.equal(ordinary.pagination.total, 723)
   assert.deepEqual(fetches[1], { range: '674:698', uid: false })
 })
+
+for (const method of ['reply', 'replyAll'] as const) {
+  test(`${method} passes added copies to SMTP and preserves existing reply-all copies`, async () => {
+    const provider = new MailcowImapProvider(
+      { email: 'sender@example.com', password: 'secret' },
+      { imapHost: 'imap', imapPort: 993, imapSecure: true, smtpHost: 'smtp', smtpPort: 587, smtpSecure: false, fromName: 'Sender', fromNameMap: {} },
+    )
+    provider.getMessage = async () => structuredClone(originalMessage) as never
+    let captured: Record<string, unknown> = {}
+    ;(provider as unknown as { sendAndArchive: (message: Record<string, unknown>) => Promise<{ messageId: string }> }).sendAndArchive = async message => {
+      captured = message
+      return { messageId: 'copy-test' }
+    }
+    await provider[method]('message-1', { body: 'Reply', cc: 'added@example.com', bcc: 'hidden@example.com' })
+    assert.equal(captured.bcc, 'hidden@example.com')
+    if (method === 'replyAll') assert.deepEqual(captured.cc, ['accounts@o7digitalgroup.com', 'added@example.com'])
+    else assert.equal(captured.cc, 'added@example.com')
+  })
+}
